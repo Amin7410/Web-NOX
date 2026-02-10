@@ -1,0 +1,17 @@
+{
+    "name": "nox-platform-root",
+    "private": true,
+    "scripts": {
+        "prepare": "husky",
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "lint": "turbo run lint"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^19.0.0",
+        "@commitlint/config-conventional": "^19.0.0",
+        "husky": "^9.0.0",
+        "turbo": "^2.3.0"
+    },
+    "packageManager": "pnpm@9.0.0"
+}

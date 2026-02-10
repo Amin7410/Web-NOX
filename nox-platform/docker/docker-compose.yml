@@ -1,0 +1,12 @@
+services:
+  nox-db:
+    image: postgres:16
+    container_name: nox-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nox
+      POSTGRES_PASSWORD: nox_secret
+      POSTGRES_DB: nox_core
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data

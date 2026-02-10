@@ -1,0 +1,6 @@
+{
+    "extends": "@nox/tsconfig/base.json",
+    "include": [
+        "src"
+    ]
+}

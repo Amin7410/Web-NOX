@@ -1,0 +1,54 @@
+# --- Global ---
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+.env.*.local
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# --- Node.js / Frontend ---
+node_modules/
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+public/hot/
+_report.html
+
+# --- Java / Gradle / Backend ---
+.gradle/
+**/build/
+!src/**/build/
+target/
+out/
+gradle-app.setting
+.classpath
+.project
+.settings/
+bin/
+logs/
+
+# --- Docker / Database ---
+pgdata/
+postgres_data/
+
+# --- VS Code specific (history) ---
+.history/
+
+# --- Miscellaneous ---
+*.bak
+*.tmp

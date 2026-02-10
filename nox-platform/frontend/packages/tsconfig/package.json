@@ -1,0 +1,9 @@
+{
+    "name": "@nox/tsconfig",
+    "version": "0.0.0",
+    "private": true,
+    "files": [
+        "base.json"
+    ],
+    "packageManager": "pnpm@9.0.0"
+}

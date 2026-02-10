@@ -1,0 +1,573 @@
+// ==========================================
+// NOX DATABASE
+// ==========================================
+
+// 1. IAM & SECURITY
+
+Table users {
+  id UUID [pk, default: `gen_random_uuid()`]
+  email VARCHAR(255) [not null]
+  is_email_verified BOOLEAN [not null, default: FALSE]
+  full_name VARCHAR(255)
+  avatar_url TEXT
+  status VARCHAR(50) [not null, default: 'PENDING_VERIFICATION']
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    email [unique, note: "LOWER(email) WHERE deleted_at IS NULL"] 
+    status
+  }
+}
+
+Table user_security {
+  user_id UUID [pk]
+  password_hash TEXT
+  is_password_set BOOLEAN [not null, default: FALSE]
+  last_password_change TIMESTAMPTZ
+  failed_login_attempts INTEGER [not null, default: 0]
+  locked_until TIMESTAMPTZ
+  mfa_enabled BOOLEAN [not null, default: FALSE]
+  mfa_secret TEXT
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+}
+
+Table user_mfa_backup_codes {
+  id UUID [pk, default: `gen_random_uuid()`]
+  user_id UUID [not null]
+  code_hash VARCHAR(255) [not null]
+  used BOOLEAN [default: FALSE]
+  used_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ [default: `NOW()`]
+
+  Indexes {
+    user_id
+  }
+}
+
+Table user_sessions {
+  id UUID [pk, default: `gen_random_uuid()`]
+  user_id UUID [not null]
+  refresh_token TEXT [unique, not null]
+  device_type VARCHAR(50)
+  user_agent TEXT
+  ip_address VARCHAR(45)
+  last_active_at TIMESTAMPTZ [not null, default: `NOW()`]
+  expires_at TIMESTAMPTZ [not null]
+  revoked_at TIMESTAMPTZ
+  revoke_reason VARCHAR(50)
+
+  Indexes {
+    user_id
+  }
+}
+
+Table social_identities {
+  id UUID [pk, default: `gen_random_uuid()`]
+  user_id UUID [not null]
+  provider VARCHAR(50) [not null]
+  provider_id VARCHAR(255) [not null]
+  profile_data JSONB [not null, default: '{}']
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+
+  Indexes {
+    (provider, provider_id) [unique]
+    user_id
+  }
+}
+
+// 2. MULTI-TENANCY & BILLING
+
+Table organizations {
+  id UUID [pk, default: `gen_random_uuid()`]
+  name VARCHAR(255) [not null]
+  slug VARCHAR(255) [not null]
+  settings JSONB [not null, default: '{}']
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    slug [unique, note: "WHERE deleted_at IS NULL"]
+  }
+}
+
+Table roles {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  name VARCHAR(100) [not null]
+  permissions "TEXT[]" [not null, default: '{}']
+
+  Indexes {
+    (org_id, name) [unique]
+    org_id
+  }
+}
+
+Table org_members {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  user_id UUID [not null]
+  role_id UUID [not null]
+  joined_at TIMESTAMPTZ [not null, default: `NOW()`]
+  invited_by UUID
+
+  Indexes {
+    (org_id, user_id) [unique]
+    user_id
+    role_id
+  }
+}
+
+Table invitations {
+  id UUID [pk, default: `gen_random_uuid()`]
+  email VARCHAR(255) [not null]
+  org_id UUID [not null]
+  role_id UUID [not null]
+  token VARCHAR(255) [unique, not null]
+  invited_by_id UUID [not null]
+  status VARCHAR(50) [not null, default: 'PENDING']
+  expires_at TIMESTAMPTZ [not null]
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  accepted_at TIMESTAMPTZ
+  resent_count INTEGER [default: 0]
+  last_sent_at TIMESTAMPTZ
+
+  Indexes {
+    token
+    (org_id, email) [unique, note: "WHERE status = 'PENDING'"]
+  }
+}
+
+Table subscriptions {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [unique, not null]
+  plan_id VARCHAR(50) [not null]
+  status VARCHAR(50) [not null, default: 'ACTIVE']
+  stripe_customer_id VARCHAR(255)
+  stripe_sub_id VARCHAR(255)
+  quotas JSONB [not null, default: '{}']
+  current_period_start TIMESTAMPTZ
+  current_period_end TIMESTAMPTZ
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+  
+  Indexes {
+    stripe_customer_id
+  }
+}
+
+Table org_usage_metrics {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  metric_type VARCHAR(50) [not null]
+  current_value BIGINT [default: 0]
+  reset_at TIMESTAMPTZ
+  updated_at TIMESTAMPTZ [default: `NOW()`]
+
+  Indexes {
+    (org_id, metric_type) [unique]
+    org_id
+  }
+}
+
+Table api_keys {
+  id UUID [pk, default: `gen_random_uuid()`]
+  key_hash VARCHAR(255) [unique, not null]
+  key_prefix VARCHAR(20) [not null]
+  name VARCHAR(255) [not null]
+  user_id UUID [not null]
+  org_id UUID [not null]
+  scopes "TEXT[]"
+  last_used_at TIMESTAMPTZ
+  expires_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+
+  Indexes {
+    user_id
+    org_id
+  }
+}
+
+// 3. WAREHOUSE & ASSETS
+
+Table warehouses {
+  id UUID [pk, default: `gen_random_uuid()`]
+  owner_id UUID [not null]
+  owner_type VARCHAR(20) [not null, note: "CHECK (owner_type IN ('USER', 'ORG'))"]
+  name VARCHAR(255)
+  is_system BOOLEAN [not null, default: FALSE]
+  created_at TIMESTAMPTZ [default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (owner_id, owner_type) [unique, note: "WHERE deleted_at IS NULL"]
+  }
+}
+
+Table asset_collections {
+  id UUID [pk, default: `gen_random_uuid()`]
+  warehouse_id UUID [not null]
+  name VARCHAR(255) [not null]
+  parent_collection_id UUID
+  created_at TIMESTAMPTZ [default: `NOW()`]
+
+  Indexes {
+    (warehouse_id, name) [unique]
+    parent_collection_id
+  }
+}
+
+Table assets_block_templates {
+  id UUID [pk, default: `gen_random_uuid()`]
+  warehouse_id UUID [not null]
+  collection_id UUID
+  name VARCHAR(255) [not null]
+  description TEXT
+  thumbnail_url TEXT
+  structure_data JSONB [not null]
+  version VARCHAR(20) [default: '1.0.0']
+  created_at TIMESTAMPTZ [default: `NOW()`]
+  updated_at TIMESTAMPTZ [default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (warehouse_id, created_at)
+    collection_id
+  }
+}
+
+Table assets_invader_definitions {
+  id UUID [pk, default: `gen_random_uuid()`]
+  warehouse_id UUID [not null]
+  collection_id UUID
+  code VARCHAR(100) [unique, not null]
+  name VARCHAR(255) [not null]
+  category VARCHAR(50) [not null]
+  config_schema JSONB [not null]
+  compiler_hooks JSONB [not null]
+  version VARCHAR(20) [default: '1.0.0']
+  created_at TIMESTAMPTZ [default: `NOW()`]
+  updated_at TIMESTAMPTZ [default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (warehouse_id, created_at)
+    collection_id
+  }
+}
+
+// 4. CORE ENGINE (RUNTIME)
+
+Table projects {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  name VARCHAR(255) [not null]
+  slug VARCHAR(255) [not null]
+  description TEXT
+  visibility VARCHAR(50) [not null, default: 'PRIVATE']
+  status VARCHAR(50) [not null, default: 'ACTIVE']
+  created_by_id UUID [not null]
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (org_id, slug) [unique, note: "WHERE deleted_at IS NULL"]
+    (org_id, created_at)
+    created_by_id
+  }
+}
+
+Table workspaces {
+  id UUID [pk, default: `gen_random_uuid()`]
+  project_id UUID [not null]
+  name VARCHAR(255) [not null]
+  type VARCHAR(50) [not null]
+  created_by UUID [not null]
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (project_id, created_at)
+    created_by
+  }
+}
+
+Table core_blocks {
+  id UUID [pk, default: `gen_random_uuid()`]
+  workspace_id UUID [not null]
+  parent_block_id UUID
+  origin_asset_id UUID
+  type VARCHAR(50) [not null]
+  name VARCHAR(255) [not null]
+  config JSONB [not null, default: '{}']
+  visual JSONB [not null, default: '{}']
+  created_by_id UUID
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (workspace_id, type) [name: "idx_blocks_filter", note: "WHERE deleted_at IS NULL"]
+    (parent_block_id)
+    (origin_asset_id)
+    (created_by_id)
+  }
+}
+
+Table block_invader_usages {
+  id UUID [pk, default: `gen_random_uuid()`]
+  block_id UUID [not null]
+  invader_asset_id UUID [not null]
+  applied_version VARCHAR(20)
+  config_snapshot JSONB
+  created_at TIMESTAMPTZ [default: `NOW()`]
+
+  Indexes {
+    (block_id, invader_asset_id) [unique]
+    invader_asset_id
+  }
+}
+
+Table core_relations {
+  id UUID [pk, default: `gen_random_uuid()`]
+  workspace_id UUID [not null]
+  source_block_id UUID [not null]
+  target_block_id UUID [not null]
+  type VARCHAR(50) [not null]
+  rules JSONB [not null, default: '{}']
+  visual JSONB [not null, default: '{}']
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    workspace_id
+    (source_block_id, target_block_id) [unique, note: "WHERE deleted_at IS NULL"]
+    target_block_id
+  }
+}
+
+Table core_snapshots {
+  id UUID [pk, default: `gen_random_uuid()`]
+  project_id UUID [not null]
+  name VARCHAR(255) [not null]
+  commit_message TEXT
+  full_state_dump JSONB [not null]
+  created_by_id UUID [not null]
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  
+  Indexes {
+    (project_id, created_at)
+    created_by_id
+  }
+}
+
+// 5. COLLABORATION & OPS
+
+Table comments {
+  id UUID [pk, default: `gen_random_uuid()`]
+  author_id UUID [not null]
+  target_type VARCHAR(50) [not null]
+  target_id UUID [not null]
+  content TEXT [not null]
+  parent_comment_id UUID
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (target_type, target_id, created_at)
+    author_id
+    parent_comment_id
+  }
+}
+
+Table notes {
+  id UUID [pk, default: `gen_random_uuid()`]
+  owner_type VARCHAR(50) [not null]
+  owner_id UUID [not null]
+  title VARCHAR(255)
+  content TEXT
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+
+  Indexes {
+    (owner_type, owner_id)
+  }
+}
+
+Table chat_rooms {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  project_id UUID
+  name VARCHAR(255) [not null]
+  
+  Indexes {
+    org_id
+    project_id
+  }
+}
+
+Table chat_messages {
+  id UUID [pk, default: `gen_random_uuid()`]
+  room_id UUID [not null]
+  sender_id UUID
+  content TEXT [not null]
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  
+  Indexes {
+    (room_id, created_at)
+    sender_id
+  }
+}
+
+Table files {
+  id UUID [pk, default: `gen_random_uuid()`]
+  uploader_id UUID [not null]
+  project_id UUID [not null]
+  file_name VARCHAR(255) [not null]
+  mime_type VARCHAR(100) [not null]
+  file_size BIGINT [not null]
+  storage_path TEXT [not null]
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  deleted_at TIMESTAMPTZ
+  
+  Indexes {
+    (project_id, created_at)
+    uploader_id
+  }
+}
+
+Table file_attachments {
+  id UUID [pk, default: `gen_random_uuid()`]
+  file_id UUID [not null]
+  target_type VARCHAR(50) [not null]
+  target_id UUID [not null]
+
+  Indexes {
+    (file_id, target_type, target_id) [unique]
+    (target_type, target_id)
+  }
+}
+
+Table audit_logs {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  actor_id UUID [not null]
+  action VARCHAR(100) [not null]
+  target_type VARCHAR(50)
+  target_id UUID
+  metadata JSONB
+  ip_address VARCHAR(45)
+  user_agent TEXT
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  
+  Indexes {
+    (org_id, created_at)
+    (target_type, target_id)
+    actor_id
+  }
+}
+
+Table edit_locks {
+  id UUID [pk, default: `gen_random_uuid()`]
+  resource_type VARCHAR(50) [not null]
+  resource_id UUID [not null]
+  locked_by UUID [not null]
+  expires_at TIMESTAMPTZ [not null]
+
+  Indexes {
+    (resource_type, resource_id) [unique]
+    locked_by
+  }
+}
+
+Table feature_flags {
+  id UUID [pk, default: `gen_random_uuid()`]
+  key VARCHAR(100) [unique, not null]
+  description TEXT
+  default_value JSONB [not null]
+}
+
+Table org_feature_overrides {
+  id UUID [pk, default: `gen_random_uuid()`]
+  org_id UUID [not null]
+  feature_flag_id UUID [not null]
+  value JSONB [not null]
+
+  Indexes {
+    (org_id, feature_flag_id) [unique]
+    feature_flag_id
+  }
+}
+
+// RELATIONS
+
+Ref: users.id < user_security.user_id [delete: cascade]
+Ref: users.id < user_mfa_backup_codes.user_id [delete: cascade]
+Ref: users.id < user_sessions.user_id [delete: cascade]
+Ref: users.id < social_identities.user_id [delete: cascade]
+
+Ref: organizations.id < roles.org_id [delete: cascade]
+Ref: organizations.id < org_members.org_id [delete: cascade]
+Ref: users.id < org_members.user_id [delete: cascade]
+Ref: roles.id < org_members.role_id
+Ref: users.id < org_members.invited_by
+
+Ref: organizations.id < invitations.org_id [delete: cascade]
+Ref: roles.id < invitations.role_id
+Ref: users.id < invitations.invited_by_id
+
+Ref: organizations.id < subscriptions.org_id [delete: cascade]
+Ref: organizations.id < org_usage_metrics.org_id [delete: cascade]
+Ref: users.id < api_keys.user_id [delete: cascade]
+Ref: organizations.id < api_keys.org_id [delete: cascade]
+
+Ref: warehouses.id < asset_collections.warehouse_id [delete: cascade]
+Ref: asset_collections.id < asset_collections.parent_collection_id
+Ref: warehouses.id < assets_block_templates.warehouse_id [delete: cascade]
+Ref: asset_collections.id < assets_block_templates.collection_id [delete: set null]
+Ref: warehouses.id < assets_invader_definitions.warehouse_id [delete: cascade]
+Ref: asset_collections.id < assets_invader_definitions.collection_id [delete: set null]
+
+Ref: organizations.id < projects.org_id [delete: cascade]
+Ref: users.id < projects.created_by_id
+Ref: projects.id < workspaces.project_id [delete: cascade]
+Ref: users.id < workspaces.created_by
+
+Ref: workspaces.id < core_blocks.workspace_id [delete: cascade]
+Ref: core_blocks.id < core_blocks.parent_block_id [delete: cascade]
+Ref: assets_block_templates.id < core_blocks.origin_asset_id [delete: set null]
+Ref: users.id < core_blocks.created_by_id
+
+Ref: core_blocks.id < block_invader_usages.block_id [delete: cascade]
+Ref: assets_invader_definitions.id < block_invader_usages.invader_asset_id [delete: cascade]
+
+Ref: workspaces.id < core_relations.workspace_id [delete: cascade]
+Ref: core_blocks.id < core_relations.source_block_id [delete: cascade]
+Ref: core_blocks.id < core_relations.target_block_id [delete: cascade]
+
+Ref: projects.id < core_snapshots.project_id [delete: cascade]
+Ref: users.id < core_snapshots.created_by_id
+
+Ref: users.id < comments.author_id
+Ref: comments.id < comments.parent_comment_id
+
+Ref: organizations.id < chat_rooms.org_id
+Ref: projects.id < chat_rooms.project_id
+Ref: chat_rooms.id < chat_messages.room_id
+Ref: users.id < chat_messages.sender_id [delete: set null]
+
+Ref: users.id < files.uploader_id
+Ref: projects.id < files.project_id
+Ref: files.id < file_attachments.file_id
+
+Ref: organizations.id < audit_logs.org_id
+Ref: users.id < audit_logs.actor_id
+
+Ref: users.id < edit_locks.locked_by
+
+Ref: organizations.id < org_feature_overrides.org_id [delete: cascade]
+Ref: feature_flags.id < org_feature_overrides.feature_flag_id [delete: cascade]
+
+
+
+

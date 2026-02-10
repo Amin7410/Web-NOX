@@ -1,0 +1,19 @@
+{
+    "name": "@nox/ui",
+    "version": "0.0.0",
+    "main": "./src/index.tsx",
+    "types": "./src/index.tsx",
+    "dependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    },
+    "peerDependencies": {
+        "react": "*",
+        "react-dom": "*"
+    },
+    "devDependencies": {
+        "@nox/tsconfig": "workspace:*",
+        "typescript": "^5.2.2"
+    },
+    "packageManager": "pnpm@9.0.0"
+}
