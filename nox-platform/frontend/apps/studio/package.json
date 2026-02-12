@@ -20,7 +20,11 @@
         "@vitejs/plugin-react": "^4.2.1",
         "typescript": "^5.2.2",
         "vite": "^5.0.8",
-        "@nox/tsconfig": "workspace:*"
+        "@nox/tsconfig": "workspace:*",
+        "@nox/tailwind-config": "workspace:*",
+        "tailwindcss": "^3.4.1",
+        "postcss": "^8.4.35",
+        "autoprefixer": "^10.4.17"
     },
     "packageManager": "pnpm@9.0.0"
 }

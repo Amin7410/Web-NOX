@@ -1,0 +1,14 @@
+{
+    "name": "@nox/tailwind-config",
+    "version": "0.0.0",
+    "private": true,
+    "exports": {
+        ".": "./tailwind.config.js"
+    },
+    "peerDependencies": {
+        "tailwindcss": "^3.4.1"
+    },
+    "devDependencies": {
+        "tailwindcss": "^3.4.1"
+    }
+}

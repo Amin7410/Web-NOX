@@ -41,7 +41,8 @@ Start the compiled backend:
 cd backend
 ./gradlew.bat bootRun
 ```
-*API Docs: http://localhost:8081/swagger-ui.html (if enabled) or http://localhost:8081/api/health*
+
+*API Docs: http://localhost:8081/swagger-ui.html or http://localhost:8081/api/health*
 
 ### 4. Frontend
 Install dependencies and start the monorepo from the root:
