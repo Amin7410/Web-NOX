@@ -23,7 +23,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U nox -d nox_core"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -40,7 +40,12 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
         env:
-          DB_PASSWORD: nox_secret
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/nox_core
+          SPRING_DATASOURCE_USERNAME: nox
+          SPRING_DATASOURCE_PASSWORD: nox_secret
+          SPRING_FLYWAY_URL: jdbc:postgresql://localhost:5432/nox_core
+          SPRING_FLYWAY_USER: nox
+          SPRING_FLYWAY_PASSWORD: nox_secret
 
   frontend:
     runs-on: ubuntu-latest
