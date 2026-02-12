@@ -1,31 +1,48 @@
-name: Java CI with Gradle
+name: CI
 
 on:
     push:
-        branches: ["main", "master"]
+        branches: ["main"]
     pull_request:
-        branches: ["main", "master"]
-
-permissions:
-    contents: read
+        branches: ["main"]
 
 jobs:
-    build:
+    backend:
         runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./nox-platform/backend
+
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: nox
+                    POSTGRES_PASSWORD: nox_secret
+                    POSTGRES_DB: nox_core
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U nox -d nox_core"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
 
         steps:
             - uses: actions/checkout@v4
-
             - name: Set up JDK 21
               uses: actions/setup-java@v4
               with:
                   java-version: "21"
                   distribution: "temurin"
-
-            - name: Grant execute permission for gradlew
-              run: chmod +x gradlew
-              working-directory: ./nox-platform/backend
-
+            - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v3
             - name: Build with Gradle
               run: ./gradlew build
-              working-directory: ./nox-platform/backend
+              env:
+                  SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/nox_core
+                  SPRING_DATASOURCE_USERNAME: nox
+                  SPRING_DATASOURCE_PASSWORD: nox_secret
+                  SPRING_FLYWAY_URL: jdbc:postgresql://localhost:5432/nox_core
+                  SPRING_FLYWAY_USER: nox
+                  SPRING_FLYWAY_PASSWORD: nox_secret
