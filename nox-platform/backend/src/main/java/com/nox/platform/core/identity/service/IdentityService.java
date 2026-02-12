@@ -15,6 +15,7 @@ public class IdentityService {
 
     private final UserRepository userRepository;
     private final UserSecurityRepository userSecurityRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Transactional
     public User registerUser(UserRegistrationRequest request) {
@@ -27,10 +28,9 @@ public class IdentityService {
 
         user = userRepository.save(user);
 
-        // 2. Create UserSecurity (Plain text password for smoke test)
         UserSecurity userSecurity = UserSecurity.builder()
                 .user(user)
-                .passwordHash(request.getPassword()) // TODO: Hash this!
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .passwordSet(true)
                 .build();
 

@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/nox_core
     username: nox
-    password: nox_secret
+    password: ${DB_PASSWORD:nox_secret}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -21,3 +21,6 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B2D5051535546566D59}
