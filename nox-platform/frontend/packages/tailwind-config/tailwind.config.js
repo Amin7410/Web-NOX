@@ -26,6 +26,17 @@ module.exports = {
                     DEFAULT: '#ffc107',
                     foreground: '#212529',
                 },
+                // Added for Nox Design System
+                border: '#27272a', // zinc-800
+                input: '#27272a',
+                ring: '#3b82f6', // blue-500
+                background: '#09090b', // zinc-950
+                surface: '#09090b', // zinc-950 (user requested nox-surface)
+                foreground: '#fafafa', // zinc-50
+            },
+            fontFamily: {
+                sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
             },
         },
     },

@@ -32,12 +32,14 @@ NOX Platform is a system for building "Digital Blueprints" for software, support
 ### 2. Infrastructure
 Start the database (PostgreSQL):
 ```bash
+cd nox-platform
 docker-compose -f docker/docker-compose.yml up -d
 ```
 
 ### 3. Backend
 Start the compiled backend:
 ```bash
+cd nox-platform
 cd backend
 ./gradlew.bat bootRun
 ```
