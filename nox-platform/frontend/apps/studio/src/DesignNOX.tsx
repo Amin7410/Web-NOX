@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Button, Input, NoxBlock, NoxRelation, NoxRouter } from '@nox/ui';
+
 import ReactFlow, {
     ReactFlowProvider,
     useNodesState,
@@ -10,10 +10,13 @@ import ReactFlow, {
     Edge,
     useReactFlow,
     Panel,
+    MiniMap, addEdge, Connection, Handle, Position, MarkerType
 } from 'reactflow';
-import { ChevronRight, Home, Zap, ScanFace, MousePointer2, CircleDot } from 'lucide-react';
+import { Zap, Monitor, Layers, MousePointer2, Share2, Home, ChevronRight, CircleDot } from 'lucide-react';
 import 'reactflow/dist/style.css';
 import { Sidebar } from './components/Sidebar';
+import { Button, Input, NoxRouter, NoxRelation, NoxBlock } from '@nox/ui';
+import { FamilyTreeOverlay } from './FamilyTreeOverlay';
 
 // --- Types & Config ---
 const nodeTypes = {
@@ -88,7 +91,7 @@ const generateMockHierarchy = () => {
         const count = 3;
 
         for (let i = 0; i < count; i++) {
-            const blockId = `${viewId}_child_${i}`;
+            const blockId = `${viewId}_child_${i} `;
             const role = ROLES[i % ROLES.length];
 
             nodes.push({
@@ -96,7 +99,7 @@ const generateMockHierarchy = () => {
                 type: 'noxBlock',
                 data: {
                     id: blockId,
-                    label: `${role.label} L${currentDepth}`,
+                    label: `${role.label} L${currentDepth} `,
                     visual: { variant: role.variant, icon: role.icon, color: role.color },
                     status: { state: 'running' },
                     logic: '// Processing...'
@@ -150,7 +153,7 @@ const EdgeContextMenu = ({
                     <button
                         key={state}
                         onClick={() => onChange(edge.id, { ...data, state })}
-                        className={`py-1 text-[9px] rounded uppercase font-medium transition-colors ${data.state === state ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'}`}
+                        className={`py - 1 text - [9px] rounded uppercase font - medium transition - colors ${data.state === state ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'} `}
                         title={state}
                     >
                         {state}
@@ -164,7 +167,7 @@ const EdgeContextMenu = ({
                     <button
                         key={shape}
                         onClick={() => onChange(edge.id, { ...data, shape })}
-                        className={`py-1 text-[9px] rounded uppercase font-medium transition-colors ${data.shape === shape ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'}`}
+                        className={`py - 1 text - [9px] rounded uppercase font - medium transition - colors ${data.shape === shape ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'} `}
                         title={shape}
                     >
                         {shape.substring(0, 4)}..
@@ -176,9 +179,9 @@ const EdgeContextMenu = ({
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between gap-2">
                 <button
                     onClick={() => onChange(edge.id, { ...data, animating: !data.animating })}
-                    className={`flex-1 py-1.5 text-[10px] rounded font-medium flex items-center justify-center gap-1.5 ${data.animating ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                    className={`flex - 1 py - 1.5 text - [10px] rounded font - medium flex items - center justify - center gap - 1.5 ${data.animating ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'} `}
                 >
-                    <div className={`w-1.5 h-1.5 rounded-full ${data.animating ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
+                    <div className={`w - 1.5 h - 1.5 rounded - full ${data.animating ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'} `} />
                     Flow
                 </button>
                 <button
@@ -202,7 +205,8 @@ const DesignCanvas = () => {
     const [path, setPath] = useState<{ id: string, label: string }[]>([{ id: 'root', label: 'ROOT' }]);
 
     const [nodes, setNodes, onNodesChange] = useNodesState(MOCK_DATA['root'].nodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]); // Initially empty edges
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [showFamilyTree, setShowFamilyTree] = useState(false); // Structural View State // Initially empty edges
 
     // Interaction State
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -315,7 +319,7 @@ const DesignCanvas = () => {
             // Allow Self-Loops (previously blocked)
             // Create Connection
             const newEdge: Edge = {
-                id: `e-${sourceNodeId}-${node.id}-${Date.now()}`,
+                id: `e - ${sourceNodeId} -${node.id} -${Date.now()} `,
                 source: sourceNodeId,
                 target: node.id,
                 type: 'noxRelation',
@@ -380,7 +384,7 @@ const DesignCanvas = () => {
                         {index > 0 && <ChevronRight size={14} className="text-zinc-600" />}
                         <button
                             onClick={() => navigateTo(item.id, index)}
-                            className={`flex items-center gap-2 hover:text-white transition-colors ${index === path.length - 1 ? 'text-white font-semibold' : 'text-zinc-500'}`}
+                            className={`flex items - center gap - 2 hover: text - white transition - colors ${index === path.length - 1 ? 'text-white font-semibold' : 'text-zinc-500'} `}
                         >
                             {item.id === 'root' && <Home size={14} />}
                             <span className="uppercase tracking-wider text-xs">{item.label}</span>
@@ -389,7 +393,27 @@ const DesignCanvas = () => {
                 ))}
             </div>
 
-            <div className="flex flex-grow overflow-hidden">
+            {/* Family Tree Toggle (Top Right) */}
+            <div className="absolute top-14 right-4 z-[60]">
+                <button
+                    onClick={() => setShowFamilyTree(!showFamilyTree)}
+                    className={`
+                        flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all
+                        ${showFamilyTree
+                            ? 'bg-blue-500/20 text-blue-400 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                            : 'bg-zinc-900/80 text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
+                        }
+                    `}
+                >
+                    <Share2 size={14} className={showFamilyTree ? 'animate-pulse' : ''} />
+                    {showFamilyTree ? 'Close S-View' : 'Structural View'}
+                </button>
+            </div>
+
+            {/* Structural View Overlay */}
+            <FamilyTreeOverlay isOpen={showFamilyTree} onClose={() => setShowFamilyTree(false)} />
+
+            <div className={`flex flex-grow overflow-hidden transition-all duration-500 ${showFamilyTree ? 'blur-sm scale-95 opacity-30 grayscale' : ''}`}>
                 <Sidebar />
 
                 <div className="flex-grow h-full relative" ref={reactFlowWrapper}>
@@ -449,10 +473,10 @@ const DesignCanvas = () => {
                             <div className="w-px h-6 bg-zinc-700" />
 
                             <button
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${isConnecting
+                                className={`flex items - center gap - 2 px - 3 py - 1.5 rounded - full text - xs font - bold transition - all ${isConnecting
                                     ? 'bg-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]'
                                     : 'bg-transparent text-zinc-400 hover:text-white hover:bg-zinc-800'
-                                    }`}
+                                    } `}
                                 onClick={() => {
                                     if (isConnecting) {
                                         setSourceNodeId(null);
