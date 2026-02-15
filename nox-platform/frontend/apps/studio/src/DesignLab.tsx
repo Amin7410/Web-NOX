@@ -1,25 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Button, Input, NoxBlock } from '@nox/ui';
-import ReactFlow, {
-    ReactFlowProvider,
-    useNodesState,
-    Controls,
-    Background,
-    Node,
-} from 'reactflow';
-import { ChevronRight, Home } from 'lucide-react';
-import 'reactflow/dist/style.css';
+import React, { useState } from 'react';
+import { Button, Input } from '@nox/ui';
 import { Sidebar } from './components/Sidebar';
 
-const nodeTypes = {
-    noxBlock: NoxBlock,
-};
-
-let id = 0;
-const getId = () => `dndnode_${id++}`;
-
 export function DesignLab() {
-    const [component, setComponent] = useState<'button' | 'input' | 'typography' | 'interaction'>('button');
+    const [component, setComponent] = useState<'button' | 'input' | 'typography'>('button');
 
     return (
         <div className="min-h-screen bg-[#09090B] text-white p-8 font-sans selection:bg-blue-500/30">
@@ -41,6 +25,7 @@ export function DesignLab() {
                     </div>
 
                     <div className="flex gap-2">
+
                         <button
                             onClick={() => setComponent('button')}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${component === 'button'
@@ -68,233 +53,14 @@ export function DesignLab() {
                         >
                             Typography
                         </button>
-                        <button
-                            onClick={() => setComponent('interaction')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${component === 'interaction'
-                                ? 'bg-white/10 text-white'
-                                : 'text-white/40 hover:text-white'
-                                }`}
-                        >
-                            Interaction
-                        </button>
                     </div>
                 </header>
 
-                <main className={component === 'interaction' ? 'h-[calc(100vh-8rem)]' : ''}>
+                <main>
                     {component === 'button' && <ButtonShowcase />}
                     {component === 'input' && <InputShowcase />}
                     {component === 'typography' && <TypographyShowcase />}
-                    {component === 'interaction' && (
-                        <div className="h-full border border-white/10 rounded-xl overflow-hidden flex bg-[#09090B]">
-                            <ReactFlowProvider>
-                                <InteractionLab />
-                            </ReactFlowProvider>
-                        </div>
-                    )}
                 </main>
-            </div>
-        </div>
-    );
-}
-
-// --- MOCK DATA FOR NESTED NAVIGATION ---
-// --- RECURSIVE MOCK DATA GENERATION (10 LEVELS) ---
-const MAX_DEPTH = 10;
-
-/**
- * Generates a mock hierarchy with SEMANTIC, REALISTIC data.
- */
-const generateMockHierarchy = () => {
-    const hierarchy: Record<string, { nodes: Node[] }> = {};
-
-    // Definition of "Roles" for different levels to make it look real
-    const ROLES = {
-        LEVEL_1: [
-            { label: 'E-Commerce Platform', type: 'system', variant: 'default', icon: 'box', color: 'blue' },
-            { label: 'Analytics Engine', type: 'system', variant: 'sleek', icon: 'activity', color: 'purple' },
-            { label: 'Legacy Inventory', type: 'system', variant: 'rugged', icon: 'server', color: 'amber' },
-        ],
-        LEVEL_2: [
-            { label: 'Auth Service', type: 'service', variant: 'default', icon: 'server', color: 'blue' },
-            { label: 'Payment Gateway', type: 'service', variant: 'default', icon: 'server', color: 'green' },
-            { label: 'User Database', type: 'db', variant: 'rugged', icon: 'database', color: 'indigo' },
-            { label: 'Redis Cache', type: 'db', variant: 'rugged', icon: 'database', color: 'red' },
-            { label: 'Recommendation AI', type: 'ai', variant: 'sleek', icon: 'cpu', color: 'purple' },
-        ],
-        LEVEL_3: [
-            { label: 'API Handler', type: 'worker', variant: 'default', icon: 'settings', color: 'blue' },
-            { label: 'Background Worker', type: 'worker', variant: 'rugged', icon: 'settings', color: 'zinc' },
-            { label: 'Event Bus', type: 'infra', variant: 'sleek', icon: 'activity', color: 'orange' },
-        ],
-    };
-
-    const getRole = (depth: number, index: number) => {
-        if (depth === 1) return ROLES.LEVEL_1[index % ROLES.LEVEL_1.length];
-        if (depth === 2) return ROLES.LEVEL_2[index % ROLES.LEVEL_2.length];
-        return ROLES.LEVEL_3[index % ROLES.LEVEL_3.length];
-    };
-
-    // Helper to generate blocks for a specific parent view
-    const generateLevel = (viewId: string, currentDepth: number) => {
-        if (currentDepth > MAX_DEPTH) return;
-
-        const nodes: Node[] = [];
-        const count = currentDepth === 1 ? 3 : 4; // 3 Root nodes, 4 children each
-
-        for (let i = 0; i < count; i++) {
-            const blockId = `${viewId}-child-${i}`;
-            const role = getRole(currentDepth, i);
-
-            // Add some randomness to status
-            // 10% chance error, 20% chance stopped
-            // Use random seed based on ID hash to be deterministic if possible, but Math.random() is fine for mock
-            const isError = Math.random() > 0.9;
-            const isStopped = Math.random() > 0.8;
-
-            const status = {
-                state: (isError ? 'error' : (isStopped ? 'stopped' : 'running')) as any,
-                message: isError ? 'CONNECTION ERR' : (isStopped ? 'HALTED' : undefined),
-                lastActive: Date.now() - Math.floor(Math.random() * 100000),
-            };
-
-            // Custom "Sleek" variants for AI nodes
-            const visual = {
-                variant: role.variant as any,
-                icon: role.icon,
-                color: role.color,
-            };
-
-            // Create the node
-            nodes.push({
-                id: blockId,
-                type: 'noxBlock',
-                data: {
-                    label: role.label,
-                    id: blockId,
-                    visual,
-                    status
-                },
-                position: { x: 50 + (i * 340), y: 100 + (i % 2 * 50) } // Staggered layout
-            });
-
-            // Recursively generate the INTERNAL view for this block
-            generateLevel(blockId, currentDepth + 1);
-        }
-
-        hierarchy[viewId] = { nodes };
-    };
-
-    generateLevel('root', 1);
-    return hierarchy;
-};
-
-const MOCK_DATA = generateMockHierarchy();
-
-
-function InteractionLab() {
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-
-    // Navigation State
-    const [_currentViewId, setCurrentViewId] = useState<string>('root');
-    const [path, setPath] = useState<{ id: string, label: string }[]>([{ id: 'root', label: 'Main Workspace' }]);
-
-    const [nodes, setNodes, onNodesChange] = useNodesState(MOCK_DATA['root'].nodes);
-
-    // Handle Double Click to Enter Nested View
-    const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
-        if (node.type === 'noxBlock' && MOCK_DATA[node.id]) {
-            const viewId = node.id;
-            setCurrentViewId(viewId);
-            setPath((prev) => [...prev, { id: viewId, label: node.data.label || viewId }]);
-
-            // Load mocked data for this view
-            setNodes(MOCK_DATA[viewId].nodes);
-        }
-    }, [setNodes]);
-
-    // Navigate back using Breadcrumbs
-    const navigateTo = (viewId: string, index: number) => {
-        setCurrentViewId(viewId);
-        setPath((prev) => prev.slice(0, index + 1));
-
-        const data = MOCK_DATA[viewId] || { nodes: [] };
-        setNodes(data.nodes);
-    };
-
-    const onDragOver = useCallback((event: React.DragEvent) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-    }, []);
-
-    const onDrop = useCallback(
-        (event: React.DragEvent) => {
-            event.preventDefault();
-
-            const type = event.dataTransfer.getData('application/reactflow');
-            if (typeof type === 'undefined' || !type) {
-                return;
-            }
-
-            const position = reactFlowInstance.screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
-            });
-
-            const newNode: Node = {
-                id: getId(),
-                type: type === 'noxBlock' ? 'noxBlock' : type, // Handle sidebar drop types if needed
-                position,
-                data: {
-                    label: `${type} node`,
-                    description: 'New node.',
-                    status: { state: 'running' },
-                    visual: { variant: 'default', icon: 'box', color: 'blue' }
-                },
-            };
-
-            setNodes((nds) => nds.concat(newNode));
-        },
-        [reactFlowInstance, setNodes]
-    );
-
-    return (
-        <div className="flex flex-col h-full w-full">
-            {/* Breadcrumb Navigation */}
-            <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-2 text-sm">
-                {path.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                        {index > 0 && <ChevronRight size={14} className="text-zinc-600" />}
-                        <button
-                            onClick={() => navigateTo(item.id, index)}
-                            className={`flex items-center gap-2 hover:text-white transition-colors ${index === path.length - 1 ? 'text-white font-semibold' : 'text-zinc-500'}`}
-                        >
-                            {item.id === 'root' && <Home size={14} />}
-                            {item.label}
-                        </button>
-                    </React.Fragment>
-                ))}
-            </div>
-
-            <div className="dndflow flex w-full flex-grow relative">
-                <Sidebar />
-                <div className="reactflow-wrapper flex-grow h-full relative" ref={reactFlowWrapper}>
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={[]}
-                        onNodesChange={onNodesChange}
-                        onInit={setReactFlowInstance}
-                        onDrop={onDrop}
-                        onDragOver={onDragOver}
-                        onNodeDoubleClick={onNodeDoubleClick}
-                        nodeTypes={nodeTypes}
-                        proOptions={{ hideAttribution: true }}
-                        fitView
-                    >
-                        <Background color="#222" gap={20} size={1} />
-                        <Controls className="!bg-zinc-800 !border-zinc-700 [&>button]:!fill-zinc-400 [&>button:hover]:!bg-zinc-700" />
-                    </ReactFlow>
-                </div>
             </div>
         </div>
     );
