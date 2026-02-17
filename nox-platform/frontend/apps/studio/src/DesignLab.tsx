@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Button, Input } from '@nox/ui';
 import { Sidebar } from './components/Sidebar';
+import { DesignInvader } from './DesignInvader';
 
 export function DesignLab() {
-    const [component, setComponent] = useState<'button' | 'input' | 'typography'>('button');
+    const [component, setComponent] = useState<'button' | 'input' | 'typography' | 'invader'>('button');
 
     return (
         <div className="min-h-screen bg-[#09090B] text-white p-8 font-sans selection:bg-blue-500/30">
@@ -53,6 +54,18 @@ export function DesignLab() {
                         >
                             Typography
                         </button>
+                        <button
+                            onClick={() => setComponent('invader')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${component === 'invader'
+                                ? 'bg-white/10 text-white'
+                                : 'text-white/40 hover:text-white'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <span>Invader System</span>
+                                <span className="px-1.5 py-0.5 bg-gradient-to-r from-red-500 to-blue-500 rounded text-[9px] font-bold text-white">NEW</span>
+                            </span>
+                        </button>
                     </div>
                 </header>
 
@@ -60,6 +73,7 @@ export function DesignLab() {
                     {component === 'button' && <ButtonShowcase />}
                     {component === 'input' && <InputShowcase />}
                     {component === 'typography' && <TypographyShowcase />}
+                    {component === 'invader' && <DesignInvader />}
                 </main>
             </div>
         </div>
