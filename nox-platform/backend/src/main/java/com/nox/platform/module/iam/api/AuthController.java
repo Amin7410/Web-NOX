@@ -135,7 +135,7 @@ public class AuthController {
     @PostMapping("/mfa/enable")
     public ResponseEntity<ApiResponse<Map<String, List<String>>>> enableMfa(
             @Valid @RequestBody MfaEnableRequest request) {
-        List<String> backupCodes = authService.enableMfa(request.email(), request.secret(), request.code());
+        List<String> backupCodes = authService.enableMfa(request.email(), request.code());
         return ResponseEntity.ok(ApiResponse.ok(
                 Map.of("backupCodes", backupCodes)));
     }
@@ -222,7 +222,6 @@ public class AuthController {
 
     public record MfaEnableRequest(
             @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email String email,
-            @jakarta.validation.constraints.NotBlank(message = "Secret is required") String secret,
             @jakarta.validation.constraints.NotNull(message = "Code is required") Integer code) {
     }
 

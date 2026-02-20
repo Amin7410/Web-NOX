@@ -63,6 +63,9 @@ public class UserSecurity {
     @Column(name = "mfa_secret", columnDefinition = "TEXT")
     private String mfaSecret;
 
+    @Column(name = "temp_mfa_secret", columnDefinition = "TEXT")
+    private String tempMfaSecret;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;

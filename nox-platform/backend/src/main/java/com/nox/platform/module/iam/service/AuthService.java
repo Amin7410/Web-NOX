@@ -262,21 +262,30 @@ public class AuthService {
         }
 
         String secret = mfaService.generateSecretKey();
+        user.getSecurity().setTempMfaSecret(secret);
+        userRepository.save(user);
+
         String qrCodeUri = mfaService.getQrCodeUri(secret, user.getEmail());
         return new MfaSetupResult(secret, qrCodeUri);
     }
 
     @Transactional
-    public List<String> enableMfa(String email, String secret, int code) {
+    public List<String> enableMfa(String email, int code) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
-        if (!mfaService.verifyCode(secret, code)) {
+        String tempSecret = user.getSecurity().getTempMfaSecret();
+        if (tempSecret == null) {
+            throw new DomainException("MFA_SETUP_REQUIRED", "MFA setup was not initiated", 400);
+        }
+
+        if (!mfaService.verifyCode(tempSecret, code)) {
             throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Verification failed.", 400);
         }
 
         user.getSecurity().setMfaEnabled(true);
-        user.getSecurity().setMfaSecret(secret);
+        user.getSecurity().setMfaSecret(tempSecret);
+        user.getSecurity().setTempMfaSecret(null);
         userRepository.save(user);
 
         List<String> plainBackupCodes = new ArrayList<>();
