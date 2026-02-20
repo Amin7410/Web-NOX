@@ -153,4 +153,47 @@ class AuthControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.success").value(true));
         }
+
+        @Test
+        void verifyEmail_returns200() throws Exception {
+                AuthController.VerifyEmailRequest request = new AuthController.VerifyEmailRequest("test@nox.com",
+                                "123456");
+
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.success").value(true));
+        }
+
+        @Test
+        void setupMfa_returnsSecretAndUri() throws Exception {
+                when(authService.setupMfa(any())).thenReturn(new AuthService.MfaSetupResult("secret123", "uri123"));
+
+                AuthController.MfaSetupRequest request = new AuthController.MfaSetupRequest("test@nox.com");
+
+                mockMvc.perform(post("/api/v1/auth/mfa/setup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.success").value(true))
+                                .andExpect(jsonPath("$.data.secret").value("secret123"))
+                                .andExpect(jsonPath("$.data.qrCodeUri").value("uri123"));
+        }
+
+        @Test
+        void changePassword_returns200() throws Exception {
+                AuthController.ChangePasswordRequest request = new AuthController.ChangePasswordRequest("old123",
+                                "new123");
+
+                java.security.Principal mockPrincipal = org.mockito.Mockito.mock(java.security.Principal.class);
+                when(mockPrincipal.getName()).thenReturn("test@nox.com");
+
+                mockMvc.perform(post("/api/v1/auth/change-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .principal(mockPrincipal)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.success").value(true));
+        }
 }

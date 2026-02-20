@@ -22,6 +22,7 @@ import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.domain.OtpCode;
+import com.nox.platform.module.iam.domain.UserMfaBackupCode;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.time.OffsetDateTime;
@@ -331,5 +332,69 @@ class AuthServiceTest {
         assertEquals("encoded_new_password", setupUser.getSecurity().getPasswordHash());
         assertTrue(setupUser.getSecurity().isPasswordSet());
         verify(userRepository).save(setupUser);
+        verify(userSessionRepository).revokeAllUserSessions(setupUser.getId(), "Password Reset");
+    }
+
+    @Test
+    void setupMfa_whenValid_returnsSecretAndUri() {
+        when(userRepository.findByEmail(setupUser.getEmail())).thenReturn(Optional.of(setupUser));
+        when(mfaService.generateSecretKey()).thenReturn("new-mfa-secret");
+        when(mfaService.getQrCodeUri("new-mfa-secret", "test@nox.com")).thenReturn("otpauth://totp/...");
+
+        var result = authService.setupMfa(setupUser.getEmail());
+
+        assertEquals("new-mfa-secret", result.secret());
+        assertEquals("otpauth://totp/...", result.qrCodeUri());
+        assertEquals("new-mfa-secret", setupUser.getSecurity().getTempMfaSecret());
+        verify(userRepository).save(setupUser);
+    }
+
+    @Test
+    void enableMfa_whenValidCode_enablesMfaAndGeneratesBackupCodes() {
+        setupUser.getSecurity().setTempMfaSecret("temp-secret");
+        when(userRepository.findByEmail(setupUser.getEmail())).thenReturn(Optional.of(setupUser));
+        when(mfaService.verifyCode("temp-secret", 123456)).thenReturn(true);
+
+        var result = authService.enableMfa(setupUser.getEmail(), 123456);
+
+        assertTrue(setupUser.getSecurity().isMfaEnabled());
+        assertEquals("temp-secret", setupUser.getSecurity().getMfaSecret());
+        assertNull(setupUser.getSecurity().getTempMfaSecret());
+        assertEquals(10, result.size());
+        verify(userRepository).save(setupUser);
+        verify(userMfaBackupCodeRepository, times(10)).save(any(UserMfaBackupCode.class));
+    }
+
+    @Test
+    void verifyMfa_whenValidTokenAndCode_returnsJwt() {
+        when(jwtService.extractUsername("mfa-token")).thenReturn("test@nox.com");
+        when(jwtService.extractClaim(eq("mfa-token"), any())).thenReturn(true);
+        setupUser.getSecurity().setMfaEnabled(true);
+        setupUser.getSecurity().setMfaSecret("mfa-secret");
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
+        when(mfaService.verifyCode("mfa-secret", 123456)).thenReturn(true);
+        when(jwtService.generateToken("test@nox.com")).thenReturn("real-jwt");
+        when(jwtService.generateRefreshToken()).thenReturn("real-refresh");
+
+        var result = authService.verifyMfa("mfa-token", 123456, "127.0.0.1", "Agent");
+
+        assertEquals("real-jwt", result.token());
+        assertEquals("real-refresh", result.refreshToken());
+        assertFalse(result.mfaRequired());
+        verify(userSessionRepository).save(any(UserSession.class));
+    }
+
+    @Test
+    void changePassword_whenValid_updatesPasswordAndRevokesSessions() {
+        when(userRepository.findByEmail(setupUser.getEmail())).thenReturn(Optional.of(setupUser));
+        when(passwordEncoder.matches("oldPass", "hashed")).thenReturn(true);
+        when(passwordEncoder.encode("newPass123!")).thenReturn("newHashed");
+
+        authService.changePassword(setupUser.getEmail(), "oldPass", "newPass123!");
+
+        assertEquals("newHashed", setupUser.getSecurity().getPasswordHash());
+        assertNotNull(setupUser.getSecurity().getLastPasswordChange());
+        verify(userRepository).save(setupUser);
+        verify(userSessionRepository).revokeAllUserSessions(setupUser.getId(), "Password Changed");
     }
 }
