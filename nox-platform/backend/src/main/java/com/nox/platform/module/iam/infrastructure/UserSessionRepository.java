@@ -19,6 +19,6 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
     Page<UserSession> findByUserId(UUID userId, Pageable pageable);
 
     @Modifying
-    @Query("UPDATE UserSession s SET s.revokedAt = CURRENT_TIMESTAMP, s.revokedReason = :reason WHERE s.user.id = :userId AND s.revokedAt IS NULL AND s.expiresAt > CURRENT_TIMESTAMP")
+    @Query("UPDATE UserSession s SET s.revokedAt = CURRENT_TIMESTAMP, s.revokeReason = :reason WHERE s.user.id = :userId AND s.revokedAt IS NULL AND s.expiresAt > CURRENT_TIMESTAMP")
     void revokeAllUserSessions(@Param("userId") UUID userId, @Param("reason") String reason);
 }
