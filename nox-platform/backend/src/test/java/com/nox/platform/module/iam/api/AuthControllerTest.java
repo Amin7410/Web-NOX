@@ -111,7 +111,8 @@ class AuthControllerTest {
         @Test
         void refreshToken_withValidToken_returnsNewToken() throws Exception {
                 when(authService.refreshAccessToken(eq("valid-refresh-token"), any(), any()))
-                                .thenReturn(new AuthService.AuthResult(null, "new-jwt-token", "valid-refresh-token"));
+                                .thenReturn(new AuthService.AuthResult(null, "new-jwt-token", "valid-refresh-token",
+                                                false, null));
 
                 AuthController.RefreshTokenRequest request = new AuthController.RefreshTokenRequest(
                                 "valid-refresh-token");

@@ -46,12 +46,20 @@ public class AuthController {
                 userAgent);
         User user = result.user();
 
+        if (result.mfaRequired()) {
+            return ResponseEntity.ok(ApiResponse.ok(
+                    Map.of(
+                            "mfaRequired", "true",
+                            "mfaToken", result.mfaToken())));
+        }
+
         return ResponseEntity.ok(ApiResponse.ok(
                 Map.of(
                         "id", user.getId().toString(),
                         "email", user.getEmail(),
                         "token", result.token(),
-                        "refreshToken", result.refreshToken())));
+                        "refreshToken", result.refreshToken(),
+                        "mfaRequired", "false")));
     }
 
     @PostMapping("/refresh")
@@ -104,6 +112,38 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PostMapping("/mfa/setup")
+    public ResponseEntity<ApiResponse<Map<String, String>>> setupMfa(@Valid @RequestBody MfaSetupRequest request) {
+        AuthService.MfaSetupResult result = authService.setupMfa(request.email());
+        return ResponseEntity.ok(ApiResponse.ok(
+                Map.of(
+                        "secret", result.secret(),
+                        "qrCodeUri", result.qrCodeUri())));
+    }
+
+    @PostMapping("/mfa/enable")
+    public ResponseEntity<ApiResponse<Void>> enableMfa(@Valid @RequestBody MfaEnableRequest request) {
+        authService.enableMfa(request.email(), request.secret(), request.code());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @PostMapping("/mfa/verify")
+    public ResponseEntity<ApiResponse<Map<String, String>>> verifyMfa(
+            @Valid @RequestBody MfaVerifyRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        AuthService.AuthResult result = authService.verifyMfa(request.mfaToken(), request.code(), ipAddress, userAgent);
+        User user = result.user();
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                Map.of(
+                        "id", user.getId().toString(),
+                        "email", user.getEmail(),
+                        "token", result.token(),
+                        "refreshToken", result.refreshToken())));
+    }
+
     // --- Auxiliary payload records ---
 
     public record RefreshTokenRequest(
@@ -121,5 +161,20 @@ public class AuthController {
     public record ResetPasswordRequest(
             @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String code,
             @jakarta.validation.constraints.NotBlank(message = "New Password is required") String newPassword) {
+    }
+
+    public record MfaSetupRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email String email) {
+    }
+
+    public record MfaEnableRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email String email,
+            @jakarta.validation.constraints.NotBlank(message = "Secret is required") String secret,
+            @jakarta.validation.constraints.NotNull(message = "Code is required") Integer code) {
+    }
+
+    public record MfaVerifyRequest(
+            @jakarta.validation.constraints.NotBlank(message = "MFA Token is required") String mfaToken,
+            @jakarta.validation.constraints.NotNull(message = "Code is required") Integer code) {
     }
 }

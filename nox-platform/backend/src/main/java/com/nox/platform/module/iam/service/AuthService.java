@@ -32,6 +32,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final OtpService otpService;
     private final EmailService emailService;
+    private final MfaService mfaService;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -96,6 +97,16 @@ public class AuthService {
 
         userRepository.save(user);
 
+        if (user.getSecurity().isMfaEnabled()) {
+            // Generate a short-lived token specifically for MFA step
+            String mfaToken = jwtService.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
+            return new AuthResult(null, null, null, true, mfaToken);
+        }
+
+        return generateSuccessAuthResult(user, ipAddress, userAgent);
+    }
+
+    private AuthResult generateSuccessAuthResult(User user, String ipAddress, String userAgent) {
         String jwtToken = jwtService.generateToken(user.getEmail());
         String refreshToken = jwtService.generateRefreshToken();
 
@@ -109,7 +120,7 @@ public class AuthService {
                 .build();
         userSessionRepository.save(session);
 
-        return new AuthResult(user, jwtToken, refreshToken);
+        return new AuthResult(user, jwtToken, refreshToken, false, null);
     }
 
     @Transactional
@@ -140,7 +151,7 @@ public class AuthService {
 
         // We do not rotate refresh token here, but we could if strict rotation is
         // required
-        return new AuthResult(user, newJwtToken, session.getRefreshToken());
+        return new AuthResult(user, newJwtToken, session.getRefreshToken(), false, null);
     }
 
     @Transactional
@@ -187,6 +198,60 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public record AuthResult(User user, String token, String refreshToken) {
+    @Transactional
+    public AuthResult verifyMfa(String mfaToken, int code, String ipAddress, String userAgent) {
+        String email = jwtService.extractUsername(mfaToken);
+        Boolean isMfaPending = jwtService.extractClaim(mfaToken, claims -> claims.get("mfa_pending", Boolean.class));
+
+        if (isMfaPending == null || !isMfaPending) {
+            throw new DomainException("INVALID_MFA_TOKEN", "Provided token is not a valid MFA pending token", 401);
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (!user.getSecurity().isMfaEnabled() || user.getSecurity().getMfaSecret() == null) {
+            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
+        }
+
+        if (!mfaService.verifyCode(user.getSecurity().getMfaSecret(), code)) {
+            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Please try again.", 401);
+        }
+
+        return generateSuccessAuthResult(user, ipAddress, userAgent);
+    }
+
+    @Transactional
+    public MfaSetupResult setupMfa(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (user.getSecurity().isMfaEnabled()) {
+            throw new DomainException("MFA_ALREADY_ENABLED", "MFA is already enabled for this user", 400);
+        }
+
+        String secret = mfaService.generateSecretKey();
+        String qrCodeUri = mfaService.getQrCodeUri(secret, user.getEmail());
+        return new MfaSetupResult(secret, qrCodeUri);
+    }
+
+    @Transactional
+    public void enableMfa(String email, String secret, int code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (!mfaService.verifyCode(secret, code)) {
+            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Verification failed.", 400);
+        }
+
+        user.getSecurity().setMfaEnabled(true);
+        user.getSecurity().setMfaSecret(secret);
+        userRepository.save(user);
+    }
+
+    public record AuthResult(User user, String token, String refreshToken, boolean mfaRequired, String mfaToken) {
+    }
+
+    public record MfaSetupResult(String secret, String qrCodeUri) {
     }
 }

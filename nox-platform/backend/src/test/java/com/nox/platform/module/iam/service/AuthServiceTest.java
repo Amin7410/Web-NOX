@@ -57,6 +57,9 @@ class AuthServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private MfaService mfaService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -141,6 +144,7 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals("mock-jwt-token", result.token());
         assertEquals("mock-refresh-token", result.refreshToken());
+        assertFalse(result.mfaRequired());
         assertEquals(setupUser, result.user());
 
         // Verify attempts reset to 0
@@ -222,6 +226,7 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals("new-jwt-token", result.token());
         assertEquals("valid-token", result.refreshToken());
+        assertFalse(result.mfaRequired());
         assertEquals(setupUser, result.user());
         assertTrue(session.getLastActiveAt().isAfter(OffsetDateTime.now().minusMinutes(1)));
         verify(userSessionRepository).save(session);
