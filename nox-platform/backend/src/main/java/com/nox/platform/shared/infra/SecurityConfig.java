@@ -1,6 +1,7 @@
 package com.nox.platform.shared.infra;
 
-import com.nox.platform.infra.security.CustomUserDetailsService;
+import com.nox.platform.module.iam.infrastructure.security.CustomUserDetailsService;
+import com.nox.platform.module.iam.infrastructure.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,10 +21,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    private final com.nox.platform.infra.security.JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthFilter;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
-            com.nox.platform.infra.security.JwtAuthenticationFilter jwtAuthFilter) {
+            JwtAuthenticationFilter jwtAuthFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthFilter = jwtAuthFilter;
     }
