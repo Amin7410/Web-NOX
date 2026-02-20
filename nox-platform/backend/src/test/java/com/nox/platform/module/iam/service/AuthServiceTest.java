@@ -284,10 +284,11 @@ class AuthServiceTest {
     @Test
     void verifyEmail_whenValidOtp_thenSetsUserStatusActive() {
         setupUser.setStatus(UserStatus.PENDING_VERIFICATION);
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
         OtpCode otp = OtpCode.builder().user(setupUser).code("123456").type(OtpCode.OtpType.VERIFY_EMAIL).build();
-        when(otpService.validateAndUseOtp("123456", OtpCode.OtpType.VERIFY_EMAIL)).thenReturn(otp);
+        when(otpService.validateAndUseOtp(setupUser, "123456", OtpCode.OtpType.VERIFY_EMAIL)).thenReturn(otp);
 
-        authService.verifyEmail("123456");
+        authService.verifyEmail("test@nox.com", "123456");
 
         assertEquals(UserStatus.ACTIVE, setupUser.getStatus());
         verify(userRepository).save(setupUser);
@@ -296,10 +297,12 @@ class AuthServiceTest {
     @Test
     void verifyEmail_whenUserAlreadyActive_thenThrowsException() {
         setupUser.setStatus(UserStatus.ACTIVE);
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
         OtpCode otp = OtpCode.builder().user(setupUser).code("123456").type(OtpCode.OtpType.VERIFY_EMAIL).build();
-        when(otpService.validateAndUseOtp("123456", OtpCode.OtpType.VERIFY_EMAIL)).thenReturn(otp);
+        when(otpService.validateAndUseOtp(setupUser, "123456", OtpCode.OtpType.VERIFY_EMAIL)).thenReturn(otp);
 
-        DomainException exception = assertThrows(DomainException.class, () -> authService.verifyEmail("123456"));
+        DomainException exception = assertThrows(DomainException.class,
+                () -> authService.verifyEmail("test@nox.com", "123456"));
 
         assertEquals("USER_ALREADY_ACTIVE", exception.getCode());
         verify(userRepository, never()).save(any());
@@ -318,11 +321,12 @@ class AuthServiceTest {
 
     @Test
     void resetPassword_whenValidOtp_thenUpdatesPassword() {
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
         OtpCode otp = OtpCode.builder().user(setupUser).code("987654").type(OtpCode.OtpType.RESET_PASSWORD).build();
-        when(otpService.validateAndUseOtp("987654", OtpCode.OtpType.RESET_PASSWORD)).thenReturn(otp);
+        when(otpService.validateAndUseOtp(setupUser, "987654", OtpCode.OtpType.RESET_PASSWORD)).thenReturn(otp);
         when(passwordEncoder.encode("newPassword123!")).thenReturn("encoded_new_password");
 
-        authService.resetPassword("987654", "newPassword123!");
+        authService.resetPassword("test@nox.com", "987654", "newPassword123!");
 
         assertEquals("encoded_new_password", setupUser.getSecurity().getPasswordHash());
         assertTrue(setupUser.getSecurity().isPasswordSet());

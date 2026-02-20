@@ -107,7 +107,7 @@ public class AuthController {
 
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        authService.verifyEmail(request.code());
+        authService.verifyEmail(request.email(), request.otpCode());
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
@@ -119,7 +119,7 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request.code(), request.newPassword());
+        authService.resetPassword(request.email(), request.otpCode(), request.newPassword());
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
@@ -204,7 +204,8 @@ public class AuthController {
     }
 
     public record VerifyEmailRequest(
-            @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String code) {
+            @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email String email,
+            @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String otpCode) {
     }
 
     public record ForgotPasswordRequest(
@@ -212,7 +213,8 @@ public class AuthController {
     }
 
     public record ResetPasswordRequest(
-            @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String code,
+            @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email String email,
+            @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String otpCode,
             @jakarta.validation.constraints.NotBlank(message = "New Password is required") String newPassword) {
     }
 

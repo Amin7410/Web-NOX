@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -52,6 +53,10 @@ public class OtpCode {
     @Column(name = "used_at")
     private OffsetDateTime usedAt;
 
+    @Default
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -79,5 +84,9 @@ public class OtpCode {
 
     public void markAsUsed() {
         this.usedAt = OffsetDateTime.now();
+    }
+
+    public void incrementFailedAttempts() {
+        this.failedAttempts++;
     }
 }

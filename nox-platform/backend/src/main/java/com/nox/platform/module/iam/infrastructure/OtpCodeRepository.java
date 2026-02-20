@@ -15,6 +15,8 @@ import java.util.UUID;
 public interface OtpCodeRepository extends JpaRepository<OtpCode, UUID> {
     Optional<OtpCode> findByCodeAndType(String code, OtpCode.OtpType type);
 
+    Optional<OtpCode> findFirstByUser_IdAndTypeAndUsedAtIsNullOrderByCreatedAtDesc(UUID userId, OtpCode.OtpType type);
+
     List<OtpCode> findByUser_IdAndTypeAndUsedAtIsNull(UUID userId, OtpCode.OtpType type);
 
     @Modifying

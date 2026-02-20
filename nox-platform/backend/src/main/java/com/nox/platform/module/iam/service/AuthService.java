@@ -195,9 +195,11 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyEmail(String otpCode) {
-        OtpCode otp = otpService.validateAndUseOtp(otpCode, OtpCode.OtpType.VERIFY_EMAIL);
-        User user = otp.getUser();
+    public void verifyEmail(String email, String otpCode) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        OtpCode otp = otpService.validateAndUseOtp(user, otpCode, OtpCode.OtpType.VERIFY_EMAIL);
 
         if (user.getStatus() == UserStatus.ACTIVE) {
             throw new DomainException("USER_ALREADY_ACTIVE", "This account is already verified.", 400);
@@ -219,9 +221,11 @@ public class AuthService {
     }
 
     @Transactional
-    public void resetPassword(String otpCode, String newPassword) {
-        OtpCode otp = otpService.validateAndUseOtp(otpCode, OtpCode.OtpType.RESET_PASSWORD);
-        User user = otp.getUser();
+    public void resetPassword(String email, String otpCode, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        OtpCode otp = otpService.validateAndUseOtp(user, otpCode, OtpCode.OtpType.RESET_PASSWORD);
 
         String hashedPassword = passwordEncoder.encode(newPassword);
         user.getSecurity().setPasswordHash(hashedPassword);

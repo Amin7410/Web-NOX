@@ -45,12 +45,28 @@ public class OtpService {
         return otpCodeRepository.save(otpCode);
     }
 
-    public OtpCode validateAndUseOtp(String code, OtpCode.OtpType type) {
-        OtpCode otpCode = otpCodeRepository.findByCodeAndType(code, type)
-                .orElseThrow(() -> new DomainException("INVALID_OTP", "Invalid or expired OTP code", 400));
+    public OtpCode validateAndUseOtp(User user, String code, OtpCode.OtpType type) {
+        OtpCode otpCode = otpCodeRepository
+                .findFirstByUser_IdAndTypeAndUsedAtIsNullOrderByCreatedAtDesc(user.getId(), type)
+                .orElseThrow(() -> new DomainException("INVALID_OTP", "No active OTP found", 400));
 
         if (!otpCode.isValid()) {
-            throw new DomainException("INVALID_OTP", "Invalid or expired OTP code", 400);
+            throw new DomainException("INVALID_OTP", "OTP code has expired", 400);
+        }
+
+        if (otpCode.getFailedAttempts() >= 5) {
+            otpCode.markAsUsed();
+            otpCodeRepository.save(otpCode);
+            throw new DomainException("OTP_LOCKED", "Too many failed attempts. Please request a new OTP.", 429);
+        }
+
+        if (!otpCode.getCode().equals(code)) {
+            otpCode.incrementFailedAttempts();
+            if (otpCode.getFailedAttempts() >= 5) {
+                otpCode.markAsUsed();
+            }
+            otpCodeRepository.save(otpCode);
+            throw new DomainException("INVALID_OTP", "Invalid OTP code", 400);
         }
 
         otpCode.markAsUsed();
