@@ -227,6 +227,9 @@ public class AuthService {
         user.getSecurity().setPasswordHash(hashedPassword);
         user.getSecurity().setPasswordSet(true);
         userRepository.save(user);
+
+        // Revoke all existing sessions to force re-login
+        userSessionRepository.revokeAllUserSessions(user.getId(), "Password Reset");
     }
 
     @Transactional
@@ -354,6 +357,9 @@ public class AuthService {
         user.getSecurity().setPasswordHash(passwordEncoder.encode(newPassword));
         user.getSecurity().setLastPasswordChange(OffsetDateTime.now());
         userRepository.save(user);
+
+        // Revoke all existing sessions to force re-login
+        userSessionRepository.revokeAllUserSessions(user.getId(), "Password Changed");
     }
 
     @Transactional
