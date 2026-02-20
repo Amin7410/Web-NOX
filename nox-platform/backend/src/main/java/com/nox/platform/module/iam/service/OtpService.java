@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -17,8 +19,13 @@ import java.util.Optional;
 public class OtpService {
 
     private final OtpCodeRepository otpCodeRepository;
-    private static final int OTP_LENGTH = 6;
-    private static final int OTP_EXPIRY_MINUTES = 15;
+
+    @Value("${security.otp.length:6}")
+    private int otpLength;
+
+    @Value("${security.otp.expiry-minutes:15}")
+    private int otpExpiryMinutes;
+
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -36,7 +43,7 @@ public class OtpService {
                 .user(user)
                 .code(code)
                 .type(type)
-                .expiresAt(OffsetDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES))
+                .expiresAt(OffsetDateTime.now().plusMinutes(otpExpiryMinutes))
                 .build();
 
         return otpCodeRepository.save(otpCode);
@@ -55,8 +62,8 @@ public class OtpService {
     }
 
     private String generateRandomCode() {
-        StringBuilder sb = new StringBuilder(OTP_LENGTH);
-        for (int i = 0; i < OTP_LENGTH; i++) {
+        StringBuilder sb = new StringBuilder(otpLength);
+        for (int i = 0; i < otpLength; i++) {
             sb.append(secureRandom.nextInt(10)); // 0-9
         }
         return sb.toString();

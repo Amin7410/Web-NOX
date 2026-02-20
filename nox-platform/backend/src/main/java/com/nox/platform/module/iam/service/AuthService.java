@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import nl.basjes.parse.useragent.UserAgentAnalyzer;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -50,6 +51,12 @@ public class AuthService {
             .hideMatcherLoadStats()
             .withCache(10000)
             .build();
+
+    @Value("${security.login.max-attempts:5}")
+    private int maxLoginAttempts;
+
+    @Value("${security.login.lockout-duration-minutes:15}")
+    private int lockoutDurationMinutes;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -105,8 +112,8 @@ public class AuthService {
         } catch (Exception e) {
             // Failure Path
             user.getSecurity().incrementFailedLogins();
-            if (user.getSecurity().getFailedLoginAttempts() >= 5) {
-                user.getSecurity().lockAccount(15); // Lock for 15 minutes
+            if (user.getSecurity().getFailedLoginAttempts() >= maxLoginAttempts) {
+                user.getSecurity().lockAccount(lockoutDurationMinutes);
             }
             userRepository.save(user);
             throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);

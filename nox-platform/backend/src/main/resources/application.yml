@@ -24,3 +24,11 @@ springdoc:
 
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B2D5051535546566D59}
+
+security:
+  login:
+    max-attempts: 5
+    lockout-duration-minutes: 15
+  otp:
+    length: 6
+    expiry-minutes: 15

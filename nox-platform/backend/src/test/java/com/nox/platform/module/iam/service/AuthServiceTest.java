@@ -23,6 +23,7 @@ import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.domain.OtpCode;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.test.util.ReflectionTestUtils;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
@@ -87,6 +88,9 @@ class AuthServiceTest {
                 .isPasswordSet(true)
                 .build();
         setupUser.setSecurity(security);
+
+        ReflectionTestUtils.setField(authService, "maxLoginAttempts", 5);
+        ReflectionTestUtils.setField(authService, "lockoutDurationMinutes", 15);
     }
 
     @Test
