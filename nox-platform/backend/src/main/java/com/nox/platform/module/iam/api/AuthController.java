@@ -144,6 +144,21 @@ public class AuthController {
                         "refreshToken", result.refreshToken())));
     }
 
+    @PostMapping("/social-login")
+    public ResponseEntity<ApiResponse<Map<String, String>>> socialLogin(@Valid @RequestBody SocialLoginRequest request,
+            HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        AuthService.AuthResult result = authService.socialLogin(
+                request.provider(), request.providerId(), request.email(), request.fullName(), request.profileData(),
+                ipAddress, userAgent);
+
+        return ResponseEntity.ok(ApiResponse.ok(Map.of(
+                "token", result.token(),
+                "refreshToken", result.refreshToken())));
+    }
+
     // --- Auxiliary payload records ---
 
     public record RefreshTokenRequest(
@@ -176,5 +191,13 @@ public class AuthController {
     public record MfaVerifyRequest(
             @jakarta.validation.constraints.NotBlank(message = "MFA Token is required") String mfaToken,
             @jakarta.validation.constraints.NotNull(message = "Code is required") Integer code) {
+    }
+
+    public record SocialLoginRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Provider is required") String provider,
+            @jakarta.validation.constraints.NotBlank(message = "Provider ID is required") String providerId,
+            @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email(message = "Email should be valid") String email,
+            String fullName,
+            Map<String, Object> profileData) {
     }
 }

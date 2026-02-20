@@ -8,6 +8,8 @@ import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.domain.OtpCode;
+import com.nox.platform.module.iam.domain.SocialIdentity;
+import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -33,6 +37,7 @@ public class AuthService {
     private final OtpService otpService;
     private final EmailService emailService;
     private final MfaService mfaService;
+    private final SocialIdentityRepository socialIdentityRepository;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -247,6 +252,46 @@ public class AuthService {
         user.getSecurity().setMfaEnabled(true);
         user.getSecurity().setMfaSecret(secret);
         userRepository.save(user);
+    }
+
+    @Transactional
+    public AuthResult socialLogin(String provider, String providerId, String email, String fullName,
+            Map<String, Object> profileData, String ipAddress, String userAgent) {
+        Optional<SocialIdentity> existingIdentity = socialIdentityRepository.findByProviderAndProviderId(provider,
+                providerId);
+        User user;
+
+        if (existingIdentity.isPresent()) {
+            user = existingIdentity.get().getUser();
+        } else {
+            user = userRepository.findByEmail(email).orElse(null);
+
+            if (user == null) {
+                user = User.builder()
+                        .email(email)
+                        .fullName(fullName)
+                        .status(UserStatus.ACTIVE)
+                        .isEmailVerified(true)
+                        .build();
+
+                UserSecurity security = UserSecurity.builder()
+                        .user(user)
+                        .isPasswordSet(false)
+                        .build();
+                user.setSecurity(security);
+                user = userRepository.save(user);
+            }
+
+            SocialIdentity identity = SocialIdentity.builder()
+                    .user(user)
+                    .provider(provider)
+                    .providerId(providerId)
+                    .profileData(profileData)
+                    .build();
+            socialIdentityRepository.save(identity);
+        }
+
+        return generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 
     public record AuthResult(User user, String token, String refreshToken, boolean mfaRequired, String mfaToken) {
