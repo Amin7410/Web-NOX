@@ -40,6 +40,7 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     implementation("com.warrenstrange:googleauth:1.5.0")
     implementation("nl.basjes.parse.useragent:yauaa:7.20.0")
+    implementation("commons-codec:commons-codec:1.17.1")
 }
 
 tasks.withType<Test> {

@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import nl.basjes.parse.useragent.UserAgentAnalyzer;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -278,7 +279,7 @@ public class AuthService {
 
             UserMfaBackupCode backupCode = UserMfaBackupCode.builder()
                     .user(user)
-                    .codeHash(passwordEncoder.encode(plainCode))
+                    .codeHash(DigestUtils.sha256Hex(plainCode))
                     .used(false)
                     .build();
             userMfaBackupCodeRepository.save(backupCode);
@@ -305,9 +306,10 @@ public class AuthService {
 
         List<UserMfaBackupCode> backupCodes = userMfaBackupCodeRepository.findByUserAndUsedFalse(user);
 
+        String hashedInput = DigestUtils.sha256Hex(backupCode);
         UserMfaBackupCode matchedCode = null;
         for (UserMfaBackupCode storedCode : backupCodes) {
-            if (passwordEncoder.matches(backupCode, storedCode.getCodeHash())) {
+            if (hashedInput.equals(storedCode.getCodeHash())) {
                 matchedCode = storedCode;
                 break;
             }
