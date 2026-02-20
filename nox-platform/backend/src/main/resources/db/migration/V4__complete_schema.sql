@@ -15,7 +15,7 @@ CREATE TABLE subscriptions (
     current_period_end TIMESTAMPTZ,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_subscriptions_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+    CONSTRAINT fk_subscriptions_org FOREIGN KEY (org_id) REFERENCES organizations(id)
 );
 
 CREATE INDEX idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
@@ -29,7 +29,7 @@ CREATE TABLE org_usage_metrics (
     reset_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
-    CONSTRAINT fk_org_usage_metrics_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_org_usage_metrics_org FOREIGN KEY (org_id) REFERENCES organizations(id),
     CONSTRAINT uq_org_usage_metrics_type UNIQUE (org_id, metric_type)
 );
 
@@ -49,7 +49,7 @@ CREATE TABLE api_keys (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_api_keys_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_api_keys_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+    CONSTRAINT fk_api_keys_org FOREIGN KEY (org_id) REFERENCES organizations(id)
 );
 
 CREATE INDEX idx_api_keys_user ON api_keys(user_id);
@@ -99,8 +99,8 @@ CREATE TABLE chat_rooms (
     project_id UUID,
     name VARCHAR(255) NOT NULL,
 
-    CONSTRAINT fk_chat_rooms_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    CONSTRAINT fk_chat_rooms_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    CONSTRAINT fk_chat_rooms_org FOREIGN KEY (org_id) REFERENCES organizations(id),
+    CONSTRAINT fk_chat_rooms_project FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
 CREATE INDEX idx_chat_rooms_org ON chat_rooms(org_id);
@@ -134,7 +134,7 @@ CREATE TABLE files (
     deleted_at TIMESTAMPTZ,
 
     CONSTRAINT fk_files_uploader FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_files_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    CONSTRAINT fk_files_project FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
 CREATE INDEX idx_files_project_time ON files(project_id, created_at);
@@ -166,7 +166,7 @@ CREATE TABLE audit_logs (
     user_agent TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_audit_logs_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_audit_logs_org FOREIGN KEY (org_id) REFERENCES organizations(id),
     CONSTRAINT fk_audit_logs_actor FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -203,7 +203,7 @@ CREATE TABLE org_feature_overrides (
     feature_flag_id UUID NOT NULL,
     value JSONB NOT NULL,
 
-    CONSTRAINT fk_org_feature_overrides_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_org_feature_overrides_org FOREIGN KEY (org_id) REFERENCES organizations(id),
     CONSTRAINT fk_org_feature_overrides_flag FOREIGN KEY (feature_flag_id) REFERENCES feature_flags(id) ON DELETE CASCADE,
     CONSTRAINT uq_org_feature_overrides UNIQUE (org_id, feature_flag_id)
 );

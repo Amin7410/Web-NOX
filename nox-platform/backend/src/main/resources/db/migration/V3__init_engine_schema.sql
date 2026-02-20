@@ -16,7 +16,7 @@ CREATE UNIQUE INDEX idx_organizations_slug ON organizations (slug) WHERE deleted
 -- Table: roles
 CREATE TABLE roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID NOT NULL REFERENCES organizations(id),
     name VARCHAR(100) NOT NULL,
     permissions TEXT[] NOT NULL DEFAULT '{}'
 );
@@ -27,7 +27,7 @@ CREATE INDEX idx_roles_org_id ON roles (org_id);
 -- Table: org_members
 CREATE TABLE org_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID NOT NULL REFERENCES organizations(id),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_id UUID NOT NULL REFERENCES roles(id),
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -43,7 +43,7 @@ CREATE INDEX idx_org_members_role_id ON org_members (role_id);
 -- Table: projects
 CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID NOT NULL REFERENCES organizations(id),
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL,
     description TEXT,
@@ -62,7 +62,7 @@ CREATE INDEX idx_projects_created_by ON projects (created_by_id);
 -- Table: workspaces
 CREATE TABLE workspaces (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id),
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
     created_by UUID NOT NULL REFERENCES users(id),
@@ -76,7 +76,7 @@ CREATE INDEX idx_workspaces_created_by ON workspaces (created_by);
 -- Table: core_blocks
 CREATE TABLE core_blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id),
     parent_block_id UUID REFERENCES core_blocks(id) ON DELETE CASCADE,
     origin_asset_id UUID REFERENCES assets_block_templates(id) ON DELETE SET NULL,
     type VARCHAR(50) NOT NULL,
@@ -92,6 +92,8 @@ CREATE INDEX idx_core_blocks_filter ON core_blocks (workspace_id, type) WHERE de
 CREATE INDEX idx_core_blocks_parent ON core_blocks (parent_block_id);
 CREATE INDEX idx_core_blocks_origin ON core_blocks (origin_asset_id);
 CREATE INDEX idx_core_blocks_created_by ON core_blocks (created_by_id);
+CREATE INDEX idx_core_blocks_config ON core_blocks USING GIN (config);
+CREATE INDEX idx_core_blocks_visual ON core_blocks USING GIN (visual);
 
 -- Table: block_invader_usages
 CREATE TABLE block_invader_usages (
@@ -109,7 +111,7 @@ CREATE INDEX idx_block_invader_usages_invader ON block_invader_usages (invader_a
 -- Table: core_relations
 CREATE TABLE core_relations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id),
     source_block_id UUID NOT NULL REFERENCES core_blocks(id) ON DELETE CASCADE,
     target_block_id UUID NOT NULL REFERENCES core_blocks(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
@@ -125,7 +127,7 @@ CREATE INDEX idx_core_relations_target ON core_relations (target_block_id);
 -- Table: core_snapshots
 CREATE TABLE core_snapshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id),
     name VARCHAR(255) NOT NULL,
     commit_message TEXT,
     full_state_dump JSONB NOT NULL,

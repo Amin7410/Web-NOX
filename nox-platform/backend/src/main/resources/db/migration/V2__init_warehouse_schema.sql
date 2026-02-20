@@ -16,7 +16,7 @@ CREATE UNIQUE INDEX idx_warehouses_owner ON warehouses (owner_id, owner_type) WH
 -- Table: asset_collections
 CREATE TABLE asset_collections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+    warehouse_id UUID NOT NULL REFERENCES warehouses(id),
     name VARCHAR(255) NOT NULL,
     parent_collection_id UUID REFERENCES asset_collections(id),
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -28,7 +28,7 @@ CREATE INDEX idx_asset_collections_parent ON asset_collections (parent_collectio
 -- Table: assets_block_templates
 CREATE TABLE assets_block_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+    warehouse_id UUID NOT NULL REFERENCES warehouses(id),
     collection_id UUID REFERENCES asset_collections(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -46,7 +46,7 @@ CREATE INDEX idx_assets_block_templates_collection ON assets_block_templates (co
 -- Table: assets_invader_definitions
 CREATE TABLE assets_invader_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+    warehouse_id UUID NOT NULL REFERENCES warehouses(id),
     collection_id UUID REFERENCES asset_collections(id) ON DELETE SET NULL,
     code VARCHAR(100) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,

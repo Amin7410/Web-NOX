@@ -16,7 +16,7 @@ CREATE TABLE invitations (
     resent_count INTEGER DEFAULT 0,
     last_sent_at TIMESTAMPTZ,
 
-    CONSTRAINT fk_invitations_org FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_invitations_org FOREIGN KEY (org_id) REFERENCES organizations(id),
     CONSTRAINT fk_invitations_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE RESTRICT, -- Keep invitation even if role changes? Or cascade? Design says: 516 Ref: roles.id < invitations.role_id. Usually RESTRICT.
     CONSTRAINT fk_invitations_inviter FOREIGN KEY (invited_by_id) REFERENCES users(id) ON DELETE CASCADE
 );
