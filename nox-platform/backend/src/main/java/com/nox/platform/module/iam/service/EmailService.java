@@ -20,4 +20,11 @@ public class EmailService {
         log.info("Here is your OTP code to reset your password: {}", otpCode);
         log.info("=========================================");
     }
+
+    public void sendInvitationEmail(String to, String token) {
+        log.info("=========================================");
+        log.info("Sending Invitation Email to: {}", to);
+        log.info("Click this link to accept the invitation: frontend.com/accept-invite?token={}", token);
+        log.info("=========================================");
+    }
 }
