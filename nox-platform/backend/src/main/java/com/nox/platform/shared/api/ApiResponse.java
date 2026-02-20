@@ -2,6 +2,8 @@ package com.nox.platform.shared.api;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 
 /**
@@ -10,6 +12,8 @@ import java.time.OffsetDateTime;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ApiResponse<T> {
     private boolean success;
     private T data;
@@ -43,6 +47,8 @@ public class ApiResponse<T> {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ApiError {
         private String code;
         private String message;
@@ -51,12 +57,6 @@ public class ApiResponse<T> {
         public ApiError(String code, String message) {
             this.code = code;
             this.message = message;
-        }
-
-        public ApiError(String code, String message, Object details) {
-            this.code = code;
-            this.message = message;
-            this.details = details;
         }
     }
 }
