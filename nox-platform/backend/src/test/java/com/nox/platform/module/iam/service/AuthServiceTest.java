@@ -61,7 +61,7 @@ class AuthServiceTest {
                 .id(UUID.randomUUID())
                 .email("test@nox.com")
                 .fullName("Test User")
-                .status(UserStatus.PENDING_VERIFICATION)
+                .status(UserStatus.ACTIVE)
                 .build();
         UserSecurity security = UserSecurity.builder()
                 .user(setupUser)
@@ -132,7 +132,7 @@ class AuthServiceTest {
         // Verify attempts reset to 0
         assertEquals(0, setupUser.getSecurity().getFailedLoginAttempts());
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(userRepository, times(2)).save(setupUser);
+        verify(userRepository).save(setupUser);
         verify(userSessionRepository).save(any(UserSession.class));
     }
 
@@ -176,5 +176,58 @@ class AuthServiceTest {
 
         assertEquals("ACCOUNT_LOCKED", exception.getCode());
         verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    void authenticate_whenAccountNotActive_thenThrowsException() {
+        setupUser.setStatus(UserStatus.PENDING_VERIFICATION);
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
+
+        DomainException exception = assertThrows(DomainException.class,
+                () -> authService.authenticate("test@nox.com", "password123"));
+
+        assertEquals("ACCOUNT_NOT_ACTIVE", exception.getCode());
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    void refreshAccessToken_whenValidToken_thenReturnsNewToken() {
+        UserSession session = UserSession.builder()
+                .user(setupUser)
+                .refreshToken("valid-token")
+                .lastActiveAt(OffsetDateTime.now().minusDays(1))
+                .expiresAt(OffsetDateTime.now().plusDays(6))
+                .build();
+
+        when(userSessionRepository.findByRefreshToken("valid-token")).thenReturn(Optional.of(session));
+        when(jwtService.generateToken("test@nox.com")).thenReturn("new-jwt-token");
+
+        AuthService.AuthResult result = authService.refreshAccessToken("valid-token");
+
+        assertNotNull(result);
+        assertEquals("new-jwt-token", result.token());
+        assertEquals("valid-token", result.refreshToken());
+        assertEquals(setupUser, result.user());
+        assertTrue(session.getLastActiveAt().isAfter(OffsetDateTime.now().minusMinutes(1)));
+        verify(userSessionRepository).save(session);
+    }
+
+    @Test
+    void refreshAccessToken_whenExpiredToken_thenThrowsException() {
+        UserSession session = UserSession.builder()
+                .user(setupUser)
+                .refreshToken("expired-token")
+                .lastActiveAt(OffsetDateTime.now().minusDays(8))
+                .expiresAt(OffsetDateTime.now().minusDays(1))
+                .build();
+
+        when(userSessionRepository.findByRefreshToken("expired-token")).thenReturn(Optional.of(session));
+
+        DomainException exception = assertThrows(DomainException.class,
+                () -> authService.refreshAccessToken("expired-token"));
+
+        assertEquals("EXP_REFRESH_TOKEN", exception.getCode());
+        verify(jwtService, never()).generateToken(any());
+        verify(userSessionRepository, never()).save(any());
     }
 }
