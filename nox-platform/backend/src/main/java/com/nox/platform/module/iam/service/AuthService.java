@@ -20,6 +20,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import nl.basjes.parse.useragent.UserAgentAnalyzer;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -43,6 +44,11 @@ public class AuthService {
     private final MfaService mfaService;
     private final SocialIdentityRepository socialIdentityRepository;
     private final UserMfaBackupCodeRepository userMfaBackupCodeRepository;
+
+    private static final UserAgentAnalyzer uaa = UserAgentAnalyzer.newBuilder()
+            .hideMatcherLoadStats()
+            .withCache(10000)
+            .build();
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -116,17 +122,24 @@ public class AuthService {
         return generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 
-    private AuthResult generateSuccessAuthResult(User user, String ipAddress, String userAgent) {
+    private AuthResult generateSuccessAuthResult(User user, String ipAddress, String rawUserAgent) {
         String jwtToken = jwtService.generateToken(user.getEmail());
         String refreshToken = jwtService.generateRefreshToken();
+
+        String deviceType = "UNKNOWN";
+        if (rawUserAgent != null) {
+            nl.basjes.parse.useragent.UserAgent parsedAgent = uaa.parse(rawUserAgent);
+            deviceType = parsedAgent.getValue("DeviceClass");
+        }
 
         UserSession session = UserSession.builder()
                 .user(user)
                 .refreshToken(refreshToken)
                 .ipAddress(ipAddress)
-                .userAgent(userAgent)
+                .userAgent(rawUserAgent)
+                .deviceType(deviceType)
                 .lastActiveAt(OffsetDateTime.now())
-                .expiresAt(OffsetDateTime.now().plusDays(7)) // Refresh token valid for 7 days
+                .expiresAt(OffsetDateTime.now().plusDays(7))
                 .build();
         userSessionRepository.save(session);
 

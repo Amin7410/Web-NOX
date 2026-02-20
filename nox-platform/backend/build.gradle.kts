@@ -39,6 +39,7 @@ dependencies {
     implementation("io.github.cdimascio:java-dotenv:5.2.2")
     testImplementation("org.springframework.security:spring-security-test")
     implementation("com.warrenstrange:googleauth:1.5.0")
+    implementation("nl.basjes.parse.useragent:yauaa:7.20.0")
 }
 
 tasks.withType<Test> {
