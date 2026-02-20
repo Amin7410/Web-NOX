@@ -65,6 +65,10 @@ public class AuthService {
                     423);
         }
 
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email", 403);
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, plaintextPassword));
@@ -81,7 +85,6 @@ public class AuthService {
             throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);
         }
 
-        userRepository.save(user);
         userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user.getEmail());
