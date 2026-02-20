@@ -4,6 +4,7 @@ import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.domain.UserSecurity;
 import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
+import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.shared.exception.DomainException;
@@ -63,6 +64,9 @@ class AuthServiceTest {
 
     @Mock
     private SocialIdentityRepository socialIdentityRepository;
+
+    @Mock
+    private UserMfaBackupCodeRepository userMfaBackupCodeRepository;
 
     @InjectMocks
     private AuthService authService;

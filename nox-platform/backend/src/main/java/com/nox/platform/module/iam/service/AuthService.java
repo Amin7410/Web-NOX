@@ -9,7 +9,9 @@ import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.domain.OtpCode;
 import com.nox.platform.module.iam.domain.SocialIdentity;
+import com.nox.platform.module.iam.domain.UserMfaBackupCode;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
+import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +42,7 @@ public class AuthService {
     private final EmailService emailService;
     private final MfaService mfaService;
     private final SocialIdentityRepository socialIdentityRepository;
+    private final UserMfaBackupCodeRepository userMfaBackupCodeRepository;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -241,7 +246,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void enableMfa(String email, String secret, int code) {
+    public List<String> enableMfa(String email, String secret, int code) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
@@ -252,6 +257,57 @@ public class AuthService {
         user.getSecurity().setMfaEnabled(true);
         user.getSecurity().setMfaSecret(secret);
         userRepository.save(user);
+
+        List<String> plainBackupCodes = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            String plainCode = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            plainBackupCodes.add(plainCode);
+
+            UserMfaBackupCode backupCode = UserMfaBackupCode.builder()
+                    .user(user)
+                    .codeHash(passwordEncoder.encode(plainCode))
+                    .used(false)
+                    .build();
+            userMfaBackupCodeRepository.save(backupCode);
+        }
+
+        return plainBackupCodes;
+    }
+
+    @Transactional
+    public AuthResult verifyMfaBackupCode(String mfaToken, String backupCode, String ipAddress, String userAgent) {
+        String email = jwtService.extractUsername(mfaToken);
+        Boolean isMfaPending = jwtService.extractClaim(mfaToken, claims -> claims.get("mfa_pending", Boolean.class));
+
+        if (isMfaPending == null || !isMfaPending) {
+            throw new DomainException("INVALID_MFA_TOKEN", "Provided token is not a valid MFA pending token", 401);
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (!user.getSecurity().isMfaEnabled()) {
+            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
+        }
+
+        List<UserMfaBackupCode> backupCodes = userMfaBackupCodeRepository.findByUserAndUsedFalse(user);
+
+        UserMfaBackupCode matchedCode = null;
+        for (UserMfaBackupCode storedCode : backupCodes) {
+            if (passwordEncoder.matches(backupCode, storedCode.getCodeHash())) {
+                matchedCode = storedCode;
+                break;
+            }
+        }
+
+        if (matchedCode == null) {
+            throw new DomainException("INVALID_BACKUP_CODE", "Invalid or already used backup code.", 401);
+        }
+
+        matchedCode.setUsed(true);
+        userMfaBackupCodeRepository.save(matchedCode);
+
+        return generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 
     @Transactional

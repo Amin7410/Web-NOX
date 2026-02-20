@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -122,9 +123,11 @@ public class AuthController {
     }
 
     @PostMapping("/mfa/enable")
-    public ResponseEntity<ApiResponse<Void>> enableMfa(@Valid @RequestBody MfaEnableRequest request) {
-        authService.enableMfa(request.email(), request.secret(), request.code());
-        return ResponseEntity.ok(ApiResponse.ok(null));
+    public ResponseEntity<ApiResponse<Map<String, List<String>>>> enableMfa(
+            @Valid @RequestBody MfaEnableRequest request) {
+        List<String> backupCodes = authService.enableMfa(request.email(), request.secret(), request.code());
+        return ResponseEntity.ok(ApiResponse.ok(
+                Map.of("backupCodes", backupCodes)));
     }
 
     @PostMapping("/mfa/verify")
@@ -134,6 +137,24 @@ public class AuthController {
         String userAgent = httpRequest.getHeader("User-Agent");
 
         AuthService.AuthResult result = authService.verifyMfa(request.mfaToken(), request.code(), ipAddress, userAgent);
+        User user = result.user();
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                Map.of(
+                        "id", user.getId().toString(),
+                        "email", user.getEmail(),
+                        "token", result.token(),
+                        "refreshToken", result.refreshToken())));
+    }
+
+    @PostMapping("/mfa/verify-backup")
+    public ResponseEntity<ApiResponse<Map<String, String>>> verifyMfaBackupCode(
+            @Valid @RequestBody VerifyMfaBackupCodeRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        AuthService.AuthResult result = authService.verifyMfaBackupCode(request.mfaToken(), request.backupCode(),
+                ipAddress, userAgent);
         User user = result.user();
 
         return ResponseEntity.ok(ApiResponse.ok(
@@ -191,6 +212,11 @@ public class AuthController {
     public record MfaVerifyRequest(
             @jakarta.validation.constraints.NotBlank(message = "MFA Token is required") String mfaToken,
             @jakarta.validation.constraints.NotNull(message = "Code is required") Integer code) {
+    }
+
+    public record VerifyMfaBackupCodeRequest(
+            @jakarta.validation.constraints.NotBlank(message = "MFA Token is required") String mfaToken,
+            @jakarta.validation.constraints.NotBlank(message = "Backup Code is required") String backupCode) {
     }
 
     public record SocialLoginRequest(
