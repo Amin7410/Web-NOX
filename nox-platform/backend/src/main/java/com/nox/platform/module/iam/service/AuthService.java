@@ -311,6 +311,21 @@ public class AuthService {
     }
 
     @Transactional
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (!user.getSecurity().isPasswordSet()
+                || !passwordEncoder.matches(oldPassword, user.getSecurity().getPasswordHash())) {
+            throw new DomainException("INVALID_PASSWORD", "Old password is not correct", 400);
+        }
+
+        user.getSecurity().setPasswordHash(passwordEncoder.encode(newPassword));
+        user.getSecurity().setLastPasswordChange(OffsetDateTime.now());
+        userRepository.save(user);
+    }
+
+    @Transactional
     public AuthResult socialLogin(String provider, String providerId, String email, String fullName,
             Map<String, Object> profileData, String ipAddress, String userAgent) {
         Optional<SocialIdentity> existingIdentity = socialIdentityRepository.findByProviderAndProviderId(provider,

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -165,6 +166,13 @@ public class AuthController {
                         "refreshToken", result.refreshToken())));
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request,
+            Principal principal) {
+        authService.changePassword(principal.getName(), request.oldPassword(), request.newPassword());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     @PostMapping("/social-login")
     public ResponseEntity<ApiResponse<Map<String, String>>> socialLogin(@Valid @RequestBody SocialLoginRequest request,
             HttpServletRequest httpRequest) {
@@ -217,6 +225,11 @@ public class AuthController {
     public record VerifyMfaBackupCodeRequest(
             @jakarta.validation.constraints.NotBlank(message = "MFA Token is required") String mfaToken,
             @jakarta.validation.constraints.NotBlank(message = "Backup Code is required") String backupCode) {
+    }
+
+    public record ChangePasswordRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Old Password is required") String oldPassword,
+            @jakarta.validation.constraints.NotBlank(message = "New Password is required") String newPassword) {
     }
 
     public record SocialLoginRequest(
