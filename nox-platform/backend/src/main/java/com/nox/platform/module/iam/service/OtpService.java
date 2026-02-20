@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -32,11 +31,7 @@ public class OtpService {
     @Transactional
     public OtpCode generateOtp(User user, OtpCode.OtpType type) {
         // Invalidate any existing unused OTP of the same type for this user
-        List<OtpCode> existingUnused = otpCodeRepository.findByUser_IdAndTypeAndUsedAtIsNull(user.getId(), type);
-        existingUnused.forEach(otp -> {
-            otp.markAsUsed(); // Soft invalidate
-            otpCodeRepository.save(otp);
-        });
+        otpCodeRepository.invalidatePreviousOtps(user.getId(), type);
 
         String code = generateRandomCode();
 
