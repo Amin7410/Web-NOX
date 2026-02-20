@@ -12,6 +12,7 @@ CREATE TABLE invitations (
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     accepted_at TIMESTAMPTZ,
     resent_count INTEGER DEFAULT 0,
     last_sent_at TIMESTAMPTZ,
