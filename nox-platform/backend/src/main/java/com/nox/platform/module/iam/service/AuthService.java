@@ -7,6 +7,7 @@ import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.domain.UserSession;
+import com.nox.platform.module.iam.domain.OtpCode;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -52,7 +55,13 @@ public class AuthService {
 
         user.setSecurity(security);
 
-        return userRepository.save(user);
+        user = userRepository.save(user);
+
+        // Generate and send verification email
+        OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.VERIFY_EMAIL);
+        emailService.sendVerificationEmail(user.getEmail(), otp.getCode());
+
+        return user;
     }
 
     @Transactional
@@ -141,6 +150,41 @@ public class AuthService {
                     session.revoke("User Logged Out");
                     userSessionRepository.save(session);
                 });
+    }
+
+    @Transactional
+    public void verifyEmail(String otpCode) {
+        OtpCode otp = otpService.validateAndUseOtp(otpCode, OtpCode.OtpType.VERIFY_EMAIL);
+        User user = otp.getUser();
+
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            throw new DomainException("USER_ALREADY_ACTIVE", "This account is already verified.", 400);
+        }
+
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void forgotPassword(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (user.getStatus() != UserStatus.ACTIVE) {
+                return; // Do not send reset emails to unverified accounts
+            }
+            OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.RESET_PASSWORD);
+            emailService.sendPasswordResetEmail(user.getEmail(), otp.getCode());
+        });
+    }
+
+    @Transactional
+    public void resetPassword(String otpCode, String newPassword) {
+        OtpCode otp = otpService.validateAndUseOtp(otpCode, OtpCode.OtpType.RESET_PASSWORD);
+        User user = otp.getUser();
+
+        String hashedPassword = passwordEncoder.encode(newPassword);
+        user.getSecurity().setPasswordHash(hashedPassword);
+        user.getSecurity().setPasswordSet(true);
+        userRepository.save(user);
     }
 
     public record AuthResult(User user, String token, String refreshToken) {

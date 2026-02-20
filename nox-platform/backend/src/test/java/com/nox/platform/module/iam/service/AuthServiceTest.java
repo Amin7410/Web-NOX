@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.domain.UserSession;
+import com.nox.platform.module.iam.domain.OtpCode;
 import org.springframework.security.authentication.BadCredentialsException;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -50,6 +51,12 @@ class AuthServiceTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private OtpService otpService;
+
+    @Mock
+    private EmailService emailService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -76,7 +83,10 @@ class AuthServiceTest {
         // Arrange
         when(userRepository.existsByEmail("test@nox.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded_testing_password");
-        when(userRepository.save(any(User.class))).thenReturn(setupUser);
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        OtpCode otp = OtpCode.builder().code("123456").type(OtpCode.OtpType.VERIFY_EMAIL).build();
+        when(otpService.generateOtp(any(User.class), eq(OtpCode.OtpType.VERIFY_EMAIL))).thenReturn(otp);
 
         // Act
         User result = authService.registerUser("test@nox.com", "password123", "Test User");
@@ -100,6 +110,9 @@ class AuthServiceTest {
         assertEquals("encoded_testing_password", security.getPasswordHash());
         assertTrue(security.isPasswordSet());
         assertEquals(capturedUser, security.getUser());
+
+        // Verify email sent
+        verify(emailService).sendVerificationEmail("test@nox.com", "123456");
     }
 
     @Test
@@ -249,5 +262,53 @@ class AuthServiceTest {
         assertNotNull(session.getRevokedAt());
         assertEquals("User Logged Out", session.getRevokeReason());
         verify(userSessionRepository).save(session);
+    }
+
+    @Test
+    void verifyEmail_whenValidOtp_thenSetsUserStatusActive() {
+        setupUser.setStatus(UserStatus.PENDING_VERIFICATION);
+        OtpCode otp = OtpCode.builder().user(setupUser).code("123456").type(OtpCode.OtpType.VERIFY_EMAIL).build();
+        when(otpService.validateAndUseOtp("123456", OtpCode.OtpType.VERIFY_EMAIL)).thenReturn(otp);
+
+        authService.verifyEmail("123456");
+
+        assertEquals(UserStatus.ACTIVE, setupUser.getStatus());
+        verify(userRepository).save(setupUser);
+    }
+
+    @Test
+    void verifyEmail_whenUserAlreadyActive_thenThrowsException() {
+        setupUser.setStatus(UserStatus.ACTIVE);
+        OtpCode otp = OtpCode.builder().user(setupUser).code("123456").type(OtpCode.OtpType.VERIFY_EMAIL).build();
+        when(otpService.validateAndUseOtp("123456", OtpCode.OtpType.VERIFY_EMAIL)).thenReturn(otp);
+
+        DomainException exception = assertThrows(DomainException.class, () -> authService.verifyEmail("123456"));
+
+        assertEquals("USER_ALREADY_ACTIVE", exception.getCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void forgotPassword_whenValidEmail_thenSendsEmail() {
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
+        OtpCode otp = OtpCode.builder().user(setupUser).code("987654").type(OtpCode.OtpType.RESET_PASSWORD).build();
+        when(otpService.generateOtp(setupUser, OtpCode.OtpType.RESET_PASSWORD)).thenReturn(otp);
+
+        authService.forgotPassword("test@nox.com");
+
+        verify(emailService).sendPasswordResetEmail("test@nox.com", "987654");
+    }
+
+    @Test
+    void resetPassword_whenValidOtp_thenUpdatesPassword() {
+        OtpCode otp = OtpCode.builder().user(setupUser).code("987654").type(OtpCode.OtpType.RESET_PASSWORD).build();
+        when(otpService.validateAndUseOtp("987654", OtpCode.OtpType.RESET_PASSWORD)).thenReturn(otp);
+        when(passwordEncoder.encode("newPassword123!")).thenReturn("encoded_new_password");
+
+        authService.resetPassword("987654", "newPassword123!");
+
+        assertEquals("encoded_new_password", setupUser.getSecurity().getPasswordHash());
+        assertTrue(setupUser.getSecurity().isPasswordSet());
+        verify(userRepository).save(setupUser);
     }
 }

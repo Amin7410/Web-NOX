@@ -86,7 +86,40 @@ public class AuthController {
         return ip;
     }
 
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request.code());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.email());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.code(), request.newPassword());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    // --- Auxiliary payload records ---
+
     public record RefreshTokenRequest(
             @jakarta.validation.constraints.NotBlank(message = "Refresh token is required") String refreshToken) {
+    }
+
+    public record VerifyEmailRequest(
+            @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String code) {
+    }
+
+    public record ForgotPasswordRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Email is required") @jakarta.validation.constraints.Email(message = "Email should be valid") String email) {
+    }
+
+    public record ResetPasswordRequest(
+            @jakarta.validation.constraints.NotBlank(message = "OTP Code is required") String code,
+            @jakarta.validation.constraints.NotBlank(message = "New Password is required") String newPassword) {
     }
 }
