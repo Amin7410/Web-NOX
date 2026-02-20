@@ -1,12 +1,14 @@
 package com.nox.platform.module.iam.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class EmailService {
 
+    @Async
     public void sendVerificationEmail(String to, String otpCode) {
         log.info("=========================================");
         log.info("Sending Email Verification to: {}", to);
@@ -14,6 +16,7 @@ public class EmailService {
         log.info("=========================================");
     }
 
+    @Async
     public void sendPasswordResetEmail(String to, String otpCode) {
         log.info("=========================================");
         log.info("Sending Password Reset Email to: {}", to);
@@ -21,6 +24,7 @@ public class EmailService {
         log.info("=========================================");
     }
 
+    @Async
     public void sendInvitationEmail(String to, String token) {
         log.info("=========================================");
         log.info("Sending Invitation Email to: {}", to);
