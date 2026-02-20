@@ -3,6 +3,7 @@ package com.nox.platform.module.iam.api;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.service.AuthService;
 import com.nox.platform.shared.api.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +35,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Map<String, String>>> login(@Valid @RequestBody AuthRequest request) {
-        AuthService.AuthResult result = authService.authenticate(request.getEmail(), request.getPassword());
+    public ResponseEntity<ApiResponse<Map<String, String>>> login(
+            @Valid @RequestBody AuthRequest request,
+            HttpServletRequest httpRequest) {
+
+        String ipAddress = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        AuthService.AuthResult result = authService.authenticate(request.getEmail(), request.getPassword(), ipAddress,
+                userAgent);
         User user = result.user();
 
         return ResponseEntity.ok(ApiResponse.ok(
@@ -48,13 +56,34 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
-            @Valid @RequestBody RefreshTokenRequest request) {
-        AuthService.AuthResult result = authService.refreshAccessToken(request.refreshToken());
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletRequest httpRequest) {
+
+        String ipAddress = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        AuthService.AuthResult result = authService.refreshAccessToken(request.refreshToken(), ipAddress, userAgent);
 
         return ResponseEntity.ok(ApiResponse.ok(
                 Map.of(
                         "token", result.token(),
                         "refreshToken", result.refreshToken())));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        } else {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 
     public record RefreshTokenRequest(

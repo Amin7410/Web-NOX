@@ -122,7 +122,8 @@ class AuthServiceTest {
         when(jwtService.generateRefreshToken()).thenReturn("mock-refresh-token");
         setupUser.getSecurity().setFailedLoginAttempts(3); // simulate prior fails
 
-        AuthService.AuthResult result = authService.authenticate("test@nox.com", "password123");
+        AuthService.AuthResult result = authService.authenticate("test@nox.com", "password123", "127.0.0.1",
+                "Mock-Agent");
 
         assertNotNull(result);
         assertEquals("mock-jwt-token", result.token());
@@ -143,7 +144,7 @@ class AuthServiceTest {
                 .thenThrow(new BadCredentialsException("Bad Credentials"));
 
         DomainException exception = assertThrows(DomainException.class,
-                () -> authService.authenticate("test@nox.com", "wrong-password"));
+                () -> authService.authenticate("test@nox.com", "wrong-password", "127.0.0.1", "Mock-Agent"));
 
         assertEquals("INVALID_CREDENTIALS", exception.getCode());
         assertEquals(1, setupUser.getSecurity().getFailedLoginAttempts());
@@ -158,7 +159,8 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad Credentials"));
 
-        assertThrows(DomainException.class, () -> authService.authenticate("test@nox.com", "wrong-password"));
+        assertThrows(DomainException.class,
+                () -> authService.authenticate("test@nox.com", "wrong-password", "127.0.0.1", "Mock-Agent"));
 
         assertEquals(5, setupUser.getSecurity().getFailedLoginAttempts());
         assertNotNull(setupUser.getSecurity().getLockedUntil());
@@ -172,7 +174,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
 
         DomainException exception = assertThrows(DomainException.class,
-                () -> authService.authenticate("test@nox.com", "password123"));
+                () -> authService.authenticate("test@nox.com", "password123", "127.0.0.1", "Mock-Agent"));
 
         assertEquals("ACCOUNT_LOCKED", exception.getCode());
         verify(authenticationManager, never()).authenticate(any());
@@ -184,7 +186,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
 
         DomainException exception = assertThrows(DomainException.class,
-                () -> authService.authenticate("test@nox.com", "password123"));
+                () -> authService.authenticate("test@nox.com", "password123", "127.0.0.1", "Mock-Agent"));
 
         assertEquals("ACCOUNT_NOT_ACTIVE", exception.getCode());
         verify(authenticationManager, never()).authenticate(any());
@@ -202,7 +204,7 @@ class AuthServiceTest {
         when(userSessionRepository.findByRefreshToken("valid-token")).thenReturn(Optional.of(session));
         when(jwtService.generateToken("test@nox.com")).thenReturn("new-jwt-token");
 
-        AuthService.AuthResult result = authService.refreshAccessToken("valid-token");
+        AuthService.AuthResult result = authService.refreshAccessToken("valid-token", "127.0.0.1", "Mock-Agent");
 
         assertNotNull(result);
         assertEquals("new-jwt-token", result.token());
@@ -224,10 +226,28 @@ class AuthServiceTest {
         when(userSessionRepository.findByRefreshToken("expired-token")).thenReturn(Optional.of(session));
 
         DomainException exception = assertThrows(DomainException.class,
-                () -> authService.refreshAccessToken("expired-token"));
+                () -> authService.refreshAccessToken("expired-token", "127.0.0.1", "Mock-Agent"));
 
         assertEquals("EXP_REFRESH_TOKEN", exception.getCode());
         verify(jwtService, never()).generateToken(any());
         verify(userSessionRepository, never()).save(any());
+    }
+
+    @Test
+    void logout_whenValidToken_thenRevokesSession() {
+        UserSession session = UserSession.builder()
+                .user(setupUser)
+                .refreshToken("valid-token")
+                .lastActiveAt(OffsetDateTime.now())
+                .expiresAt(OffsetDateTime.now().plusDays(7))
+                .build();
+
+        when(userSessionRepository.findByRefreshToken("valid-token")).thenReturn(Optional.of(session));
+
+        authService.logout("valid-token");
+
+        assertNotNull(session.getRevokedAt());
+        assertEquals("User Logged Out", session.getRevokeReason());
+        verify(userSessionRepository).save(session);
     }
 }

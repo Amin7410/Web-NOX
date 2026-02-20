@@ -19,6 +19,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -108,7 +110,7 @@ class AuthControllerTest {
 
         @Test
         void refreshToken_withValidToken_returnsNewToken() throws Exception {
-                when(authService.refreshAccessToken("valid-refresh-token"))
+                when(authService.refreshAccessToken(eq("valid-refresh-token"), any(), any()))
                                 .thenReturn(new AuthService.AuthResult(null, "new-jwt-token", "valid-refresh-token"));
 
                 AuthController.RefreshTokenRequest request = new AuthController.RefreshTokenRequest(
@@ -125,7 +127,7 @@ class AuthControllerTest {
 
         @Test
         void refreshToken_withInvalidToken_returns401() throws Exception {
-                when(authService.refreshAccessToken("invalid-token"))
+                when(authService.refreshAccessToken(eq("invalid-token"), any(), any()))
                                 .thenThrow(new DomainException("INVALID_REFRESH_TOKEN",
                                                 "Refresh token is invalid or expired", 401));
 
@@ -137,5 +139,17 @@ class AuthControllerTest {
                                 .andExpect(status().isUnauthorized())
                                 .andExpect(jsonPath("$.success").value(false))
                                 .andExpect(jsonPath("$.error.code").value("INVALID_REFRESH_TOKEN"));
+        }
+
+        @Test
+        void logout_returns200() throws Exception {
+                AuthController.RefreshTokenRequest request = new AuthController.RefreshTokenRequest(
+                                "valid-refresh-token");
+
+                mockMvc.perform(post("/api/v1/auth/logout")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.success").value(true));
         }
 }

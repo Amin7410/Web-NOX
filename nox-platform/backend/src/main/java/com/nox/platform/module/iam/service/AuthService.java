@@ -56,7 +56,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResult authenticate(String email, String plaintextPassword) {
+    public AuthResult authenticate(String email, String plaintextPassword, String ipAddress, String userAgent) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401));
 
@@ -93,6 +93,8 @@ public class AuthService {
         UserSession session = UserSession.builder()
                 .user(user)
                 .refreshToken(refreshToken)
+                .ipAddress(ipAddress)
+                .userAgent(userAgent)
                 .lastActiveAt(OffsetDateTime.now())
                 .expiresAt(OffsetDateTime.now().plusDays(7)) // Refresh token valid for 7 days
                 .build();
@@ -102,7 +104,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResult refreshAccessToken(String refreshToken) {
+    public AuthResult refreshAccessToken(String refreshToken, String ipAddress, String userAgent) {
         UserSession session = userSessionRepository.findByRefreshToken(refreshToken)
                 .orElseThrow(
                         () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401));
@@ -111,8 +113,13 @@ public class AuthService {
             throw new DomainException("EXP_REFRESH_TOKEN", "Refresh token has expired or been revoked", 401);
         }
 
-        // Update last active
+        // Update last active, IP and User Agent
         session.setLastActiveAt(OffsetDateTime.now());
+        if (ipAddress != null)
+            session.setIpAddress(ipAddress);
+        if (userAgent != null)
+            session.setUserAgent(userAgent);
+
         userSessionRepository.save(session);
 
         User user = session.getUser();
@@ -125,6 +132,15 @@ public class AuthService {
         // We do not rotate refresh token here, but we could if strict rotation is
         // required
         return new AuthResult(user, newJwtToken, session.getRefreshToken());
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        userSessionRepository.findByRefreshToken(refreshToken)
+                .ifPresent(session -> {
+                    session.revoke("User Logged Out");
+                    userSessionRepository.save(session);
+                });
     }
 
     public record AuthResult(User user, String token, String refreshToken) {
