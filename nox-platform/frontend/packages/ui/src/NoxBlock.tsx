@@ -1,3 +1,5 @@
+"use client";
+
 import { memo, useMemo } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
 import { Settings, Activity, Cpu, Box, Database, Server, Zap, Layers, Code, Terminal, Lock, AlertTriangle } from 'lucide-react';

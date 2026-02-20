@@ -8,6 +8,7 @@ Thumbs.db
 
 # --- IDEs ---
 .idea/
+.agent/
 .vscode/
 *.swp
 *.swo

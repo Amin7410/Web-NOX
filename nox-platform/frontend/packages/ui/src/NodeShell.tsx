@@ -1,3 +1,5 @@
+"use client";
+
 import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Pencil } from 'lucide-react';

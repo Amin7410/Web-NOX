@@ -1,3 +1,5 @@
+"use client";
+
 import { memo } from 'react';
 import { EdgeProps, getBezierPath, getSmoothStepPath, getStraightPath, BaseEdge, EdgeLabelRenderer } from 'reactflow';
 
