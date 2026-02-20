@@ -1,4 +1,4 @@
-package com.nox.platform.config;
+package com.nox.platform.shared.infra;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

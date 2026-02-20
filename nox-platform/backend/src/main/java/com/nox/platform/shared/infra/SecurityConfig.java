@@ -1,4 +1,4 @@
-package com.nox.platform.config;
+package com.nox.platform.shared.infra;
 
 import com.nox.platform.infra.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;

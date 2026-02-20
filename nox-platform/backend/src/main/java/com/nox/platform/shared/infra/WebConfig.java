@@ -1,4 +1,4 @@
-package com.nox.platform.config;
+package com.nox.platform.shared.infra;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

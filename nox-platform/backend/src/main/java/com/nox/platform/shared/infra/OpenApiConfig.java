@@ -1,4 +1,4 @@
-package com.nox.platform.config;
+package com.nox.platform.shared.infra;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
