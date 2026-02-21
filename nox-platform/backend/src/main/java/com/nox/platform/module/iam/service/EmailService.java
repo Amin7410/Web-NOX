@@ -4,9 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @Slf4j
 @Service
 public class EmailService {
+
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Async
     public void sendVerificationEmail(String to, String otpCode) {
@@ -28,7 +33,7 @@ public class EmailService {
     public void sendInvitationEmail(String to, String token) {
         log.info("=========================================");
         log.info("Sending Invitation Email to: {}", to);
-        log.info("Click this link to accept the invitation: frontend.com/accept-invite?token={}", token);
+        log.info("Click this link to accept the invitation: {}/accept-invite?token={}", frontendUrl, token);
         log.info("=========================================");
     }
 }
