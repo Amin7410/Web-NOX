@@ -1,8 +1,6 @@
 package com.nox.platform.module.iam.domain;
 
-import com.nox.platform.shared.util.JsonbMapConverter;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -17,6 +15,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 
 import java.util.HashMap;
@@ -53,7 +53,7 @@ public class SocialIdentity {
     private String providerId;
 
     @Column(name = "profile_data", nullable = false, columnDefinition = "jsonb")
-    @Convert(converter = JsonbMapConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     private Map<String, Object> profileData = new HashMap<>();
 
