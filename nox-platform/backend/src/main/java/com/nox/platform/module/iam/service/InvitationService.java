@@ -19,7 +19,8 @@ public class InvitationService {
 
     @Transactional
     public void inviteUser(String email, UUID orgId, UUID roleId, UUID inviterId) {
-        if (invitationRepository.existsByEmailAndOrgIdAndStatus(email, orgId, "PENDING")) {
+        if (invitationRepository.existsByEmailAndOrgIdAndStatus(email, orgId,
+                com.nox.platform.module.iam.domain.InvitationStatus.PENDING)) {
             throw new DomainException("ALREADY_INVITED", "This Email has already been invited", 400);
         }
 
@@ -31,7 +32,7 @@ public class InvitationService {
                 .roleId(roleId)
                 .invitedById(inviterId)
                 .token(token)
-                .status("PENDING")
+                .status(com.nox.platform.module.iam.domain.InvitationStatus.PENDING)
                 .expiresAt(OffsetDateTime.now().plusDays(7))
                 .build();
 

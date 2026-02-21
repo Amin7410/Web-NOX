@@ -8,5 +8,6 @@ import java.util.UUID;
 
 @Repository
 public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
-    boolean existsByEmailAndOrgIdAndStatus(String email, UUID orgId, String status);
+    boolean existsByEmailAndOrgIdAndStatus(String email, UUID orgId,
+            com.nox.platform.module.iam.domain.InvitationStatus status);
 }

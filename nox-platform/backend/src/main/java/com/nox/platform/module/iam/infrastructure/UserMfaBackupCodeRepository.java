@@ -9,10 +9,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
 
 @Repository
 public interface UserMfaBackupCodeRepository extends JpaRepository<UserMfaBackupCode, UUID> {
     Page<UserMfaBackupCode> findByUserIdAndUsedFalse(UUID userId, Pageable pageable);
 
     List<UserMfaBackupCode> findByUserAndUsedFalse(User user);
+
+    @Transactional
+    @Modifying
+    void deleteByUser(User user);
 }

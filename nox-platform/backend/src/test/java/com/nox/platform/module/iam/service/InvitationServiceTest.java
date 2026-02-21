@@ -47,7 +47,8 @@ class InvitationServiceTest {
     void inviteUser_whenValid_savesAndEmails() {
         UUID orgId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
-        when(invitationRepository.existsByEmailAndOrgIdAndStatus("invitee@nox.com", orgId, "PENDING"))
+        when(invitationRepository.existsByEmailAndOrgIdAndStatus("invitee@nox.com", orgId,
+                com.nox.platform.module.iam.domain.InvitationStatus.PENDING))
                 .thenReturn(false);
 
         invitationService.inviteUser("invitee@nox.com", orgId, roleId, inviter.getId());
@@ -60,7 +61,8 @@ class InvitationServiceTest {
     void inviteUser_whenAlreadyPending_throwsException() {
         UUID orgId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
-        when(invitationRepository.existsByEmailAndOrgIdAndStatus("invitee@nox.com", orgId, "PENDING"))
+        when(invitationRepository.existsByEmailAndOrgIdAndStatus("invitee@nox.com", orgId,
+                com.nox.platform.module.iam.domain.InvitationStatus.PENDING))
                 .thenReturn(true);
 
         DomainException ex = assertThrows(DomainException.class,
