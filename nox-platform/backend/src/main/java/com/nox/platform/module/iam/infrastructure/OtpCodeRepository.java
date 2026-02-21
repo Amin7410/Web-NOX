@@ -13,12 +13,11 @@ import java.util.UUID;
 
 @Repository
 public interface OtpCodeRepository extends JpaRepository<OtpCode, UUID> {
-    Optional<OtpCode> findByCodeAndType(String code, OtpCode.OtpType type);
-
     Optional<OtpCode> findFirstByUser_IdAndTypeAndUsedAtIsNullOrderByCreatedAtDesc(UUID userId, OtpCode.OtpType type);
 
     List<OtpCode> findByUser_IdAndTypeAndUsedAtIsNull(UUID userId, OtpCode.OtpType type);
 
+    @org.springframework.transaction.annotation.Transactional
     @Modifying
     @Query("UPDATE OtpCode o SET o.usedAt = CURRENT_TIMESTAMP WHERE o.user.id = :userId AND o.type = :type AND o.usedAt IS NULL")
     void invalidatePreviousOtps(@Param("userId") UUID userId, @Param("type") OtpCode.OtpType type);

@@ -32,7 +32,7 @@ import java.time.OffsetDateTime;
 @SQLRestriction("deleted_at IS NULL")
 public class User extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "is_email_verified", nullable = false)

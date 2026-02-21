@@ -33,10 +33,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         UserSecurity userSecurity = userSecurityRepository.findById(user.getId())
                 .orElseThrow(() -> new UsernameNotFoundException("Security credentials not found for user: " + email));
 
+        String password = userSecurity.getPasswordHash() != null ? userSecurity.getPasswordHash() : "";
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                userSecurity.getPasswordHash(),
-                // TODO: Phase 3 - Load dynamic roles from org_members based on selected
+                password,
+                // TODO: Load dynamic roles from org_members based on selected
                 // Workspace/Organization context
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")) // Default role for now
         );

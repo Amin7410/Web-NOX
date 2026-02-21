@@ -10,6 +10,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import lombok.experimental.SuperBuilder;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -38,9 +41,10 @@ public class Invitation extends BaseEntity {
     @Column(name = "invited_by_id", nullable = false)
     private UUID invitedById;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     @Builder.Default
-    private String status = "PENDING";
+    private InvitationStatus status = InvitationStatus.PENDING;
 
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;

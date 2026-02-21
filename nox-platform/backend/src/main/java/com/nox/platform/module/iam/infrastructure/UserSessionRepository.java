@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface UserSessionRepository extends JpaRepository<UserSession, UUID> {
@@ -18,6 +19,7 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
 
     Page<UserSession> findByUserId(UUID userId, Pageable pageable);
 
+    @Transactional
     @Modifying
     @Query("UPDATE UserSession s SET s.revokedAt = CURRENT_TIMESTAMP, s.revokeReason = :reason WHERE s.user.id = :userId AND s.revokedAt IS NULL AND s.expiresAt > CURRENT_TIMESTAMP")
     void revokeAllUserSessions(@Param("userId") UUID userId, @Param("reason") String reason);
