@@ -2,7 +2,6 @@ package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.OtpCode;
 import com.nox.platform.module.iam.domain.User;
-import com.nox.platform.module.iam.domain.UserSecurity;
 import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.domain.event.UserRegisteredEvent;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
@@ -56,7 +55,7 @@ class UserRegistrationServiceTest {
 
     @Test
     void registerUser_whenValidInput_thenReturnsSavedUserAndPublishesEvent() {
-        when(userRepository.existsByEmail("test@nox.com")).thenReturn(false);
+        when(userRepository.findByEmailIncludeDeleted("test@nox.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArguments()[0]);
 
@@ -87,14 +86,40 @@ class UserRegistrationServiceTest {
     }
 
     @Test
-    void registerUser_whenDuplicateEmail_thenThrowsException() {
-        when(userRepository.existsByEmail("duplicate@nox.com")).thenReturn(true);
+    void registerUser_whenDuplicateEmailActive_thenThrowsException() {
+        setupUser.setStatus(UserStatus.ACTIVE);
+        when(userRepository.findByEmailIncludeDeleted("test@nox.com")).thenReturn(Optional.of(setupUser));
 
         DomainException ex = assertThrows(DomainException.class,
-                () -> userRegistrationService.registerUser("duplicate@nox.com", "password123", "Test User"));
+                () -> userRegistrationService.registerUser("test@nox.com", "password123", "Test User"));
 
         assertEquals("EMAIL_ALREADY_EXISTS", ex.getCode());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void registerUser_whenDuplicateEmailPending_thenOverwritesAndResends() {
+        setupUser.setStatus(UserStatus.PENDING_VERIFICATION);
+        com.nox.platform.module.iam.domain.UserSecurity security = com.nox.platform.module.iam.domain.UserSecurity
+                .builder()
+                .user(setupUser)
+                .build();
+        setupUser.setSecurity(security);
+
+        when(userRepository.findByEmailIncludeDeleted("test@nox.com")).thenReturn(Optional.of(setupUser));
+        when(passwordEncoder.encode("newpassword")).thenReturn("new-encoded");
+
+        OtpCode otp = OtpCode.builder().code("654321").type(OtpCode.OtpType.VERIFY_EMAIL).build();
+        when(otpService.generateOtp(any(User.class), eq(OtpCode.OtpType.VERIFY_EMAIL))).thenReturn(otp);
+
+        User result = userRegistrationService.registerUser("test@nox.com", "newpassword", "New Name");
+
+        assertNotNull(result);
+        assertEquals("New Name", result.getFullName());
+        assertEquals("new-encoded", result.getSecurity().getPasswordHash());
+
+        verify(userRepository).save(setupUser);
+        verify(eventPublisher).publishEvent(any(UserRegisteredEvent.class));
     }
 
     @Test

@@ -56,6 +56,10 @@ public class UserSecurity {
     @Column(name = "locked_until")
     private OffsetDateTime lockedUntil;
 
+    @Column(name = "failed_mfa_attempts", nullable = false)
+    @Builder.Default
+    private int failedMfaAttempts = 0;
+
     @Column(name = "mfa_enabled", nullable = false)
     @Builder.Default
     private boolean mfaEnabled = false;
@@ -78,7 +82,12 @@ public class UserSecurity {
 
     public void resetFailedLogins() {
         this.failedLoginAttempts = 0;
+        this.failedMfaAttempts = 0;
         this.lockedUntil = null;
+    }
+
+    public void incrementFailedMfaAttempts() {
+        this.failedMfaAttempts++;
     }
 
     public void lockAccount(long minutes) {

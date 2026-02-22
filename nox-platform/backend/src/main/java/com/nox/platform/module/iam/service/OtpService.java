@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,15 +20,27 @@ public class OtpService {
     private final OtpCodeRepository otpCodeRepository;
 
     @Value("${security.otp.length:6}")
-    private int otpLength;
+    private int otpLength = 6;
 
     @Value("${security.otp.expiry-minutes:15}")
-    private int otpExpiryMinutes;
+    private int otpExpiryMinutes = 15;
+
+    @Value("${security.otp.max-attempts:5}")
+    private int maxAttempts = 5;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
     public OtpCode generateOtp(User user, OtpCode.OtpType type) {
+        // Check for cooldown (60 seconds)
+        otpCodeRepository.findFirstByUser_IdAndTypeAndUsedAtIsNullOrderByCreatedAtDesc(user.getId(), type)
+                .ifPresent(latestOtp -> {
+                    if (latestOtp.getCreatedAt().isAfter(OffsetDateTime.now().minusSeconds(60))) {
+                        throw new DomainException("PLEASE_WAIT",
+                                "Please wait at least 60 seconds before requesting a new OTP.", 429);
+                    }
+                });
+
         // Invalidate any existing unused OTP of the same type for this user
         otpCodeRepository.invalidatePreviousOtps(user.getId(), type);
 
@@ -54,7 +65,7 @@ public class OtpService {
             throw new DomainException("INVALID_OTP", "OTP code has expired", 400);
         }
 
-        if (otpCode.getFailedAttempts() >= 5) {
+        if (otpCode.getFailedAttempts() >= maxAttempts) {
             otpCode.markAsUsed();
             otpCodeRepository.save(otpCode);
             throw new DomainException("OTP_LOCKED", "Too many failed attempts. Please request a new OTP.", 429);
@@ -62,7 +73,7 @@ public class OtpService {
 
         if (!otpCode.getCode().equals(code)) {
             otpCode.incrementFailedAttempts();
-            if (otpCode.getFailedAttempts() >= 5) {
+            if (otpCode.getFailedAttempts() >= maxAttempts) {
                 otpCode.markAsUsed();
             }
             otpCodeRepository.save(otpCode);

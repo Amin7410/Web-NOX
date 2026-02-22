@@ -7,7 +7,9 @@ import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
+import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
+import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
 import com.nox.platform.shared.exception.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +49,12 @@ class AuthenticationServiceTest {
 
         @Mock
         private SocialAuthVerificationService socialAuthVerificationService;
+
+        @Mock
+        private UserSecurityRepository userSecurityRepository;
+
+        @Mock
+        private InternalSecurityStateService internalSecurityStateService;
 
         @InjectMocks
         private AuthenticationService authenticationService;
@@ -90,9 +98,8 @@ class AuthenticationServiceTest {
                 assertFalse(result.mfaRequired());
                 assertEquals(setupUser, result.user());
 
-                assertEquals(0, setupUser.getSecurity().getFailedLoginAttempts());
                 verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-                verify(userRepository).save(setupUser);
+                verify(internalSecurityStateService).resetFailedLogins(setupUser.getId());
                 verify(userSessionRepository).save(any(UserSession.class));
         }
 
@@ -101,15 +108,17 @@ class AuthenticationServiceTest {
                 when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
                 when(authenticationManager.authenticate(any())).thenThrow(
                                 new org.springframework.security.authentication.BadCredentialsException("Bad creds"));
-                setupUser.getSecurity().setFailedLoginAttempts(4);
+                // Return 5 to simulate that the DB-level increment has occurred
+                setupUser.getSecurity().setFailedLoginAttempts(5);
+                when(userSecurityRepository.findById(setupUser.getId()))
+                                .thenReturn(Optional.of(setupUser.getSecurity()));
 
                 DomainException ex = assertThrows(DomainException.class, () -> authenticationService
                                 .authenticate("test@nox.com", "wrongpass", "127.0.0.1", "Mock-Agent"));
 
                 assertEquals("INVALID_CREDENTIALS", ex.getCode());
-                assertEquals(5, setupUser.getSecurity().getFailedLoginAttempts());
-                assertTrue(setupUser.getSecurity().isLocked());
-                verify(userRepository).save(setupUser);
+                verify(internalSecurityStateService).incrementFailedLogins(setupUser.getId());
+                verify(internalSecurityStateService).lockAccount(eq(setupUser.getId()), any());
         }
 
         @Test
@@ -178,7 +187,29 @@ class AuthenticationServiceTest {
                 DomainException ex = assertThrows(DomainException.class, () -> authenticationService
                                 .refreshAccessToken("expired-token", "127.0.0.1", "Mock-Agent"));
 
-                assertEquals("EXP_REFRESH_TOKEN", ex.getCode());
+                assertEquals("COMPROMISED_TOKEN", ex.getCode());
+                verify(userSessionRepository).revokeAllUserSessions(eq(setupUser.getId()), anyString());
+        }
+
+        @Test
+        void refreshAccessToken_whenUserNotActive_thenThrowsException() {
+                String hashedToken = org.apache.commons.codec.digest.DigestUtils.sha256Hex("valid-token");
+                UserSession session = UserSession.builder()
+                                .user(setupUser)
+                                .refreshToken(hashedToken)
+                                .lastActiveAt(OffsetDateTime.now().minusDays(1))
+                                .expiresAt(OffsetDateTime.now().plusDays(6))
+                                .build();
+
+                setupUser.setStatus(UserStatus.BANNED);
+
+                when(userSessionRepository.findByRefreshToken(hashedToken)).thenReturn(Optional.of(session));
+
+                DomainException ex = assertThrows(DomainException.class, () -> authenticationService
+                                .refreshAccessToken("valid-token", "127.0.0.1", "Mock-Agent"));
+
+                assertEquals("ACCOUNT_NOT_ACTIVE", ex.getCode());
+                verify(jwtService, never()).generateToken(anyString());
         }
 
         @Test
@@ -195,5 +226,45 @@ class AuthenticationServiceTest {
                                 () -> authenticationService.logout("valid-token", "attacker@nox.com"));
 
                 assertEquals("UNAUTHORIZED_LOGOUT", ex.getCode());
+        }
+
+        @Test
+        void socialLogin_whenUserBanned_thenThrowsException() {
+                java.util.Map<String, Object> verifiedData = new java.util.HashMap<>();
+                verifiedData.put("providerId", "google-id");
+                verifiedData.put("email", "test@nox.com");
+                verifiedData.put("fullName", "Full Name");
+                verifiedData.put("rawProfile", new java.util.HashMap<>());
+
+                when(socialAuthVerificationService.verifyToken(anyString(), anyString())).thenReturn(verifiedData);
+                when(socialIdentityRepository.findByProviderAndProviderId(anyString(), anyString()))
+                                .thenReturn(Optional.of(com.nox.platform.module.iam.domain.SocialIdentity.builder()
+                                                .user(setupUser)
+                                                .build()));
+                setupUser.setStatus(UserStatus.BANNED);
+
+                DomainException ex = assertThrows(DomainException.class,
+                                () -> authenticationService.socialLogin("google", "valid-token", "1.1.1.1", "agent"));
+
+                assertEquals("ACCOUNT_NOT_ACTIVE", ex.getCode());
+        }
+
+        @Test
+        void linkSocialAccount_whenUserBanned_thenThrowsException() {
+                java.util.Map<String, Object> verifiedData = new java.util.HashMap<>();
+                verifiedData.put("providerId", "google-id");
+                verifiedData.put("email", "test@nox.com");
+                verifiedData.put("fullName", "Full Name");
+                verifiedData.put("rawProfile", new java.util.HashMap<>());
+
+                when(socialAuthVerificationService.verifyToken(anyString(), anyString())).thenReturn(verifiedData);
+                when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(setupUser));
+                setupUser.setStatus(UserStatus.BANNED);
+
+                DomainException ex = assertThrows(DomainException.class,
+                                () -> authenticationService.linkSocialAccount("google", "valid-token", "password",
+                                                "1.1.1.1", "agent"));
+
+                assertEquals("ACCOUNT_NOT_ACTIVE", ex.getCode());
         }
 }

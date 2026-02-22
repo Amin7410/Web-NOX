@@ -19,6 +19,9 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    @Value("${jwt.expiration-minutes:15}")
+    private int expirationMinutes;
+
     public String generateToken(String username) {
         return generateToken(new HashMap<>(), username);
     }
@@ -28,7 +31,7 @@ public class JwtService {
                 .setClaims(extraClaims)
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15)) // 15 minutes
+                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * expirationMinutes))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -51,7 +54,7 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    private io.jsonwebtoken.Claims extractAllClaims(String token) {
+    public io.jsonwebtoken.Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSignInKey())
                 .build()

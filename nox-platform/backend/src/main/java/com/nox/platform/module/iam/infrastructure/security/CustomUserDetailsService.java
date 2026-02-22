@@ -38,9 +38,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 password,
-                // TODO: Load dynamic roles from org_members based on selected
-                // Workspace/Organization context
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")) // Default role for now
+                // Roles are dynamically loaded by TenantContextFilter per request
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")) // Default Global Role
         );
     }
 }

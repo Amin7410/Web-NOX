@@ -20,8 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.nox.platform.module.iam.api.request.*;
-import com.nox.platform.module.iam.api.response.*;
-
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.anyString;

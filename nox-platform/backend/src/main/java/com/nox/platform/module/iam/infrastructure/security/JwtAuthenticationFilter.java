@@ -35,17 +35,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         jwt = authHeader.substring(7);
+        io.jsonwebtoken.Claims claims;
         try {
-            userEmail = jwtService.extractUsername(jwt);
+            claims = jwtService.extractAllClaims(jwt);
+            userEmail = claims.getSubject();
         } catch (Exception e) {
             // Invalid token, treat as anonymous
             filterChain.doFilter(request, response);
             return;
         }
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                Boolean isMfaPending = jwtService.extractClaim(jwt, claims -> claims.get("mfa_pending", Boolean.class));
+            UserDetails userDetails;
+            try {
+                userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+                // User might have been soft-deleted or removed
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found or deleted");
+                return;
+            }
+
+            boolean isTokenExpired = claims.getExpiration() != null
+                    && claims.getExpiration().before(new java.util.Date());
+            if (userEmail.equals(userDetails.getUsername()) && !isTokenExpired) {
+                Boolean isMfaPending = claims.get("mfa_pending", Boolean.class);
                 if (Boolean.TRUE.equals(isMfaPending)) {
                     filterChain.doFilter(request, response);
                     return;

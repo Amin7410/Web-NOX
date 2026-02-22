@@ -4,6 +4,7 @@ import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.domain.UserMfaBackupCode;
 import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
+import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class MfaAuthenticationService {
     private final UserRepository userRepository;
     private final UserMfaBackupCodeRepository userMfaBackupCodeRepository;
     private final MfaService mfaService;
+    private final UserSecurityRepository userSecurityRepository;
     private final JwtService jwtService;
     private final AuthenticationService authenticationService;
 
@@ -111,6 +113,10 @@ public class MfaAuthenticationService {
             throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
         }
 
+        if (user.getSecurity().isLocked()) {
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to security attempts", 423);
+        }
+
         List<UserMfaBackupCode> backupCodes = userMfaBackupCodeRepository.findByUserAndUsedFalse(user);
 
         String hashedInput = DigestUtils.sha256Hex(backupCode);
@@ -123,8 +129,19 @@ public class MfaAuthenticationService {
         }
 
         if (matchedCode == null) {
+            user.getSecurity().incrementFailedMfaAttempts();
+            if (user.getSecurity().getFailedMfaAttempts() >= 5) {
+                user.getSecurity().lockAccount(15);
+                userSecurityRepository.save(user.getSecurity());
+                throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.",
+                        423);
+            }
+            userSecurityRepository.save(user.getSecurity());
             throw new DomainException("INVALID_BACKUP_CODE", "Invalid or already used backup code.", 401);
         }
+
+        user.getSecurity().resetFailedLogins();
+        userSecurityRepository.save(user.getSecurity());
 
         matchedCode.setUsed(true);
         userMfaBackupCodeRepository.save(matchedCode);
@@ -140,8 +157,18 @@ public class MfaAuthenticationService {
             throw new DomainException("INVALID_MFA_TOKEN", "Provided token is not a valid MFA pending token", 401);
         }
 
-        return userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+        }
+
+        if (user.getSecurity().isLocked()) {
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
+        }
+
+        return user;
     }
 
     public record MfaSetupResult(String secret, String qrCodeUri) {

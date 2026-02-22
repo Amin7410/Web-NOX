@@ -12,5 +12,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
+    @org.springframework.data.jpa.repository.Query(value = "SELECT * FROM users WHERE email = :email", nativeQuery = true)
+    Optional<User> findByEmailIncludeDeleted(@org.springframework.data.repository.query.Param("email") String email);
+
     boolean existsByEmail(String email);
 }

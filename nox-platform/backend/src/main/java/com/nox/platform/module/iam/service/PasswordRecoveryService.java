@@ -3,6 +3,7 @@ package com.nox.platform.module.iam.service;
 import com.nox.platform.module.iam.domain.OtpCode;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.domain.event.PasswordResetRequestedEvent;
+import com.nox.platform.module.iam.domain.event.UserRegisteredEvent;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.shared.exception.DomainException;
@@ -26,7 +27,15 @@ public class PasswordRecoveryService {
 
     @Transactional
     public void forgotPassword(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+        String normalizedEmail = email.trim().toLowerCase();
+        userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
+            if (user.getStatus() == com.nox.platform.module.iam.domain.UserStatus.PENDING_VERIFICATION) {
+                // Resolution for Email Squatting: If they forgot password but aren't verified,
+                // resend verification
+                OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.VERIFY_EMAIL);
+                eventPublisher.publishEvent(new UserRegisteredEvent(this, user, otp.getCode()));
+                return;
+            }
             if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
                 return;
             }
@@ -37,6 +46,7 @@ public class PasswordRecoveryService {
 
     @Transactional
     public void resetPassword(String email, String otpCode, String newPassword) {
+        email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
@@ -52,6 +62,7 @@ public class PasswordRecoveryService {
 
     @Transactional
     public void changePassword(String email, String oldPassword, String newPassword) {
+        email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 

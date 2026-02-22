@@ -12,8 +12,6 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import lombok.experimental.SuperBuilder;
-
 import java.time.OffsetDateTime;
 import java.util.UUID;
 

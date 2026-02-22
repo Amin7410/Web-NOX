@@ -6,6 +6,7 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.domain.UserMfaBackupCode;
 import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
+import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +34,9 @@ class MfaAuthenticationServiceTest {
 
     @Mock
     private UserMfaBackupCodeRepository userMfaBackupCodeRepository;
+
+    @Mock
+    private UserSecurityRepository userSecurityRepository;
 
     @Mock
     private MfaService mfaService;
@@ -131,6 +137,44 @@ class MfaAuthenticationServiceTest {
                 () -> mfaAuthenticationService.verifyMfa("valid-mfa-token", 999999, "127.0.0.1", "Mock-Agent"));
 
         assertEquals("INVALID_MFA_CODE", ex.getCode());
+    }
+
+    @Test
+    void verifyMfaBackupCode_whenInvalidCode_thenIncrementsFailedAttempts() {
+        setupUser.getSecurity().setMfaEnabled(true);
+        setupUser.getSecurity().setFailedMfaAttempts(0);
+
+        when(jwtService.extractUsername("token")).thenReturn("test@nox.com");
+        when(jwtService.extractClaim(anyString(), any())).thenReturn(true);
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
+        when(userMfaBackupCodeRepository.findByUserAndUsedFalse(setupUser)).thenReturn(java.util.List.of()); // No valid
+                                                                                                             // codes
+
+        DomainException ex = assertThrows(DomainException.class,
+                () -> mfaAuthenticationService.verifyMfaBackupCode("token", "999999", "1.1.1.1", "agent"));
+
+        assertEquals("INVALID_BACKUP_CODE", ex.getCode());
+        assertEquals(1, setupUser.getSecurity().getFailedMfaAttempts());
+        verify(userSecurityRepository).save(setupUser.getSecurity());
+    }
+
+    @Test
+    void verifyMfaBackupCode_whenTooManyFailures_thenLocksAccount() {
+        setupUser.getSecurity().setMfaEnabled(true);
+        setupUser.getSecurity().setFailedMfaAttempts(4); // Max attempts is 5, so 4 + 1 = 5
+
+        when(jwtService.extractUsername("token")).thenReturn("test@nox.com");
+        when(jwtService.extractClaim(anyString(), any())).thenReturn(true);
+        when(userRepository.findByEmail("test@nox.com")).thenReturn(Optional.of(setupUser));
+        when(userMfaBackupCodeRepository.findByUserAndUsedFalse(setupUser)).thenReturn(java.util.List.of()); // No valid
+                                                                                                             // codes
+
+        DomainException ex = assertThrows(DomainException.class,
+                () -> mfaAuthenticationService.verifyMfaBackupCode("token", "wrong", "1.1.1.1", "agent"));
+
+        assertEquals("ACCOUNT_LOCKED", ex.getCode());
+        assertTrue(setupUser.getSecurity().isLocked());
+        verify(userSecurityRepository).save(setupUser.getSecurity());
     }
 
     @Test
