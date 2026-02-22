@@ -24,8 +24,24 @@ public class UserRegistrationService {
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
-        if (userRepository.existsByEmail(email)) {
-            throw new DomainException("EMAIL_ALREADY_EXISTS", "A user with this email already exists", 400);
+        email = email.trim().toLowerCase();
+        User existingUser = userRepository.findByEmailIncludeDeleted(email).orElse(null);
+        if (existingUser != null) {
+            if (existingUser.getStatus() != UserStatus.PENDING_VERIFICATION
+                    && existingUser.getStatus() != UserStatus.DELETED) {
+                throw new DomainException("EMAIL_ALREADY_EXISTS", "A user with this email already exists", 400);
+            }
+
+            // If pending or deleted, we allow reactivation/re-sending registration
+            existingUser.setFullName(fullName);
+            existingUser.setStatus(UserStatus.PENDING_VERIFICATION);
+            existingUser.setDeletedAt(null);
+            existingUser.getSecurity().setPasswordHash(passwordEncoder.encode(plaintextPassword));
+            userRepository.save(existingUser);
+
+            OtpCode otp = otpService.generateOtp(existingUser, OtpCode.OtpType.VERIFY_EMAIL);
+            eventPublisher.publishEvent(new UserRegisteredEvent(this, existingUser, otp.getCode()));
+            return existingUser;
         }
 
         User user = User.builder()
@@ -52,6 +68,7 @@ public class UserRegistrationService {
 
     @Transactional
     public void verifyEmail(String email, String otpCode) {
+        email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 

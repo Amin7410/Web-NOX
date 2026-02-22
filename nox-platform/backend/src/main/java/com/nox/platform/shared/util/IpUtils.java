@@ -10,10 +10,10 @@ public class IpUtils {
 
     public static String getClientIp(HttpServletRequest request) {
         /*
-         * Note: X-Forwarded-For can be spoofed by the client. It is recommended to use
+         * Note: X-Forwarded-For can be spoofed by the client. It is MANDATORY to use
          * server.forward-headers-strategy=framework in application.yml and ensure the
-         * application
-         * runs behind a trusted reverse proxy (e.g., Nginx, AWS ALB).
+         * application runs behind a trusted reverse proxy (e.g., Nginx, AWS ALB)
+         * that strips existing X-Forwarded-For headers from the client.
          */
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {

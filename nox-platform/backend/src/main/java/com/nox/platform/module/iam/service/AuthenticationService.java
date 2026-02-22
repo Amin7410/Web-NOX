@@ -8,7 +8,9 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
+import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
+import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.util.DeviceUtils;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,8 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final SocialIdentityRepository socialIdentityRepository;
     private final SocialAuthVerificationService socialAuthVerificationService;
+    private final UserSecurityRepository userSecurityRepository;
+    private final InternalSecurityStateService internalSecurityStateService;
 
     @Value("${security.login.max-attempts:5}")
     private int maxLoginAttempts;
@@ -45,6 +49,7 @@ public class AuthenticationService {
 
     @Transactional
     public AuthResult authenticate(String email, String plaintextPassword, String ipAddress, String userAgent) {
+        email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401));
 
@@ -59,17 +64,22 @@ public class AuthenticationService {
 
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, plaintextPassword));
-            user.getSecurity().resetFailedLogins();
+            internalSecurityStateService.resetFailedLogins(user.getId());
         } catch (Exception e) {
-            user.getSecurity().incrementFailedLogins();
-            if (user.getSecurity().getFailedLoginAttempts() >= maxLoginAttempts) {
-                user.getSecurity().lockAccount(lockoutDurationMinutes);
+            internalSecurityStateService.incrementFailedLogins(user.getId());
+
+            // Reload security state to check if we should lock
+            com.nox.platform.module.iam.domain.UserSecurity security = userSecurityRepository.findById(user.getId())
+                    .orElse(null);
+            if (security != null && security.getFailedLoginAttempts() >= maxLoginAttempts) {
+                internalSecurityStateService.lockAccount(user.getId(),
+                        OffsetDateTime.now().plusMinutes(lockoutDurationMinutes));
             }
-            userRepository.save(user);
             throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);
         }
 
-        userRepository.save(user);
+        // Removed redundant repository.save(user) as we use native queries for security
+        // state
 
         if (user.getSecurity().isMfaEnabled()) {
             String mfaToken = jwtService.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
@@ -106,10 +116,17 @@ public class AuthenticationService {
                         () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401));
 
         if (!session.isValid()) {
-            throw new DomainException("EXP_REFRESH_TOKEN", "Refresh token has expired or been revoked", 401);
+            // Potential session hijacking: if an invalid token is used, revoke EVERYTHING
+            // for this user
+            userSessionRepository.revokeAllUserSessions(session.getUser().getId(),
+                    "Potential Session Hijacking - Invalid Token Reuse");
+            throw new DomainException("COMPROMISED_TOKEN", "Security alert: Please login again.", 401);
         }
 
         User user = session.getUser();
+        if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+        }
         if (user.getSecurity().isLocked()) {
             throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
         }
@@ -154,7 +171,7 @@ public class AuthenticationService {
         Map<String, Object> verifiedData = socialAuthVerificationService.verifyToken(provider, token);
 
         String providerId = (String) verifiedData.get("providerId");
-        String email = (String) verifiedData.get("email");
+        String email = ((String) verifiedData.get("email")).trim().toLowerCase();
         String fullName = (String) verifiedData.get("fullName");
 
         @SuppressWarnings("unchecked")
@@ -168,6 +185,18 @@ public class AuthenticationService {
             user = existingIdentity.get().getUser();
         } else {
             user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                // Potential Account Takeover: email found but no linked social identity
+                // If user has a password set, we MUST ask for it before linking
+                if (user.getSecurity().isPasswordSet()) {
+                    throw new DomainException("LINK_REQUIRED",
+                            "Account exists. Please link your social account with your password.", 403);
+                }
+                // If no password but exists, maybe they have another social?
+                // For now, if user exists, we strictly require a link process if the current
+                // identity is new.
+            }
+
             if (user == null) {
                 user = User.builder()
                         .email(email)
@@ -193,10 +222,53 @@ public class AuthenticationService {
             socialIdentityRepository.save(identity);
         }
 
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Your account is not active or has been suspended.", 403);
+        }
+
         if (user.getSecurity() != null && user.getSecurity().isMfaEnabled()) {
             String mfaToken = jwtService.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
             return new AuthResult(null, null, null, true, mfaToken);
         }
+
+        return generateSuccessAuthResult(user, ipAddress, userAgent);
+    }
+
+    @Transactional
+    public AuthResult linkSocialAccount(String provider, String token, String password, String ipAddress,
+            String userAgent) {
+        Map<String, Object> verifiedData = socialAuthVerificationService.verifyToken(provider, token);
+        String email = ((String) verifiedData.get("email")).trim().toLowerCase();
+        String providerId = (String) verifiedData.get("providerId");
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+        }
+
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+        } catch (Exception e) {
+            throw new DomainException("INVALID_CREDENTIALS", "Invalid password for linking", 401);
+        }
+
+        // Check again if already linked (race condition)
+        if (socialIdentityRepository.findByProviderAndProviderId(provider, providerId).isPresent()) {
+            return generateSuccessAuthResult(user, ipAddress, userAgent);
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profileData = (Map<String, Object>) verifiedData.get("rawProfile");
+
+        SocialIdentity identity = SocialIdentity.builder()
+                .user(user)
+                .provider(provider)
+                .providerId(providerId)
+                .profileData(profileData)
+                .build();
+        socialIdentityRepository.save(identity);
 
         return generateSuccessAuthResult(user, ipAddress, userAgent);
     }
