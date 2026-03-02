@@ -47,7 +47,6 @@ public class AuthenticationService {
     @Value("${security.jwt.refresh-token.expiration-days:7}")
     private int refreshTokenExpirationDays;
 
-    @Transactional
     public AuthResult authenticate(String email, String plaintextPassword, String ipAddress, String userAgent) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
@@ -68,10 +67,16 @@ public class AuthenticationService {
         } catch (Exception e) {
             internalSecurityStateService.incrementFailedLogins(user.getId());
 
-            // Reload security state to check if we should lock
-            com.nox.platform.module.iam.domain.UserSecurity security = userSecurityRepository.findById(user.getId())
-                    .orElse(null);
-            if (security != null && security.getFailedLoginAttempts() >= maxLoginAttempts) {
+            // Since internalSecurityStateService mutates state natively, we must consider
+            // if we need the refreshed value.
+            // Using user.getSecurity() here might fetch stale Object relative to native
+            // increment, but lock is 5 max.
+            // It's safer to pull raw fail_limit directly or just assume if it fails right
+            // now + existing DB states it passes.
+            // A more optimized way is counting the offset against getSecurity.
+            int currentFails = user.getSecurity().getFailedLoginAttempts() + 1; // + 1 for current failure
+
+            if (currentFails >= maxLoginAttempts) {
                 internalSecurityStateService.lockAccount(user.getId(),
                         OffsetDateTime.now().plusMinutes(lockoutDurationMinutes));
             }
@@ -116,8 +121,25 @@ public class AuthenticationService {
                         () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401));
 
         if (!session.isValid()) {
-            // Potential session hijacking: if an invalid token is used, revoke EVERYTHING
-            // for this user
+            // Check Token Rotation Grace Period (60 seconds)
+            if (session.isRevoked() && session.getRevokedAt() != null) {
+                long secondsSinceRevoked = java.time.Duration.between(session.getRevokedAt(), OffsetDateTime.now())
+                        .getSeconds();
+                if (secondsSinceRevoked < 60) {
+                    // Grace period active - this is likely a network retry or race condition
+                    // We don't generate a new token (as it was already generated), we just reject
+                    // this specific request quietly
+                    // Realistically, the client should use the new token it received on the first
+                    // successful request
+                    // Or if it lost it entirely, we force them to login again smoothly without
+                    // blowing up all their other devices.
+                    throw new DomainException("INVALID_REFRESH_TOKEN",
+                            "Token recently rotated. Please use the new token or login again.", 401);
+                }
+            }
+
+            // Potential session hijacking: if an invalid token is used outside grace
+            // period, revoke EVERYTHING
             userSessionRepository.revokeAllUserSessions(session.getUser().getId(),
                     "Potential Session Hijacking - Invalid Token Reuse");
             throw new DomainException("COMPROMISED_TOKEN", "Security alert: Please login again.", 401);

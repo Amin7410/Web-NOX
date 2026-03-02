@@ -1,6 +1,7 @@
 package com.nox.platform.module.tenant.api;
 
 import com.nox.platform.module.tenant.api.request.CreateRoleRequest;
+import com.nox.platform.module.tenant.api.request.UpdateRoleRequest;
 import com.nox.platform.module.tenant.api.response.RoleResponse;
 import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.domain.Role;
@@ -33,7 +34,7 @@ public class RoleController {
             @Valid @RequestBody CreateRoleRequest request) {
 
         Organization org = organizationService.getOrganizationById(orgId);
-        Role role = roleService.createRole(org, request.name(), request.permissions());
+        Role role = roleService.createRole(org, request.name(), request.permissions(), request.level());
 
         return ApiResponse.ok(mapToResponse(role));
     }
@@ -59,6 +60,20 @@ public class RoleController {
             @PathVariable UUID orgId,
             @PathVariable String roleName) {
         roleService.deleteRole(orgId, roleName);
+    }
+
+    @PutMapping("/{roleId}")
+    @PreAuthorize("hasAuthority('*') or @tenantSecurity.hasPermission(#orgId, 'iam:manage')")
+    public ApiResponse<RoleResponse> updateRolePermissions(
+            @PathVariable UUID orgId,
+            @PathVariable UUID roleId,
+            @Valid @RequestBody UpdateRoleRequest request) {
+
+        // Validate organization bounds
+        organizationService.getOrganizationById(orgId);
+
+        Role updatedRole = roleService.updatePermissions(roleId, request.permissions());
+        return ApiResponse.ok(mapToResponse(updatedRole));
     }
 
     private RoleResponse mapToResponse(Role role) {

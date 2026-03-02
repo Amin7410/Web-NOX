@@ -19,16 +19,17 @@ public class InternalSecurityStateService {
 
     private final UserSecurityRepository userSecurityRepository;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void incrementFailedLogins(UUID userId) {
         userSecurityRepository.incrementFailedLogins(userId);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void resetFailedLogins(UUID userId) {
         userSecurityRepository.resetFailedLogins(userId);
     }
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+
+    @Transactional
     public void lockAccount(UUID userId, OffsetDateTime lockedUntil) {
         userSecurityRepository.lockAccount(userId, lockedUntil);
     }
