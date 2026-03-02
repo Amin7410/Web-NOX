@@ -6,7 +6,10 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.service.AuthenticationService;
 import com.nox.platform.module.iam.service.PasswordRecoveryService;
 import com.nox.platform.module.iam.service.UserRegistrationService;
-import com.nox.platform.module.iam.service.MfaAuthenticationService;
+import com.nox.platform.module.iam.service.SocialAuthenticationService;
+import com.nox.platform.module.iam.service.UserSessionService;
+import com.nox.platform.module.iam.service.MfaManagementService;
+import com.nox.platform.module.iam.service.MfaVerificationService;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.infra.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +48,16 @@ class AuthControllerTest {
         private PasswordRecoveryService passwordRecoveryService;
 
         @Mock
-        private MfaAuthenticationService mfaAuthenticationService;
+        private SocialAuthenticationService socialAuthenticationService;
+
+        @Mock
+        private UserSessionService userSessionService;
+
+        @Mock
+        private MfaManagementService mfaManagementService;
+
+        @Mock
+        private MfaVerificationService mfaVerificationService;
 
         @InjectMocks
         private AuthController authController;
@@ -116,7 +128,7 @@ class AuthControllerTest {
 
         @Test
         void refreshToken_withValidToken_returnsNewToken() throws Exception {
-                when(authenticationService.refreshAccessToken(eq("valid-refresh-token"), any(), any()))
+                when(userSessionService.refreshAccessToken(eq("valid-refresh-token"), any(), any()))
                                 .thenReturn(new AuthenticationService.AuthResult(null, "new-jwt-token",
                                                 "valid-refresh-token",
                                                 false, null));
@@ -135,7 +147,7 @@ class AuthControllerTest {
 
         @Test
         void refreshToken_withInvalidToken_returns401() throws Exception {
-                when(authenticationService.refreshAccessToken(eq("invalid-token"), any(), any()))
+                when(userSessionService.refreshAccessToken(eq("invalid-token"), any(), any()))
                                 .thenThrow(new DomainException("INVALID_REFRESH_TOKEN",
                                                 "Refresh token is invalid or expired", 401));
 
@@ -179,8 +191,8 @@ class AuthControllerTest {
 
         @Test
         void setupMfa_returnsSecretAndUri() throws Exception {
-                when(mfaAuthenticationService.setupMfa(any()))
-                                .thenReturn(new MfaAuthenticationService.MfaSetupResult("secret123", "uri123"));
+                when(mfaManagementService.setupMfa(any()))
+                                .thenReturn(new MfaManagementService.MfaSetupResult("secret123", "uri123"));
 
                 java.security.Principal mockPrincipal = org.mockito.Mockito.mock(java.security.Principal.class);
                 when(mockPrincipal.getName()).thenReturn("test@nox.com");
@@ -211,7 +223,7 @@ class AuthControllerTest {
 
         @Test
         void socialLogin_returnsTokens() throws Exception {
-                when(authenticationService.socialLogin(eq("google"), eq("mock_token"), any(), any()))
+                when(socialAuthenticationService.socialLogin(eq("google"), eq("mock_token"), any(), any()))
                                 .thenReturn(new AuthenticationService.AuthResult(null, "jwt_token_123",
                                                 "refresh_token_123",
                                                 false, null));

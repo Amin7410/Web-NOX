@@ -9,7 +9,6 @@ import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class MfaAuthenticationServiceTest {
+class MfaVerificationServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -46,13 +45,10 @@ class MfaAuthenticationServiceTest {
     private JwtService jwtService;
 
     @Mock
-    private AuthenticationService authenticationService;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    private UserSessionService userSessionService;
 
     @InjectMocks
-    private MfaAuthenticationService mfaAuthenticationService;
+    private MfaVerificationService mfaVerificationService;
 
     private User setupUser;
 
@@ -71,49 +67,6 @@ class MfaAuthenticationServiceTest {
                 .isPasswordSet(true)
                 .build();
         setupUser.setSecurity(security);
-
-        ReflectionTestUtils.setField(mfaAuthenticationService, "backupCodesCount", 10);
-    }
-
-    @Test
-    void setupMfa_whenValid_returnsSecretAndUri() {
-        when(userRepository.findByEmail(setupUser.getEmail())).thenReturn(Optional.of(setupUser));
-        when(mfaService.generateSecretKey()).thenReturn("new-mfa-secret");
-        when(mfaService.getQrCodeUri("new-mfa-secret", "test@nox.com")).thenReturn("otpauth://totp/...");
-
-        var result = mfaAuthenticationService.setupMfa(setupUser.getEmail());
-
-        assertEquals("new-mfa-secret", result.secret());
-        assertEquals("otpauth://totp/...", result.qrCodeUri());
-        assertEquals("new-mfa-secret", setupUser.getSecurity().getTempMfaSecret());
-        verify(userRepository).save(setupUser);
-    }
-
-    @Test
-    void enableMfa_whenValidCode_enablesMfaAndGeneratesBackupCodes() {
-        setupUser.getSecurity().setTempMfaSecret("temp-secret");
-        when(userRepository.findByEmail(setupUser.getEmail())).thenReturn(Optional.of(setupUser));
-        when(mfaService.verifyCode("temp-secret", 123456)).thenReturn(true);
-
-        var result = mfaAuthenticationService.enableMfa(setupUser.getEmail(), 123456);
-
-        assertTrue(setupUser.getSecurity().isMfaEnabled());
-        assertEquals("temp-secret", setupUser.getSecurity().getMfaSecret());
-        assertNull(setupUser.getSecurity().getTempMfaSecret());
-        assertEquals(10, result.size());
-        verify(userRepository).save(setupUser);
-        verify(userMfaBackupCodeRepository, times(10)).save(any(UserMfaBackupCode.class));
-    }
-
-    @Test
-    void enableMfa_whenSetupNotInitiated_thenThrowsException() {
-        when(userRepository.findByEmail(setupUser.getEmail())).thenReturn(Optional.of(setupUser));
-        // tempMfaSecret is natively null
-
-        DomainException ex = assertThrows(DomainException.class,
-                () -> mfaAuthenticationService.enableMfa(setupUser.getEmail(), 123456));
-
-        assertEquals("MFA_SETUP_REQUIRED", ex.getCode());
     }
 
     @Test
@@ -122,7 +75,7 @@ class MfaAuthenticationServiceTest {
         when(jwtService.extractClaim(eq("malicious-token"), any())).thenReturn(null);
 
         DomainException ex = assertThrows(DomainException.class,
-                () -> mfaAuthenticationService.verifyMfa("malicious-token", 123456, "127.0.0.1", "Mock-Agent"));
+                () -> mfaVerificationService.verifyMfa("malicious-token", 123456, "127.0.0.1", "Mock-Agent"));
 
         assertEquals("INVALID_MFA_TOKEN", ex.getCode());
     }
@@ -138,7 +91,7 @@ class MfaAuthenticationServiceTest {
         when(mfaService.verifyCode("real-secret", 999999)).thenReturn(false); // Invalid code
 
         DomainException ex = assertThrows(DomainException.class,
-                () -> mfaAuthenticationService.verifyMfa("valid-mfa-token", 999999, "127.0.0.1", "Mock-Agent"));
+                () -> mfaVerificationService.verifyMfa("valid-mfa-token", 999999, "127.0.0.1", "Mock-Agent"));
 
         assertEquals("INVALID_MFA_CODE", ex.getCode());
     }
@@ -155,7 +108,7 @@ class MfaAuthenticationServiceTest {
                                                                                                              // codes
 
         DomainException ex = assertThrows(DomainException.class,
-                () -> mfaAuthenticationService.verifyMfaBackupCode("token", "999999", "1.1.1.1", "agent"));
+                () -> mfaVerificationService.verifyMfaBackupCode("token", "999999", "1.1.1.1", "agent"));
 
         assertEquals("INVALID_BACKUP_CODE", ex.getCode());
         assertEquals(1, setupUser.getSecurity().getFailedMfaAttempts());
@@ -174,7 +127,7 @@ class MfaAuthenticationServiceTest {
                                                                                                              // codes
 
         DomainException ex = assertThrows(DomainException.class,
-                () -> mfaAuthenticationService.verifyMfaBackupCode("token", "wrong", "1.1.1.1", "agent"));
+                () -> mfaVerificationService.verifyMfaBackupCode("token", "wrong", "1.1.1.1", "agent"));
 
         assertEquals("ACCOUNT_LOCKED", ex.getCode());
         assertTrue(setupUser.getSecurity().isLocked());
@@ -195,7 +148,7 @@ class MfaAuthenticationServiceTest {
 
         // Submit a code resolving to "hash3" which isn't in the active list (e.g.,
         // used=true or non-existent)
-        DomainException ex = assertThrows(DomainException.class, () -> mfaAuthenticationService
+        DomainException ex = assertThrows(DomainException.class, () -> mfaVerificationService
                 .verifyMfaBackupCode("valid-mfa-token", "invalid-plain-code", "127.0.0.1", "Mock-Agent"));
 
         assertEquals("INVALID_BACKUP_CODE", ex.getCode());
