@@ -28,6 +28,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
     compileOnly("org.projectlombok:lombok")
     runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.projectlombok:lombok")
@@ -42,6 +44,8 @@ dependencies {
     implementation("com.warrenstrange:googleauth:1.5.0")
     implementation("nl.basjes.parse.useragent:yauaa:7.20.0")
     implementation("commons-codec:commons-codec:1.17.1")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("com.google.api-client:google-api-client:2.2.0")
 }
 
 tasks.withType<Test> {
