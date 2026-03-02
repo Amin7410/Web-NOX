@@ -27,11 +27,12 @@ public class MfaAuthenticationService {
     private final UserSecurityRepository userSecurityRepository;
     private final JwtService jwtService;
     private final AuthenticationService authenticationService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
 
     @Value("${security.mfa.backup-codes.count:10}")
     private int backupCodesCount;
 
-    @Transactional
     public AuthenticationService.AuthResult verifyMfa(String mfaToken, int code, String ipAddress, String userAgent) {
         User user = validateMfaTokenAndGetUser(mfaToken);
 
@@ -40,8 +41,19 @@ public class MfaAuthenticationService {
         }
 
         if (!mfaService.verifyCode(user.getSecurity().getMfaSecret(), code)) {
+            user.getSecurity().incrementFailedMfaAttempts();
+            if (user.getSecurity().getFailedMfaAttempts() >= 5) {
+                user.getSecurity().lockAccount(15);
+                userSecurityRepository.save(user.getSecurity());
+                throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.",
+                        423);
+            }
+            userSecurityRepository.save(user.getSecurity());
             throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Please try again.", 401);
         }
+
+        user.getSecurity().resetFailedLogins();
+        userSecurityRepository.save(user.getSecurity());
 
         return authenticationService.generateSuccessAuthResult(user, ipAddress, userAgent);
     }
@@ -105,6 +117,37 @@ public class MfaAuthenticationService {
     }
 
     @Transactional
+    public void disableMfa(String email, String currentPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        if (!user.getSecurity().isMfaEnabled()) {
+            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
+        }
+
+        if (user.getSecurity().isLocked()) {
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
+        }
+
+        org.springframework.security.core.userdetails.UserDetails userDetails;
+        try {
+            userDetails = userDetailsService.loadUserByUsername(email);
+            // Verify password explicitly using passwordEncoder
+            if (!passwordEncoder.matches(currentPassword, userDetails.getPassword())) {
+                throw new DomainException("INVALID_CREDENTIALS", "Invalid password", 401);
+            }
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            throw new DomainException("USER_NOT_FOUND", "User not found", 404);
+        }
+
+        user.getSecurity().setMfaEnabled(false);
+        user.getSecurity().setMfaSecret(null);
+        user.getSecurity().setTempMfaSecret(null);
+        userRepository.save(user);
+
+        userMfaBackupCodeRepository.deleteByUser(user);
+    }
+
     public AuthenticationService.AuthResult verifyMfaBackupCode(String mfaToken, String backupCode, String ipAddress,
             String userAgent) {
         User user = validateMfaTokenAndGetUser(mfaToken);
@@ -119,10 +162,14 @@ public class MfaAuthenticationService {
 
         List<UserMfaBackupCode> backupCodes = userMfaBackupCodeRepository.findByUserAndUsedFalse(user);
 
-        String hashedInput = DigestUtils.sha256Hex(backupCode);
         UserMfaBackupCode matchedCode = null;
+        String hashedInputCode = DigestUtils.sha256Hex(backupCode);
         for (UserMfaBackupCode storedCode : backupCodes) {
-            if (hashedInput.equals(storedCode.getCodeHash())) {
+            // Note: If old backup codes were hashed with BCrypt, they will be invalidated
+            // by this change.
+            // This is a necessary trade-off to prevent the Bcrypt CPU Exhaustion DoS
+            // attack.
+            if (hashedInputCode.equals(storedCode.getCodeHash())) {
                 matchedCode = storedCode;
                 break;
             }

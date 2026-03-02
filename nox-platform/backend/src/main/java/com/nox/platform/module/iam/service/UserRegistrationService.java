@@ -27,15 +27,18 @@ public class UserRegistrationService {
         email = email.trim().toLowerCase();
         User existingUser = userRepository.findByEmailIncludeDeleted(email).orElse(null);
         if (existingUser != null) {
-            if (existingUser.getStatus() != UserStatus.PENDING_VERIFICATION
-                    && existingUser.getStatus() != UserStatus.DELETED) {
+            if (existingUser.getStatus() == UserStatus.DELETED) {
+                // DO NOT REACTIVATE - Prevent Zombie Accounts explicitly
+                throw new DomainException("EMAIL_ALREADY_EXISTS",
+                        "A user with this email has been deleted. Please contact support.", 403);
+            }
+
+            if (existingUser.getStatus() != UserStatus.PENDING_VERIFICATION) {
                 throw new DomainException("EMAIL_ALREADY_EXISTS", "A user with this email already exists", 400);
             }
 
-            // If pending or deleted, we allow reactivation/re-sending registration
+            // If pending, we allow re-sending registration OTP override
             existingUser.setFullName(fullName);
-            existingUser.setStatus(UserStatus.PENDING_VERIFICATION);
-            existingUser.setDeletedAt(null);
             existingUser.getSecurity().setPasswordHash(passwordEncoder.encode(plaintextPassword));
             userRepository.save(existingUser);
 

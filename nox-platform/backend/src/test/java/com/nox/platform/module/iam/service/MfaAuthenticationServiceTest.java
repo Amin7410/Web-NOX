@@ -9,6 +9,7 @@ import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,9 @@ class MfaAuthenticationServiceTest {
 
     @Mock
     private AuthenticationService authenticationService;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private MfaAuthenticationService mfaAuthenticationService;
