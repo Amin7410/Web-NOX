@@ -64,7 +64,8 @@ class OrganizationServiceTest {
         when(organizationRepository.save(any(Organization.class))).thenReturn(savedOrg);
 
         Role ownerRole = Role.builder().name("OWNER").organization(savedOrg).build();
-        when(roleService.createRole(any(), org.mockito.ArgumentMatchers.eq("OWNER"), any())).thenReturn(ownerRole);
+        when(roleService.createRole(any(), org.mockito.ArgumentMatchers.eq("OWNER"), any(), any()))
+                .thenReturn(ownerRole);
 
         // Act
         Organization result = organizationService.createOrganization("My Company", "creator@example.com");
@@ -72,7 +73,7 @@ class OrganizationServiceTest {
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getSlug()).isEqualTo("my-company");
-        verify(roleService, times(3)).createRole(any(), any(), any()); // OWNER, ADMIN, MEMBER
+        verify(roleService, times(3)).createRole(any(), any(), any(), any()); // OWNER, ADMIN, MEMBER
         verify(orgMemberRepository).save(any()); // Binds owner to OrgMember
     }
 
@@ -87,7 +88,8 @@ class OrganizationServiceTest {
         when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Role ownerRole = Role.builder().name("OWNER").build();
-        when(roleService.createRole(any(), org.mockito.ArgumentMatchers.eq("OWNER"), any())).thenReturn(ownerRole);
+        when(roleService.createRole(any(), org.mockito.ArgumentMatchers.eq("OWNER"), any(), any()))
+                .thenReturn(ownerRole);
 
         // Act
         Organization result = organizationService.createOrganization("Acme Corp", "creator@example.com");

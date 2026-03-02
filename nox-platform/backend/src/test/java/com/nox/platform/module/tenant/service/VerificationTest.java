@@ -40,6 +40,9 @@ class Phase17VerificationTest {
     @MockBean
     private RoleRepository roleRepository;
 
+    @MockBean
+    private org.springframework.mail.javamail.JavaMailSender javaMailSender;
+
     @Test
     @WithMockUser(username = "admin@nox.com")
     void verifyAuditLoggingOnRoleCreation() {
@@ -54,7 +57,7 @@ class Phase17VerificationTest {
         Role mockRole = Role.builder().name("TEST_ROLE").build();
         when(roleRepository.save(any())).thenReturn(mockRole);
 
-        roleService.createRole(org, "TEST_ROLE", Collections.emptyList());
+        roleService.createRole(org, "TEST_ROLE", Collections.emptyList(), 0);
 
         // Verify that AuditService.record was called by the AuditAspect
         verify(auditService, atLeastOnce()).record(

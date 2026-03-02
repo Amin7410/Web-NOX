@@ -109,9 +109,7 @@ class AuthenticationServiceTest {
                 when(authenticationManager.authenticate(any())).thenThrow(
                                 new org.springframework.security.authentication.BadCredentialsException("Bad creds"));
                 // Return 5 to simulate that the DB-level increment has occurred
-                setupUser.getSecurity().setFailedLoginAttempts(5);
-                when(userSecurityRepository.findById(setupUser.getId()))
-                                .thenReturn(Optional.of(setupUser.getSecurity()));
+                setupUser.getSecurity().setFailedLoginAttempts(4);
 
                 DomainException ex = assertThrows(DomainException.class, () -> authenticationService
                                 .authenticate("test@nox.com", "wrongpass", "127.0.0.1", "Mock-Agent"));
