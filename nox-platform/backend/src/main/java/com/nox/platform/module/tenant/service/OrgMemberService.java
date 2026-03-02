@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +30,7 @@ public class OrgMemberService {
 
     @Transactional
     @CacheEvict(value = "org_members", key = "#orgId + '-' + #userRepository.findByEmail(#email).map(u -> u.getId()).orElse(null)")
-    public OrgMember addMember(UUID orgId, String email, String roleName, String inviterEmail) {
+    public OrgMember addMember(@AuditTargetOrg UUID orgId, String email, String roleName, String inviterEmail) {
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
 
@@ -56,9 +57,9 @@ public class OrgMemberService {
             throw new DomainException("UNAUTHORIZED", "Inviter must be a member of the organization", 403);
         }
 
-        if (inviterMember.getRole().getLevel() <= role.getLevel()) {
+        if (inviterMember.getRole().getLevel() < role.getLevel()) {
             throw new DomainException("INSUFFICIENT_PRIVILEGE",
-                    "You cannot assign a role with a level equal to or higher than your own", 403);
+                    "You cannot assign a role with a higher level than your own", 403);
         }
 
         OrgMember member = OrgMember.builder()
@@ -81,7 +82,7 @@ public class OrgMemberService {
 
     @Transactional
     @CacheEvict(value = "org_members", key = "#orgId + '-' + #userId")
-    public void removeMember(UUID orgId, UUID userId) {
+    public void removeMember(@AuditTargetOrg UUID orgId, UUID userId) {
         OrgMember member = orgMemberRepository.findByOrganizationIdAndUserId(orgId, userId)
                 .orElseThrow(() -> new DomainException("MEMBER_NOT_FOUND", "User is not a member of this organization",
                         404));

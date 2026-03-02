@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -35,23 +37,46 @@ public class AuditAspect {
     public void auditAction(JoinPoint joinPoint, Object result) {
         String methodName = joinPoint.getSignature().getName();
         Object[] args = joinPoint.getArgs();
-
-        // Extract OrgId and User context
         UUID orgId = null;
-        for (Object arg : args) {
-            if (arg instanceof UUID) {
-                orgId = (UUID) arg;
-                break;
-            } else if (arg instanceof Organization) {
-                orgId = ((Organization) arg).getId();
-                break;
+
+        if (joinPoint.getSignature() instanceof org.aspectj.lang.reflect.MethodSignature methodSignature) {
+            Method method = methodSignature.getMethod();
+            Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+
+            // 1. Scan for @AuditTargetOrg annotation explicitly
+            for (int i = 0; i < parameterAnnotations.length; i++) {
+                for (Annotation ann : parameterAnnotations[i]) {
+                    if (ann instanceof AuditTargetOrg) {
+                        if (args[i] instanceof UUID id) {
+                            orgId = id;
+                        }
+                        break;
+                    }
+                }
+                if (orgId != null)
+                    break;
+            }
+
+            // 2. Fallback: Check if any argument is literally an Organization entity
+            if (orgId == null) {
+                for (Object arg : args) {
+                    if (arg instanceof Organization org) {
+                        orgId = org.getId();
+                        break;
+                    }
+                }
             }
         }
 
         if (orgId == null)
             return;
 
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        org.springframework.security.core.Authentication authentication = SecurityContextHolder.getContext()
+                .getAuthentication();
+        if (authentication == null)
+            return;
+
+        Object principal = authentication.getPrincipal();
         if (!(principal instanceof UserDetails))
             return;
 

@@ -8,9 +8,11 @@ import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.cache.annotation.CacheEvict;
 
 @Service
 @RequiredArgsConstructor
@@ -20,15 +22,29 @@ public class RoleService {
     private final OrgMemberRepository orgMemberRepository;
 
     @Transactional
-    public Role createRole(Organization organization, String name, List<String> permissions) {
+    public Role createRole(Organization organization, String name, List<String> permissions, Integer level) {
         if (roleRepository.existsByOrganizationIdAndName(organization.getId(), name)) {
             throw new DomainException("ROLE_EXISTS", "Role name already exists in this organization", 400);
+        }
+
+        int requestedLevel = level != null ? level : 0;
+
+        java.util.UUID currentUserId = com.nox.platform.shared.util.SecurityUtil.getCurrentUserId();
+        if (currentUserId != null) {
+            orgMemberRepository.findByOrganizationIdAndUserId(organization.getId(), currentUserId)
+                    .ifPresent(member -> {
+                        if (member.getRole().getLevel() < requestedLevel) {
+                            throw new DomainException("INSUFFICIENT_PRIVILEGE",
+                                    "You cannot create a role with a level higher than your own", 403);
+                        }
+                    });
         }
 
         Role role = Role.builder()
                 .organization(organization)
                 .name(name)
                 .permissions(permissions)
+                .level(level != null ? level : 0)
                 .build();
 
         return roleRepository.save(role);
@@ -44,6 +60,7 @@ public class RoleService {
     }
 
     @Transactional
+    @CacheEvict(value = "org_members", allEntries = true)
     public Role updatePermissions(UUID roleId, List<String> permissions) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
@@ -57,7 +74,8 @@ public class RoleService {
     }
 
     @Transactional
-    public void deleteRole(UUID orgId, String roleName) {
+    @CacheEvict(value = "org_members", allEntries = true)
+    public void deleteRole(@AuditTargetOrg UUID orgId, String roleName) {
         Role role = roleRepository.findByOrganizationIdAndName(orgId, roleName)
                 .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
 

@@ -6,6 +6,7 @@ import com.nox.platform.module.tenant.domain.OrgMember;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final OrgMemberRepository orgMemberRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void deleteUser(UUID userId) {
@@ -47,5 +49,8 @@ public class UserService {
         // Soft delete user (mark as deleted and status = DELETED)
         user.markAsDeleted();
         userRepository.save(user);
+
+        // Publish event to cleanup related entities (e.g. warehouses)
+        eventPublisher.publishEvent(new com.nox.platform.shared.event.UserDeletedEvent(userId));
     }
 }

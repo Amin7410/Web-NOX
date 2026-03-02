@@ -4,6 +4,7 @@ import com.nox.platform.module.tenant.domain.OrgMember;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -14,6 +15,7 @@ import java.util.UUID;
 @Repository
 public interface OrgMemberRepository extends JpaRepository<OrgMember, UUID> {
 
+    @EntityGraph(attributePaths = { "user", "role" })
     Page<OrgMember> findByOrganizationId(UUID orgId, Pageable pageable);
 
     long countByOrganizationIdAndRoleName(UUID orgId, String roleName);
@@ -24,4 +26,8 @@ public interface OrgMemberRepository extends JpaRepository<OrgMember, UUID> {
     Optional<OrgMember> findByOrganizationIdAndUserId(UUID orgId, UUID userId);
 
     boolean existsByOrganizationIdAndUserId(UUID orgId, UUID userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE OrgMember o SET o.deletedAt = CURRENT_TIMESTAMP WHERE o.organization.id = :orgId")
+    void softDeleteByOrgId(UUID orgId);
 }

@@ -1,19 +1,30 @@
 package com.nox.platform.module.iam.service;
 
 import com.nox.platform.shared.exception.DomainException;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
 import java.util.Map;
 
 @Service
 public class SocialAuthVerificationService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
 
-    @Value("${spring.security.oauth2.client.registration.google.client-id:}")
-    private String googleClientId;
+    public SocialAuthVerificationService(
+            @Value("${spring.security.oauth2.client.registration.google.client-id:}") String googleClientId) {
+        this.googleIdTokenVerifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
+                GsonFactory.getDefaultInstance())
+                .setAudience(
+                        googleClientId != null && !googleClientId.isBlank() ? Collections.singletonList(googleClientId)
+                                : Collections.emptyList())
+                .build();
+    }
 
     /**
      * Verifies a third-party OAuth2 token and returns the normalized profile data.
@@ -41,29 +52,26 @@ public class SocialAuthVerificationService {
         throw new DomainException("INVALID_SOCIAL_TOKEN", "Failed to securely verify the social token", 401);
     }
 
-    private Map<String, Object> verifyGoogleToken(String idToken) {
+    private Map<String, Object> verifyGoogleToken(String idTokenString) {
         try {
-            String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
-            @SuppressWarnings("unchecked")
-            Map<String, Object> claims = restTemplate.getForObject(url, Map.class);
+            GoogleIdToken idToken = googleIdTokenVerifier.verify(idTokenString);
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
 
-            if (claims == null || !claims.containsKey("email") || !claims.containsKey("sub")) {
-                throw new DomainException("INVALID_SOCIAL_TOKEN",
-                        "Google token verification failed. Missing email or sub.", 401);
+                String email = payload.getEmail();
+                if (email == null) {
+                    throw new DomainException("INVALID_SOCIAL_TOKEN",
+                            "Google token verification failed. Missing email.", 401);
+                }
+
+                return Map.of(
+                        "providerId", payload.getSubject(),
+                        "email", email,
+                        "fullName", payload.get("name") != null ? payload.get("name") : "",
+                        "rawProfile", payload);
+            } else {
+                throw new DomainException("INVALID_SOCIAL_TOKEN", "Invalid ID token.", 401);
             }
-
-            // Verify audience if configured in application.yml
-            String aud = (String) claims.get("aud");
-            if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.equals(aud)) {
-                throw new DomainException("INVALID_SOCIAL_TOKEN",
-                        "Audience mismatch. Potential token substitution attack.", 403);
-            }
-
-            return Map.of(
-                    "providerId", claims.get("sub"),
-                    "email", claims.get("email"),
-                    "fullName", claims.getOrDefault("name", ""),
-                    "rawProfile", claims);
         } catch (DomainException e) {
             throw e;
         } catch (Exception e) {

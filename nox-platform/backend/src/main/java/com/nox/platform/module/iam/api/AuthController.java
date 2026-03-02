@@ -154,6 +154,13 @@ public class AuthController {
                                                 result.refreshToken(), null, null)));
         }
 
+        @org.springframework.web.bind.annotation.DeleteMapping("/mfa")
+        public ResponseEntity<ApiResponse<Void>> disableMfa(
+                        @Valid @RequestBody MfaDisableRequest request, Principal principal) {
+                mfaAuthenticationService.disableMfa(principal.getName(), request.password());
+                return ResponseEntity.ok(ApiResponse.ok(null));
+        }
+
         @PostMapping("/change-password")
         public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request,
                         Principal principal) {

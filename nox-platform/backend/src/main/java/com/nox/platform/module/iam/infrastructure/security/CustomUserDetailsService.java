@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.util.Collections;
 
@@ -26,6 +27,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "user_details", key = "#email", unless = "#result == null")
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
@@ -35,7 +37,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         String password = userSecurity.getPasswordHash() != null ? userSecurity.getPasswordHash() : "";
 
-        return new org.springframework.security.core.userdetails.User(
+        return new CustomUserDetails(
+                user.getId(),
                 user.getEmail(),
                 password,
                 // Roles are dynamically loaded by TenantContextFilter per request

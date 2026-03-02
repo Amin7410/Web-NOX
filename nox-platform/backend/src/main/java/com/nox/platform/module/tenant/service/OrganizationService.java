@@ -9,8 +9,11 @@ import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.domain.Role;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
+import com.nox.platform.module.tenant.infrastructure.RoleRepository;
 import com.nox.platform.shared.exception.DomainException;
+import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,8 +27,10 @@ public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final RoleService roleService;
+    private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Organization createOrganization(String name, String creatorEmail) {
@@ -41,9 +46,9 @@ public class OrganizationService {
                 .build();
         organization = organizationRepository.save(organization);
 
-        Role ownerRole = roleService.createRole(organization, "OWNER", List.of("*"));
-        roleService.createRole(organization, "ADMIN", List.of("iam:manage", "billing:manage", "workspace:manage"));
-        roleService.createRole(organization, "MEMBER", List.of("workspace:read"));
+        Role ownerRole = roleService.createRole(organization, "OWNER", List.of("*"), 100);
+        roleService.createRole(organization, "ADMIN", List.of("iam:manage", "billing:manage", "workspace:manage"), 50);
+        roleService.createRole(organization, "MEMBER", List.of("workspace:read"), 10);
 
         OrgMember ownerMember = OrgMember.builder()
                 .organization(organization)
@@ -83,10 +88,17 @@ public class OrganizationService {
     }
 
     @Transactional
-    public void deleteOrganization(UUID orgId) {
+    public void deleteOrganization(@AuditTargetOrg UUID orgId) {
         Organization org = getOrganizationById(orgId);
         org.softDelete();
         organizationRepository.save(org);
+
+        // Soft delete all members and roles in this org
+        orgMemberRepository.softDeleteByOrgId(orgId);
+        roleRepository.softDeleteByOrgId(orgId);
+
+        // Publish event to cleanup related entities (e.g. warehouses)
+        eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationDeletedEvent(orgId));
     }
 
     private String generateUniqueSlug(String name) {

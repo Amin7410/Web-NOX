@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.time.OffsetDateTime;
 
@@ -45,6 +46,7 @@ public class PasswordRecoveryService {
     }
 
     @Transactional
+    @CacheEvict(value = "user_details", key = "#email")
     public void resetPassword(String email, String otpCode, String newPassword) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
@@ -61,6 +63,7 @@ public class PasswordRecoveryService {
     }
 
     @Transactional
+    @CacheEvict(value = "user_details", key = "#email")
     public void changePassword(String email, String oldPassword, String newPassword) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)

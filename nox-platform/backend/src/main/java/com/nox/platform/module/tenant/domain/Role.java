@@ -21,10 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
-@Table(name = "roles", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_org_id_name", columnNames = { "org_id", "name" })
-})
+@Table(name = "roles")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,11 +49,18 @@ public class Role {
     @Column(nullable = false)
     private int level = 0;
 
+    @Column(name = "deleted_at")
+    private java.time.OffsetDateTime deletedAt;
+
     @Builder
     public Role(Organization organization, String name, List<String> permissions, Integer level) {
         this.organization = organization;
         this.name = name;
         this.permissions = permissions != null ? permissions : new ArrayList<>();
         this.level = level != null ? level : 0;
+    }
+
+    public void softDelete() {
+        this.deletedAt = java.time.OffsetDateTime.now();
     }
 }

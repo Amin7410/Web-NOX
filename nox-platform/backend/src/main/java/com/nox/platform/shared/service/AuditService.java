@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.scheduling.annotation.Async;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +17,7 @@ public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
 
+    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(UUID orgId, UUID actorId, String action, String targetType, UUID targetId,
             Map<String, Object> metadata, String ip, String ua) {
