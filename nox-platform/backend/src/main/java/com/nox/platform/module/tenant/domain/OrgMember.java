@@ -20,10 +20,13 @@ import lombok.Setter;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.SQLDelete;
+
 @Entity
-@Table(name = "org_members", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_org_id_user_id", columnNames = { "org_id", "user_id" })
-})
+@Table(name = "org_members")
+@SQLDelete(sql = "UPDATE org_members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -52,6 +55,9 @@ public class OrgMember {
     @Column(name = "joined_at", nullable = false)
     private OffsetDateTime joinedAt;
 
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
     @Builder
     public OrgMember(Organization organization, User user, Role role, User invitedBy) {
         this.organization = organization;
@@ -65,5 +71,9 @@ public class OrgMember {
         if (this.joinedAt == null) {
             this.joinedAt = OffsetDateTime.now();
         }
+    }
+
+    public void softDelete() {
+        this.deletedAt = OffsetDateTime.now();
     }
 }
