@@ -4,7 +4,10 @@ import com.nox.platform.module.iam.api.request.*;
 import com.nox.platform.module.iam.api.response.*;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.service.AuthenticationService;
-import com.nox.platform.module.iam.service.MfaAuthenticationService;
+import com.nox.platform.module.iam.service.SocialAuthenticationService;
+import com.nox.platform.module.iam.service.UserSessionService;
+import com.nox.platform.module.iam.service.MfaManagementService;
+import com.nox.platform.module.iam.service.MfaVerificationService;
 import com.nox.platform.module.iam.service.PasswordRecoveryService;
 import com.nox.platform.module.iam.service.UserRegistrationService;
 import com.nox.platform.shared.api.ApiResponse;
@@ -29,7 +32,10 @@ public class AuthController {
         private final AuthenticationService authenticationService;
         private final UserRegistrationService userRegistrationService;
         private final PasswordRecoveryService passwordRecoveryService;
-        private final MfaAuthenticationService mfaAuthenticationService;
+        private final SocialAuthenticationService socialAuthenticationService;
+        private final UserSessionService userSessionService;
+        private final MfaManagementService mfaManagementService;
+        private final MfaVerificationService mfaVerificationService;
 
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -73,7 +79,7 @@ public class AuthController {
                 String ipAddress = IpUtils.getClientIp(httpRequest);
                 String userAgent = httpRequest.getHeader("User-Agent");
 
-                AuthenticationService.AuthResult result = authenticationService.refreshAccessToken(
+                AuthenticationService.AuthResult result = userSessionService.refreshAccessToken(
                                 request.refreshToken(), ipAddress,
                                 userAgent);
 
@@ -84,7 +90,7 @@ public class AuthController {
         @PostMapping("/logout")
         public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request,
                         Principal principal) {
-                authenticationService.logout(request.refreshToken(), principal.getName());
+                userSessionService.logout(request.refreshToken(), principal.getName());
                 return ResponseEntity.ok(ApiResponse.ok(null));
         }
 
@@ -108,7 +114,7 @@ public class AuthController {
 
         @PostMapping("/mfa/setup")
         public ResponseEntity<ApiResponse<MfaSetupResponse>> setupMfa(Principal principal) {
-                MfaAuthenticationService.MfaSetupResult result = mfaAuthenticationService.setupMfa(principal.getName());
+                MfaManagementService.MfaSetupResult result = mfaManagementService.setupMfa(principal.getName());
                 return ResponseEntity.ok(ApiResponse.ok(
                                 new MfaSetupResponse(result.secret(), result.qrCodeUri())));
         }
@@ -116,7 +122,7 @@ public class AuthController {
         @PostMapping("/mfa/enable")
         public ResponseEntity<ApiResponse<MfaEnableResponse>> enableMfa(
                         @Valid @RequestBody MfaEnableRequest request, Principal principal) {
-                List<String> backupCodes = mfaAuthenticationService.enableMfa(principal.getName(), request.code());
+                List<String> backupCodes = mfaManagementService.enableMfa(principal.getName(), request.code());
                 return ResponseEntity.ok(ApiResponse.ok(
                                 new MfaEnableResponse(backupCodes)));
         }
@@ -127,7 +133,7 @@ public class AuthController {
                 String ipAddress = IpUtils.getClientIp(httpRequest);
                 String userAgent = httpRequest.getHeader("User-Agent");
 
-                AuthenticationService.AuthResult result = mfaAuthenticationService.verifyMfa(request.mfaToken(),
+                AuthenticationService.AuthResult result = mfaVerificationService.verifyMfa(request.mfaToken(),
                                 request.code(), ipAddress,
                                 userAgent);
                 User user = result.user();
@@ -143,7 +149,7 @@ public class AuthController {
                 String ipAddress = IpUtils.getClientIp(httpRequest);
                 String userAgent = httpRequest.getHeader("User-Agent");
 
-                AuthenticationService.AuthResult result = mfaAuthenticationService.verifyMfaBackupCode(
+                AuthenticationService.AuthResult result = mfaVerificationService.verifyMfaBackupCode(
                                 request.mfaToken(),
                                 request.backupCode(),
                                 ipAddress, userAgent);
@@ -157,7 +163,7 @@ public class AuthController {
         @org.springframework.web.bind.annotation.DeleteMapping("/mfa")
         public ResponseEntity<ApiResponse<Void>> disableMfa(
                         @Valid @RequestBody MfaDisableRequest request, Principal principal) {
-                mfaAuthenticationService.disableMfa(principal.getName(), request.password());
+                mfaManagementService.disableMfa(principal.getName(), request.password());
                 return ResponseEntity.ok(ApiResponse.ok(null));
         }
 
@@ -175,7 +181,7 @@ public class AuthController {
                 String ipAddress = IpUtils.getClientIp(httpRequest);
                 String userAgent = httpRequest.getHeader("User-Agent");
 
-                AuthenticationService.AuthResult result = authenticationService.socialLogin(
+                AuthenticationService.AuthResult result = socialAuthenticationService.socialLogin(
                                 request.provider(), request.token(),
                                 ipAddress, userAgent);
 

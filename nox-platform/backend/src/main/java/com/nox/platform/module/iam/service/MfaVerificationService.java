@@ -9,29 +9,26 @@ import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Service dedicated to evaluating runtime OTP verification logic bounds routing
+ * strictly mapped authentication
+ * events towards subsequent session generation systems cleanly avoiding
+ * internal looping validations against Root Authenticators.
+ */
 @Service
 @RequiredArgsConstructor
-public class MfaAuthenticationService {
+public class MfaVerificationService {
 
     private final UserRepository userRepository;
     private final UserMfaBackupCodeRepository userMfaBackupCodeRepository;
     private final MfaService mfaService;
     private final UserSecurityRepository userSecurityRepository;
     private final JwtService jwtService;
-    private final AuthenticationService authenticationService;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
-    private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
-
-    @Value("${security.mfa.backup-codes.count:10}")
-    private int backupCodesCount;
+    private final UserSessionService userSessionService;
 
     public AuthenticationService.AuthResult verifyMfa(String mfaToken, int code, String ipAddress, String userAgent) {
         User user = validateMfaTokenAndGetUser(mfaToken);
@@ -55,97 +52,7 @@ public class MfaAuthenticationService {
         user.getSecurity().resetFailedLogins();
         userSecurityRepository.save(user.getSecurity());
 
-        return authenticationService.generateSuccessAuthResult(user, ipAddress, userAgent);
-    }
-
-    @Transactional
-    public MfaSetupResult setupMfa(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
-
-        if (user.getSecurity().isMfaEnabled()) {
-            throw new DomainException("MFA_ALREADY_ENABLED", "MFA is already enabled for this user", 400);
-        }
-
-        String secret = mfaService.generateSecretKey();
-        user.getSecurity().setTempMfaSecret(secret);
-        userRepository.save(user);
-
-        String qrCodeUri = mfaService.getQrCodeUri(secret, user.getEmail());
-        return new MfaSetupResult(secret, qrCodeUri);
-    }
-
-    @Transactional
-    public List<String> enableMfa(String email, int code) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
-
-        String tempSecret = user.getSecurity().getTempMfaSecret();
-        if (tempSecret == null) {
-            throw new DomainException("MFA_SETUP_REQUIRED", "MFA setup was not initiated", 400);
-        }
-
-        if (!mfaService.verifyCode(tempSecret, code)) {
-            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Verification failed.", 400);
-        }
-
-        user.getSecurity().setMfaEnabled(true);
-        user.getSecurity().setMfaSecret(tempSecret);
-        user.getSecurity().setTempMfaSecret(null);
-        userRepository.save(user);
-
-        userMfaBackupCodeRepository.deleteByUser(user);
-
-        List<String> plainBackupCodes = new ArrayList<>();
-        SecureRandom secureRandom = new SecureRandom();
-        for (int i = 0; i < backupCodesCount; i++) {
-            byte[] randomBytes = new byte[5];
-            secureRandom.nextBytes(randomBytes);
-            String plainCode = org.apache.commons.codec.binary.Hex.encodeHexString(randomBytes).toUpperCase()
-                    .substring(0, 8);
-            plainBackupCodes.add(plainCode);
-
-            UserMfaBackupCode backupCode = UserMfaBackupCode.builder()
-                    .user(user)
-                    .codeHash(DigestUtils.sha256Hex(plainCode))
-                    .used(false)
-                    .build();
-            userMfaBackupCodeRepository.save(backupCode);
-        }
-
-        return plainBackupCodes;
-    }
-
-    @Transactional
-    public void disableMfa(String email, String currentPassword) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
-
-        if (!user.getSecurity().isMfaEnabled()) {
-            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
-        }
-
-        if (user.getSecurity().isLocked()) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
-        }
-
-        org.springframework.security.core.userdetails.UserDetails userDetails;
-        try {
-            userDetails = userDetailsService.loadUserByUsername(email);
-            // Verify password explicitly using passwordEncoder
-            if (!passwordEncoder.matches(currentPassword, userDetails.getPassword())) {
-                throw new DomainException("INVALID_CREDENTIALS", "Invalid password", 401);
-            }
-        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
-            throw new DomainException("USER_NOT_FOUND", "User not found", 404);
-        }
-
-        user.getSecurity().setMfaEnabled(false);
-        user.getSecurity().setMfaSecret(null);
-        user.getSecurity().setTempMfaSecret(null);
-        userRepository.save(user);
-
-        userMfaBackupCodeRepository.deleteByUser(user);
+        return userSessionService.generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 
     public AuthenticationService.AuthResult verifyMfaBackupCode(String mfaToken, String backupCode, String ipAddress,
@@ -165,10 +72,6 @@ public class MfaAuthenticationService {
         UserMfaBackupCode matchedCode = null;
         String hashedInputCode = DigestUtils.sha256Hex(backupCode);
         for (UserMfaBackupCode storedCode : backupCodes) {
-            // Note: If old backup codes were hashed with BCrypt, they will be invalidated
-            // by this change.
-            // This is a necessary trade-off to prevent the Bcrypt CPU Exhaustion DoS
-            // attack.
             if (hashedInputCode.equals(storedCode.getCodeHash())) {
                 matchedCode = storedCode;
                 break;
@@ -193,7 +96,7 @@ public class MfaAuthenticationService {
         matchedCode.setUsed(true);
         userMfaBackupCodeRepository.save(matchedCode);
 
-        return authenticationService.generateSuccessAuthResult(user, ipAddress, userAgent);
+        return userSessionService.generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 
     private User validateMfaTokenAndGetUser(String mfaToken) {
@@ -216,8 +119,5 @@ public class MfaAuthenticationService {
         }
 
         return user;
-    }
-
-    public record MfaSetupResult(String secret, String qrCodeUri) {
     }
 }
