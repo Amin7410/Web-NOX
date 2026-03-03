@@ -57,3 +57,10 @@ pnpm run dev
 ```
 - **Portal**: http://localhost:3000
 - **Studio**: http://localhost:5173
+
+### 5. Test
+```bash
+cd nox-platform
+cd backend
+./gradlew.bat test
+```
