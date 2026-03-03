@@ -5,4 +5,6 @@ import java.util.UUID;
 
 public interface NoxUserDetails extends UserDetails {
     UUID getId();
+
+    UUID getOrganizationId();
 }

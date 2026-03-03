@@ -10,15 +10,22 @@ import java.util.UUID;
 public class CustomUserDetails extends User implements NoxUserDetails {
 
     private final UUID id;
+    private final UUID orgId;
 
-    public CustomUserDetails(UUID id, String username, String password,
+    public CustomUserDetails(UUID id, UUID orgId, String username, String password,
             Collection<? extends GrantedAuthority> authorities) {
         super(username, password, authorities);
         this.id = id;
+        this.orgId = orgId;
     }
 
     @Override
     public UUID getId() {
         return id;
+    }
+
+    @Override
+    public UUID getOrganizationId() {
+        return orgId;
     }
 }

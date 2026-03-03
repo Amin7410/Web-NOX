@@ -39,6 +39,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         return new CustomUserDetails(
                 user.getId(),
+                null, // OrgId resolved later by TenantContextFilter
                 user.getEmail(),
                 password,
                 // Roles are dynamically loaded by TenantContextFilter per request

@@ -21,6 +21,14 @@ public class SecurityUtil {
         return null;
     }
 
+    public static UUID getCurrentOrganizationId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof NoxUserDetails noxUserDetails) {
+            return noxUserDetails.getOrganizationId();
+        }
+        return null;
+    }
+
     public static String getCurrentUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails) {

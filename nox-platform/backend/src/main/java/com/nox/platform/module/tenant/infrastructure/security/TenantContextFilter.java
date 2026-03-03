@@ -59,6 +59,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String email = userDetails.getUsername();
 
+        UUID originalUserId = null;
+        if (userDetails instanceof com.nox.platform.shared.security.NoxUserDetails noxUser) {
+            originalUserId = noxUser.getId();
+        }
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User context not found");
@@ -82,8 +87,15 @@ public class TenantContextFilter extends OncePerRequestFilter {
                     .add(new org.springframework.security.core.authority.SimpleGrantedAuthority(permission)));
         }
 
+        com.nox.platform.module.iam.infrastructure.security.CustomUserDetails tenantAwareUserDetails = new com.nox.platform.module.iam.infrastructure.security.CustomUserDetails(
+                userId,
+                orgId,
+                userDetails.getUsername(),
+                userDetails.getPassword(),
+                authorities);
+
         org.springframework.security.authentication.UsernamePasswordAuthenticationToken newAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                authentication.getPrincipal(),
+                tenantAwareUserDetails,
                 authentication.getCredentials(),
                 authorities);
         newAuth.setDetails(authentication.getDetails());
