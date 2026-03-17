@@ -29,6 +29,7 @@ pnpm-debug.log*
 .pnpm-store/
 public/hot/
 _report.html
+*.tsbuildinfo
 
 # --- Java / Gradle / Backend ---
 .gradle/
