@@ -2,7 +2,7 @@
 
 **Simulation & Code Generation Platform**
 
-NOX Platform is a system for building "Digital Blueprints" for software, supporting logic simulation and AI-driven code generation.
+NOX Platform is a system for building "Digital Blueprints" for software, supporting logic simulation.
 
 ## Architecture
 
