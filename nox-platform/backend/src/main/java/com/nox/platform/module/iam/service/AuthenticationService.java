@@ -1,29 +1,17 @@
 package com.nox.platform.module.iam.service;
 
-import com.nox.platform.module.iam.domain.SocialIdentity;
 import com.nox.platform.module.iam.domain.User;
-import com.nox.platform.module.iam.domain.UserSecurity;
-import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.domain.UserStatus;
-import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
-import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
-import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
 import com.nox.platform.shared.exception.DomainException;
-import com.nox.platform.shared.util.DeviceUtils;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.OffsetDateTime;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor

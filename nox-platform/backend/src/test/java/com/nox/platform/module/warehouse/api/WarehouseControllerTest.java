@@ -7,7 +7,6 @@ import com.nox.platform.module.warehouse.service.WarehouseService;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
-import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.util.SecurityUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
