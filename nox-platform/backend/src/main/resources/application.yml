@@ -46,6 +46,8 @@ jwt:
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
+  security:
+    expose-docs: true
 
 security:
   mfa:
