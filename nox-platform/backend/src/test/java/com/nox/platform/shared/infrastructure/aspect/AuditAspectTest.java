@@ -22,7 +22,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Optional;
 import java.util.UUID;
