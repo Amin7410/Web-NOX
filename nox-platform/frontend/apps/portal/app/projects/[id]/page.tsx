@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Settings, Trash2, Calendar, User, 
   CheckCircle2, Clock, Users, Tag, 
@@ -24,6 +25,7 @@ const MOCK_PROJECT = {
 
 export default function ProjectDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   
   // In a real app, you would fetch the project data based on the ID here
@@ -107,24 +109,29 @@ export default function ProjectDetailPage() {
               <div className="flex flex-col gap-4 mt-4">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Primary Actions</h3>
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link href={`/projects/${id}/edit`}>
-                    <Button className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm font-medium">
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit Project
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${id}/team`}>
-                    <Button variant="outline" className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium">
-                      <Users className="h-4 w-4 mr-2" />
-                      Manage Team
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${id}/analytics`}>
-                    <Button variant="outline" className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium">
-                      <MoreHorizontal className="h-4 w-4 mr-2" />
-                      View Analytics
-                    </Button>
-                  </Link>
+                  <Button 
+                    onClick={() => router.push(`/projects/${id}/edit`)}
+                    className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm font-medium"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Project
+                  </Button>
+                  <Button 
+                    onClick={() => router.push(`/projects/${id}/team`)}
+                    variant="outline" 
+                    className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Manage Team
+                  </Button>
+                  <Button 
+                    onClick={() => router.push(`/projects/${id}/analytics`)}
+                    variant="outline" 
+                    className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium"
+                  >
+                    <MoreHorizontal className="h-4 w-4 mr-2" />
+                    View Analytics
+                  </Button>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 mt-2">
