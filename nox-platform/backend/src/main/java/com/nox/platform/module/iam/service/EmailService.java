@@ -25,14 +25,19 @@ public class EmailService {
 
     @Async
     public void sendVerificationEmail(String to, String otpCode) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);
-        message.setTo(to);
-        message.setSubject("Nox Platform - Verify Your Email Address");
-        message.setText("Welcome to Nox Platform! Your verification code is: " + otpCode
-                + "\nThis code will expire in 15 minutes.");
-        mailSender.send(message);
-        log.info("Sent verification email to: {}", to);
+        log.info("[DEV] Verification code for {}: {}", to, otpCode);
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("Nox Platform - Verify Your Email Address");
+            message.setText("Welcome to Nox Platform! Your verification code is: " + otpCode
+                    + "\nThis code will expire in 15 minutes.");
+            mailSender.send(message);
+            log.info("Sent verification email to: {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}. Note: OTP was logged for DEV.", to, e.getMessage());
+        }
     }
 
     @Async
