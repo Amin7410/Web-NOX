@@ -71,11 +71,35 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PublicShell({ children }: { children: ReactNode }) {
     return (
-        <div className="flex min-h-screen items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_0_30px_-20px_rgba(0,0,0,0.8)]">
-                {children}
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 py-12 selection:bg-blue-500/30">
+            {/* Background Effects */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute -left-[10%] -top-[10%] h-[40%] w-[40%] rounded-full bg-blue-600/20 blur-[120px]" />
+                <div className="absolute -right-[10%] -bottom-[10%] h-[40%] w-[40%] rounded-full bg-purple-600/10 blur-[120px]" />
+            </div>
+
+            <div className="relative z-10 w-full max-w-md">
+                <div className="mb-8 flex justify-center">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 p-0.5 shadow-lg shadow-blue-500/20">
+                            <div className="h-full w-full rounded-[10px] bg-zinc-950 flex items-center justify-center">
+                                <div className="h-5 w-5 rounded-sm bg-blue-500" />
+                            </div>
+                        </div>
+                        <div className="text-xl font-bold tracking-tight text-white">NOX</div>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-xl ring-1 ring-white/5">
+                    {children}
+                </div>
+
+                <div className="mt-8 text-center text-xs text-zinc-500">
+                    &copy; {new Date().getFullYear()} NOX Platform. All rights reserved.
+                </div>
             </div>
         </div>
     );
 }
+
 
