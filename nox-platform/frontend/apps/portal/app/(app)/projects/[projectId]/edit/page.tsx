@@ -1,20 +1,32 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
-  ArrowLeft, UploadCloud, Users, Settings, Save, Eye, CheckCircle2,
-  X
+  ArrowLeft, UploadCloud, Users, Settings, X, Trash2
 } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Textarea } from '../../ui/textarea';
-import { Label } from '../../ui/label';
-import { Badge } from '../../ui/badge';
+import { Button } from '../../../../ui/button';
+import { Input } from '../../../../ui/input';
+import { Textarea } from '../../../../ui/textarea';
+import { Label } from '../../../../ui/label';
+import { Badge } from '../../../../ui/badge';
 
-export default function NewProjectPage() {
+// Using the same mock data structure to simulate fetching
+const MOCK_PROJECT = {
+  id: "1",
+  name: "Website Redesign",
+  status: "active",
+  organization: "nox-team",
+  description: "A complete overhaul of our marketing website to improve conversion rates and update the brand visual language. This includes new landing pages, a rebuilt blog, and an optimized checkout flow. We are also migrating to Next.js for better performance and SEO.",
+  tags: ["Web", "Frontend", "Dashboard", "Marketing"]
+};
+
+export default function EditProjectPage() {
   const router = useRouter();
+  const { projectId } = useParams();
+  
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const [organization, setOrganization] = useState("nox-team");
@@ -23,6 +35,16 @@ export default function NewProjectPage() {
   // Tags handling
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+
+  // Simulate fetching data on mount
+  useEffect(() => {
+    // In a real app, use the `projectId` param to fetch the exact project
+    setProjectName(MOCK_PROJECT.name);
+    setDescription(MOCK_PROJECT.description);
+    setOrganization(MOCK_PROJECT.organization);
+    setStatus(MOCK_PROJECT.status);
+    setTags(MOCK_PROJECT.tags);
+  }, [projectId]);
   
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -49,26 +71,26 @@ export default function NewProjectPage() {
       {/* Top Navigation Bar */}
       <div className="flex items-center justify-between mb-8">
         <Link 
-          href="/projects" 
+          href={`/projects/${projectId}`} 
           className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Projects
+          Back to Project
         </Link>
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
-            onClick={() => router.push('/projects')}
-            className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 h-9"
+            onClick={() => router.push(`/projects/${projectId}`)}
+            className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 h-9 shadow-sm"
           >
             Cancel
           </Button>
           <Button 
-            onClick={() => router.push('/projects')}
+            onClick={() => router.push(`/projects/${projectId}`)}
             className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm font-medium h-9"
             disabled={!projectName || isNameInvalid || isDescInvalid}
           >
-            Create Project
+            Save Changes
           </Button>
         </div>
       </div>
@@ -76,10 +98,10 @@ export default function NewProjectPage() {
       {/* Header Info */}
       <div className="flex flex-col gap-2 mb-10">
         <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-          Create New Project
+          Edit Project
         </h1>
         <p className="text-[15px] text-gray-500">
-          Set up a new project and start collaborating
+          Update your project information and settings
         </p>
       </div>
 
@@ -89,7 +111,7 @@ export default function NewProjectPage() {
           
           <section className="flex flex-col">
             <div className="flex items-center border-b border-gray-200 pb-3 mb-6">
-              <h2 className="text-lg font-medium text-gray-900">Project Details</h2>
+              <h2 className="text-lg font-medium text-gray-900">Project Information</h2>
             </div>
             
             <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
@@ -163,8 +185,8 @@ export default function NewProjectPage() {
                     onChange={(e) => setStatus(e.target.value)}
                     className="flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                   >
-                    <option value="draft">Draft</option>
                     <option value="active">Active</option>
+                    <option value="draft">Draft</option>
                     <option value="archived">Archived</option>
                   </select>
                 </div>
@@ -212,23 +234,15 @@ export default function NewProjectPage() {
             </form>
           </section>
 
-          {/* Action Buttons Section */}
-          <div className="flex flex-wrap items-center gap-3 pt-4">
-            <Button variant="outline" className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm">
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
-            </Button>
-            <Button variant="outline" className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm">
-              <Eye className="h-4 w-4 mr-2" />
-              Preview
-            </Button>
-            <div className="flex-1"></div>
-            <Button 
-              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm font-medium"
-              disabled={!projectName || isNameInvalid || isDescInvalid}
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Publish
+          {/* Danger Zone / Secondary Actions */}
+          <div className="flex items-center justify-between pt-8 mt-4 border-t border-red-100/50">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-gray-900">Danger Zone</h3>
+              <p className="text-xs text-gray-500">Permanently delete this project and all its data.</p>
+            </div>
+            <Button variant="outline" className="border-red-200 text-[#EF4444] bg-red-50 hover:bg-red-100 hover:border-red-300 font-medium shadow-sm transition-colors">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Project
             </Button>
           </div>
 

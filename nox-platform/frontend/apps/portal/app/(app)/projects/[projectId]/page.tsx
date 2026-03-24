@@ -21,6 +21,16 @@ export default function ProjectOverviewPage({ params }: { params: { projectId: s
                 subtitle={`${project.orgName} · ${project.visibility} · ${project.status}`}
                 actions={
                     <>
+                    <>
+                        <Button asChild variant="outline">
+                            <Link href={`/projects/${project.id}/analytics`}>Analytics</Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href={`/projects/${project.id}/team`}>Team</Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href={`/projects/${project.id}/edit`}>Edit</Link>
+                        </Button>
                         <Button asChild variant="outline">
                             <Link href={`/projects/${project.id}/settings`}>Settings</Link>
                         </Button>
@@ -29,6 +39,7 @@ export default function ProjectOverviewPage({ params }: { params: { projectId: s
                                 Open in Studio
                             </a>
                         </Button>
+                    </>
                     </>
                 }
             />

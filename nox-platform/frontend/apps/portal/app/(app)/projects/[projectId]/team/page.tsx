@@ -3,9 +3,9 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, UserPlus, Mail, MoreHorizontal } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Badge } from '../../../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
+import { Button } from '../../../../ui/button';
+import { Badge } from '../../../../ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
 
 const MOCK_TEAM = [
   { id: "1", name: "Sarah Jenkins", email: "sarah@example.com", role: "Owner", status: "Active", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face" },
@@ -17,14 +17,14 @@ const MOCK_TEAM = [
 
 export default function TeamManagementPage() {
   const params = useParams();
-  const id = params.id as string;
+  const projectId = params.projectId as string;
 
   return (
     <div className="flex flex-col w-full max-w-5xl mx-auto pb-16 p-6">
       {/* Top Navigation Bar */}
       <div className="flex items-center justify-between mb-8">
         <Link 
-          href={`/projects/${id}`}
+          href={`/projects/${projectId}`}
           className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

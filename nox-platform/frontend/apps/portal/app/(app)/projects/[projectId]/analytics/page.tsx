@@ -3,11 +3,11 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, TrendingUp, Users, Activity, Clock } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '../../../../ui/button';
 
 export default function AnalyticsPage() {
   const params = useParams();
-  const id = params.id as string;
+  const projectId = params.projectId as string;
 
   const analyticsData = [
     { label: "Total Views", value: "1,234", change: "+12%", icon: TrendingUp, color: "text-blue-500" },
@@ -21,7 +21,7 @@ export default function AnalyticsPage() {
       {/* Top Navigation Bar */}
       <div className="flex items-center justify-between mb-8">
         <Link 
-          href={`/projects/${id}`}
+          href={`/projects/${projectId}`}
           className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
