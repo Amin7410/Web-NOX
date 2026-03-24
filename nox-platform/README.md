@@ -49,11 +49,9 @@ cd backend
 ### 4. Frontend
 Install dependencies and start the monorepo from the root:
 ```bash
-# Install dependencies (from root)
 cd nox-platform
 pnpm install
 pnpm run dev
-# Start development server
 ```
 - **Portal**: http://localhost:3000
 - **Studio**: http://localhost:5173

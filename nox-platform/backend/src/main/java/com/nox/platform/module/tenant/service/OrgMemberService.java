@@ -29,7 +29,7 @@ public class OrgMemberService {
     private final UserRepository userRepository;
 
     @Transactional
-    @CacheEvict(value = "org_members", key = "#orgId + '-' + #userRepository.findByEmail(#email).map(u -> u.getId()).orElse(null)")
+    @CacheEvict(value = "org_members", key = "#orgId + '-' + #result.user.id")
     public OrgMember addMember(@AuditTargetOrg UUID orgId, String email, String roleName, String inviterEmail) {
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
