@@ -1,6 +1,5 @@
 package com.nox.platform.module.warehouse.service;
 
-import com.nox.platform.module.warehouse.domain.AssetCollection;
 import com.nox.platform.module.warehouse.domain.BlockTemplate;
 import com.nox.platform.module.warehouse.domain.InvaderDefinition;
 import com.nox.platform.module.warehouse.domain.OwnerType;

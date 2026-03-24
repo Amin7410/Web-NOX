@@ -2,7 +2,7 @@
 
 **Simulation & Code Generation Platform**
 
-NOX Platform is a system for building "Digital Blueprints" for software, supporting logic simulation and AI-driven code generation.
+NOX Platform is a system for building "Digital Blueprints" for software, supporting logic simulation.
 
 ## Architecture
 
@@ -50,10 +50,10 @@ cd backend
 Install dependencies and start the monorepo from the root:
 ```bash
 # Install dependencies (from root)
+cd nox-platform
 pnpm install
-
-# Start development server
 pnpm run dev
+# Start development server
 ```
 - **Portal**: http://localhost:3000
 - **Studio**: http://localhost:5173

@@ -21,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.security.config.Customizer;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
@@ -30,6 +32,9 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final TenantContextFilter tenantContextFilter;
+
+    @Value("${app.security.expose-docs:false}")
+    private boolean exposeDocs;
 
     @Autowired
     @Qualifier("handlerExceptionResolver")
@@ -48,8 +53,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/verify-email",
@@ -59,14 +64,20 @@ public class SecurityConfig {
                                 "/api/v1/auth/mfa/verify-backup",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/social-login")
-                        .permitAll()
-                        .requestMatchers(
+                        .permitAll();
+
+                    if (exposeDocs) {
+                        auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    }
+
+                    auth.requestMatchers(
                                 "/api/v1/auth/mfa/setup",
                                 "/api/v1/auth/mfa/enable",
                                 "/api/v1/auth/change-password",
                                 "/api/v1/auth/logout")
                         .authenticated()
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated();
+                })
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
                             exceptionResolver.resolveException(request, response, null, authException);

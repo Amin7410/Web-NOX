@@ -14,7 +14,6 @@ export interface RelationData {
 }
 
 export const NoxRelation = memo(({
-    id,
     sourceX,
     sourceY,
     targetX,
@@ -51,7 +50,6 @@ export const NoxRelation = memo(({
 
     let strokeColor = '#52525b'; // zinc-600
     let strokeWidth = 2;
-    let className = 'transition-all duration-300';
     let filter = '';
 
     switch (state) {
@@ -99,7 +97,6 @@ export const NoxRelation = memo(({
                 path={path}
                 markerEnd={markerEnd}
                 style={globePathStyle}
-                className={className}
             />
 
             {/* 3. Data Flow Animation (Moving Particles) */}
@@ -108,7 +105,6 @@ export const NoxRelation = memo(({
                     path={path}
                     markerEnd={markerEnd}
                     style={{ stroke: '#10b981', strokeWidth: 2, strokeDasharray: '5,10', animation: 'flow 1s linear infinite' }}
-                    className="opacity-80"
                 />
             )}
 

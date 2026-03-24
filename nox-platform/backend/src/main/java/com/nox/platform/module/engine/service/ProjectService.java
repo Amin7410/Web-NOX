@@ -4,7 +4,6 @@ import com.nox.platform.module.engine.api.request.CreateProjectRequest;
 import com.nox.platform.module.engine.api.request.UpdateProjectRequest;
 import com.nox.platform.module.engine.api.response.ProjectResponse;
 import com.nox.platform.module.engine.domain.Project;
-import com.nox.platform.module.engine.domain.ProjectStatus;
 import com.nox.platform.module.engine.domain.ProjectVisibility;
 import com.nox.platform.module.engine.domain.Workspace;
 import com.nox.platform.module.engine.domain.WorkspaceType;
@@ -24,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Service

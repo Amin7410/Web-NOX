@@ -1,0 +1,27 @@
+spring:
+  cache:
+    type: simple
+  mail:
+    host: localhost
+    port: 1025
+    username: test@test.com
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    protocol: smtp
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+
+app:
+  frontend:
+    url: http://localhost:3000
