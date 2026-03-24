@@ -42,9 +42,10 @@ public class AuthenticationService {
                     423);
         }
 
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email", 403);
-        }
+        // Temporarily disabled email verification check
+        // if (user.getStatus() != UserStatus.ACTIVE) {
+        //     throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email", 403);
+        // }
 
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, plaintextPassword));

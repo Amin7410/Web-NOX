@@ -50,7 +50,7 @@ public class UserRegistrationService {
         User user = User.builder()
                 .email(email)
                 .fullName(fullName)
-                .status(UserStatus.PENDING_VERIFICATION)
+                .status(UserStatus.ACTIVE)  // Changed from PENDING_VERIFICATION to ACTIVE
                 .build();
 
         String hashedPassword = passwordEncoder.encode(plaintextPassword);
@@ -62,9 +62,9 @@ public class UserRegistrationService {
         user.setSecurity(security);
         user = userRepository.save(user);
 
-        OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.VERIFY_EMAIL);
-
-        eventPublisher.publishEvent(new UserRegisteredEvent(this, user, otp.getCode()));
+        // Skip OTP generation and email verification for now
+        // OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.VERIFY_EMAIL);
+        // eventPublisher.publishEvent(new UserRegisteredEvent(this, user, otp.getCode()));
 
         return user;
     }
