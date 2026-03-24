@@ -1,6 +1,9 @@
-import { redirect } from "next/navigation";
+import { ProjectPortfolio } from "@/components/dashboard/ProjectPortfolio";
 
 export default function Home() {
-    redirect("/projects");
+    return (
+        <div className="flex flex-col min-h-screen">
+            <ProjectPortfolio />
+        </div>
+    );
 }
-
