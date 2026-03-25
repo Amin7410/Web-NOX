@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Button } from "@nox/ui";
 
 type NavItem = {
     href: string;
@@ -24,8 +23,10 @@ function NavLink({ href, label }: NavItem) {
         <Link
             href={href}
             className={[
-                "rounded-lg px-3 py-2 text-sm transition",
-                active ? "bg-white/10 text-white" : "text-zinc-300 hover:bg-white/5 hover:text-white",
+                "flex items-center rounded-lg px-3 py-2 text-sm transition-all duration-200",
+                active 
+                    ? "bg-white text-[#4F46E5] shadow-sm ring-1 ring-gray-200 font-semibold" 
+                    : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm",
             ].join(" ")}
         >
             {label}
@@ -36,34 +37,25 @@ function NavLink({ href, label }: NavItem) {
 export function AppShell({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-screen">
-            <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
-                <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-blue-600/20 ring-1 ring-blue-500/30" />
-                        <div className="leading-tight">
-                            <div className="text-sm font-semibold">NOX Portal</div>
-                            <div className="text-xs text-zinc-400">Customer dashboard</div>
+            <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 py-8 md:grid-cols-[240px_1fr] lg:px-8">
+                <aside className="md:sticky md:top-24 md:self-start">
+                    <div className="flex flex-col gap-6">
+                        <div>
+                            <h3 className="mb-3 px-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                                Management
+                            </h3>
+                            <nav className="flex flex-col gap-1.5">
+                                {nav.map((item) => (
+                                    <NavLink key={item.href} {...item} />
+                                ))}
+                            </nav>
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                            Sign out
-                        </Button>
-                    </div>
-                </div>
-            </header>
-
-            <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[220px_1fr]">
-                <aside className="md:sticky md:top-[72px] md:self-start">
-                    <nav className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-2">
-                        {nav.map((item) => (
-                            <NavLink key={item.href} {...item} />
-                        ))}
-                    </nav>
                 </aside>
 
-                <main className="min-w-0">{children}</main>
+                <main className="min-w-0 bg-transparent">
+                    {children}
+                </main>
             </div>
         </div>
     );

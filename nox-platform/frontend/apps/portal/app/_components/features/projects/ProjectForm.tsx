@@ -13,7 +13,7 @@ import { Textarea } from '../../../ui/textarea';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
 
-export default function NewProjectPage() {
+export function ProjectForm() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
@@ -183,7 +183,7 @@ export default function NewProjectPage() {
                     <Badge 
                       key={tag} 
                       variant="secondary" 
-                      className="bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium px-2.5 py-1 rounded-md border-0 transition-colors flex items-center gap-1.5"
+                      className="bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium px-2.5 py-1 rounded-md border-0 transition-colors cursor-pointer"
                     >
                       {tag}
                       <button 
