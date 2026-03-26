@@ -57,6 +57,7 @@ pnpm run dev
 ```
 - **Portal**: http://localhost:3000
 - **Studio**: http://localhost:5173
+- **MailHog**: http://localhost:8025
 
 ### 5. Test
 ```bash
