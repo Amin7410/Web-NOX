@@ -1,10 +1,45 @@
+'use client';
+
 import Link from "next/link";
 import { Button, Input } from "@nox/ui";
 import { Alert } from "../../../_components/UiBits";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-    const loading = false as boolean;
-    const error: string | null = null;
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                // Redirect to organizations or dashboard after successful login
+                router.push("/organizations");
+                router.refresh();
+            } else {
+                setError(data.message || "Invalid email or password");
+            }
+        } catch (err) {
+            setError("An error occurred during sign in. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="space-y-5">
@@ -19,15 +54,27 @@ export default function LoginPage() {
                 <Alert tone="danger" title="Sign in failed" description={error} />
             ) : null}
 
-            <form className="space-y-3">
+            <form className="space-y-3" onSubmit={handleSubmit}>
                 <div className="space-y-1">
                     <label className="text-sm text-zinc-200">Email</label>
-                    <Input type="email" placeholder="you@example.com" required />
+                    <Input 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        required 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
                 </div>
 
                 <div className="space-y-1">
                     <label className="text-sm text-zinc-200">Password</label>
-                    <Input type="password" placeholder="••••••••" required />
+                    <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        required 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
                 </div>
 
                 <div className="flex items-center justify-between pt-1">

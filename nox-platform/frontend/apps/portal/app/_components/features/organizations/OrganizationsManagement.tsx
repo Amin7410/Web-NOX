@@ -2,17 +2,59 @@
 
 import { 
   Building2, Plus, Users, Layout, ChevronRight, 
-  Search, Filter
+  Search, Loader2
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import { Badge } from "../../../ui/badge";
-import { MOCK_ORGANIZATIONS } from "./data";
+import { Organization } from "./data";
 
 export function OrganizationsManagement() {
   const router = useRouter();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null); // Added error state
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const res = await fetch("/api/orgs");
+        if (res.status === 401) {
+          setError("Session expired. Please login again.");
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        const orgList = data.data || [];
+        setOrganizations(orgList.map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          slug: o.slug,
+          role: "Member",
+          memberCount: 0,
+          projectCount: 0,
+          createdAt: o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—",
+          status: "Active"
+        })));
+      } catch (err) {
+        console.error("Failed to fetch orgs", err);
+        setError("Failed to load organizations.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrganizations();
+  }, []);
+
+  const filteredOrgs = organizations.filter(org => 
+    org.name.toLowerCase().includes(search.toLowerCase()) || 
+    org.slug.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col w-full">
@@ -41,31 +83,24 @@ export function OrganizationsManagement() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search organizations..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9 w-full bg-gray-50 border-gray-200 focus-visible:ring-[#4F46E5] focus-visible:border-[#4F46E5] h-9 transition-all"
           />
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 sm:flex-none border-gray-200 text-gray-600 bg-white hover:bg-gray-50 h-9 px-4"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 sm:flex-none border-gray-200 text-gray-600 bg-white hover:bg-gray-50 h-9 px-4"
-          >
-            Sort
-          </Button>
         </div>
       </div>
 
       {/* Organization Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-        {MOCK_ORGANIZATIONS.map((org) => (
+        {loading ? (
+           <div className="col-span-full py-20 flex justify-center items-center">
+              <Loader2 className="h-8 w-8 text-[#4F46E5] animate-spin" />
+           </div>
+        ) : filteredOrgs.length === 0 ? (
+          <div className="col-span-full py-20 text-center text-gray-500">
+             No organizations found.
+          </div>
+        ) : filteredOrgs.map((org) => (
           <div
             key={org.id}
             onClick={() => router.push(`/organizations/${org.id}`)}

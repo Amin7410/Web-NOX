@@ -1,19 +1,69 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   User, Shield, Smartphone, Globe, 
   Camera, CheckCircle2, Lock, Bell
 } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
+import { Button } from "../../../ui/button";
+import { Input } from "../../../ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "../../../ui/avatar";
+import { Alert } from "../../../_components/UiBits";
+import { useRouter } from "next/navigation";
 
 export function UserProfileForm() {
-  const [fullName, setFullName] = useState("John Doe");
-  const [email] = useState("user@example.com"); // Usually read-only unless following a flow
-  const [username, setUsername] = useState("johndoe");
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const [profile, setProfile] = useState({
+      fullName: "",
+      email: "",
+      avatarUrl: ""
+  });
+
+  useEffect(() => {
+      const fetchProfile = async () => {
+          try {
+              const res = await fetch('/api/auth/me');
+              if (res.status === 401) {
+                  router.push("/auth/login");
+                  return;
+              }
+              const data = await res.json();
+              if (res.ok) {
+                  setProfile({
+                      fullName: data.data.fullName || "",
+                      email: data.data.email || "",
+                      avatarUrl: data.data.avatarUrl || ""
+                  });
+              } else {
+                  setError("Failed to load profile data");
+              }
+          } catch (err) {
+              setError("An error occurred while loading profile");
+          } finally {
+              setLoading(false);
+          }
+      };
+
+      fetchProfile();
+  }, [router]);
+
+  const handleSave = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSaving(true);
+      setError(null);
+      setSuccess(false);
+      
+      // Mocking save for now as there is no backend update endpoint yet
+      setTimeout(() => {
+          setSaving(false);
+          setSuccess(true);
+      }, 1000);
+  };
 
   return (
     <div className="flex flex-col w-full max-w-4xl mx-auto pb-16 p-6">
@@ -49,7 +99,7 @@ export function UserProfileForm() {
               <div className="flex flex-col sm:flex-row items-center gap-6 pb-2">
                 <div className="relative group">
                   <Avatar className="h-24 w-24 border-4 border-white shadow-md cursor-pointer group-hover:opacity-80 transition-opacity">
-                    <AvatarImage src="https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=100&h=100&fit=crop" />
+                    <AvatarImage src={profile.avatarUrl || "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=100&h=100&fit=crop"} />
                     <AvatarFallback className="bg-[#4F46E5] text-white text-xl font-bold">JD</AvatarFallback>
                   </Avatar>
                   <label 
@@ -70,52 +120,56 @@ export function UserProfileForm() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                {/* Full Name */}
-                <div className="flex flex-col gap-2.5">
-                  <Label htmlFor="fullName" className="text-gray-900 font-bold text-sm tracking-tight">Full Name</Label>
-                  <Input 
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="bg-white border-gray-300 focus-visible:ring-[#4F46E5] focus-visible:border-[#4F46E5] transition-all h-11 text-[15px] shadow-sm"
-                  />
-                </div>
-
-                {/* Username */}
-                <div className="flex flex-col gap-2.5">
-                  <Label htmlFor="username" className="text-gray-900 font-bold text-sm tracking-tight">Username</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">@</span>
+              <form className="space-y-6" onSubmit={handleSave}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  {/* Full Name */}
+                  <div className="flex flex-col gap-2.5">
+                    <label htmlFor="fullName" className="text-gray-900 font-bold text-sm tracking-tight">Full Name</label>
                     <Input 
-                      id="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="pl-7 bg-white border-gray-300 focus-visible:ring-[#4F46E5] focus-visible:border-[#4F46E5] transition-all h-11 text-[15px] shadow-sm font-semibold text-[#4F46E5]"
+                      id="fullName"
+                      value={profile.fullName}
+                      onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                      className="bg-white border-gray-300 focus-visible:ring-[#4F46E5] focus-visible:border-[#4F46E5] transition-all h-11 text-[15px] shadow-sm"
                     />
+                  </div>
+
+                  {/* Username (Placeholder for now, not in profile state) */}
+                  <div className="flex flex-col gap-2.5">
+                    <label htmlFor="username" className="text-gray-900 font-bold text-sm tracking-tight">Username</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">@</span>
+                      <Input 
+                        id="username"
+                        value="johndoe" // Placeholder
+                        readOnly
+                        className="pl-7 bg-gray-50 border-gray-200 text-gray-500 h-11 text-[15px] shadow-none cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email (Read Only) */}
+                  <div className="flex flex-col gap-2.5 sm:col-span-2">
+                    <label htmlFor="email" className="text-gray-900 font-bold text-sm tracking-tight text-gray-400">Email Address</label>
+                    <div className="relative group">
+                      <Input 
+                        id="email"
+                        value={profile.email}
+                        readOnly
+                        className="bg-gray-50 border-gray-200 text-gray-500 h-11 text-[15px] shadow-none cursor-not-allowed pr-10"
+                      />
+                      <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#22C55E]" />
+                    </div>
+                    <p className="text-[11px] font-bold text-[#22C55E] uppercase tracking-widest mt-0.5">Verified Primary Email</p>
                   </div>
                 </div>
 
-                {/* Email (Read Only) */}
-                <div className="flex flex-col gap-2.5 sm:col-span-2">
-                  <Label htmlFor="email" className="text-gray-900 font-bold text-sm tracking-tight text-gray-400">Email Address</Label>
-                  <div className="relative group">
-                    <Input 
-                      id="email"
-                      value={email}
-                      readOnly
-                      className="bg-gray-50 border-gray-200 text-gray-500 h-11 text-[15px] shadow-none cursor-not-allowed pr-10"
-                    />
-                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#22C55E]" />
-                  </div>
-                  <p className="text-[11px] font-bold text-[#22C55E] uppercase tracking-widest mt-0.5">Verified Primary Email</p>
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-50">
+                  <Button variant="outline" className="h-10 border-gray-300 text-gray-600 font-bold text-xs uppercase tracking-widest hover:bg-gray-50">Reset Changes</Button>
+                  <Button type="submit" className="h-10 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs uppercase tracking-widest shadow-md px-6" disabled={saving}>
+                    {saving ? "Saving..." : "Save Changes"}
+                  </Button>
                 </div>
-              </div>
-
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-50">
-                <Button variant="outline" className="h-10 border-gray-300 text-gray-600 font-bold text-xs uppercase tracking-widest hover:bg-gray-50">Reset Changes</Button>
-                <Button className="h-10 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs uppercase tracking-widest shadow-md px-6">Save Transitions</Button>
-              </div>
+              </form>
             </div>
           </div>
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Building2, Globe, Shield, 
-  CheckCircle2, Info, Layout, Users, ExternalLink
+  CheckCircle2, Info, Layout, Users, ExternalLink, Loader2
 } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -17,6 +17,7 @@ export function OrganizationForm() {
   const [orgName, setOrgName] = useState("");
   const [slug, setSlug] = useState("");
   const [plan, setPlan] = useState("free");
+  const [loading, setLoading] = useState(false);
   
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
@@ -24,6 +25,31 @@ export function OrganizationForm() {
     // Auto-generate slug if empty or matching previous name
     if (!slug || slug === orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-')) {
       setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!orgName || !slug) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/orgs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: orgName, slug }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.data) {
+        router.push(`/organizations/${data.data.id}`);
+      } else if (res.status === 401) {
+        alert("Session expired or unauthorized. Please login again.");
+        router.push("/auth/login"); // Redirect to login if possible
+      } else {
+        alert(data.message || "Failed to create organization");
+      }
+    } catch (error) {
+      alert("Network error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,10 +73,11 @@ export function OrganizationForm() {
             Cancel
           </Button>
           <Button 
-            onClick={() => router.push('/organizations')}
+            onClick={handleCreate}
             className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md font-semibold h-9 px-6 transition-all"
-            disabled={!orgName || !slug}
+            disabled={!orgName || !slug || loading}
           >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Create Organization
           </Button>
         </div>
