@@ -4,6 +4,7 @@ import com.nox.platform.module.engine.api.request.CreateWorkspaceRequest;
 import com.nox.platform.module.engine.api.response.WorkspaceResponse;
 import com.nox.platform.module.engine.domain.Project;
 import com.nox.platform.module.engine.domain.Workspace;
+import com.nox.platform.module.engine.domain.WorkspaceStatus;
 import com.nox.platform.module.engine.infrastructure.WorkspaceRepository;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
@@ -53,15 +54,25 @@ public class WorkspaceService {
     }
 
     @Transactional
-    public void deleteWorkspace(UUID projectId, UUID workspaceId) {
-        // Validate Project Access first natively
-        projectService.findProjectInternal(projectId);
-
-        Workspace workspace = workspaceRepository.findByIdAndProjectId(workspaceId, projectId)
-                .orElseThrow(
-                        () -> new DomainException("WORKSPACE_NOT_FOUND", "Workspace missing or invalid bounds", 404));
-
+    public void deleteWorkspace(UUID workspaceId) {
+        Workspace workspace = getWorkspaceInternal(workspaceId);
         workspaceRepository.delete(workspace);
+    }
+
+    @Transactional
+    public WorkspaceResponse updateWorkspaceStatus(UUID workspaceId, WorkspaceStatus newStatus) {
+        Workspace workspace = getWorkspaceInternal(workspaceId);
+        workspace.setStatus(newStatus);
+        workspace = workspaceRepository.save(workspace);
+        return mapToResponse(workspace);
+    }
+
+    // INTERNAL API FOR ENGINE MODULE (Tenant Isolation Check)
+    public Workspace getWorkspaceInternal(UUID workspaceId) {
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new DomainException("WORKSPACE_NOT_FOUND", "Workspace missing or invalid bounds", 404)); // NOPMD
+        projectService.findProjectInternal(workspace.getProject().getId());
+        return workspace;
     }
 
     private WorkspaceResponse mapToResponse(Workspace workspace) {
@@ -70,6 +81,7 @@ public class WorkspaceService {
                 workspace.getProject().getId(),
                 workspace.getName(),
                 workspace.getType(),
+                workspace.getStatus(),
                 workspace.getCreatedBy().getId(),
                 workspace.getCreatedAt());
     }

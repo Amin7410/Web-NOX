@@ -76,6 +76,7 @@ class WorkspaceControllerTest {
                 CreateWorkspaceRequest request = new CreateWorkspaceRequest("Backend", WorkspaceType.BACKEND);
                 WorkspaceResponse response = new WorkspaceResponse(
                                 mockWorkspaceId, mockProjectId, "Backend", WorkspaceType.BACKEND,
+                                com.nox.platform.module.engine.domain.WorkspaceStatus.DRAFT,
                                 mockUserId, OffsetDateTime.now());
 
                 Mockito.when(workspaceService.createWorkspace(eq(mockProjectId), any(CreateWorkspaceRequest.class),
@@ -95,6 +96,7 @@ class WorkspaceControllerTest {
         void getWorkspacesByProject_success() throws Exception {
                 WorkspaceResponse response = new WorkspaceResponse(
                                 mockWorkspaceId, mockProjectId, "Backend", WorkspaceType.BACKEND,
+                                com.nox.platform.module.engine.domain.WorkspaceStatus.DRAFT,
                                 mockUserId, OffsetDateTime.now());
 
                 Mockito.when(workspaceService.getWorkspacesByProject(mockProjectId)).thenReturn(List.of(response));
@@ -110,6 +112,6 @@ class WorkspaceControllerTest {
                                 mockWorkspaceId))
                                 .andExpect(status().isNoContent());
 
-                Mockito.verify(workspaceService).deleteWorkspace(mockProjectId, mockWorkspaceId);
+                Mockito.verify(workspaceService).deleteWorkspace(mockWorkspaceId);
         }
 }

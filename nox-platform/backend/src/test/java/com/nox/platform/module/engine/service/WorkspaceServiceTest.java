@@ -89,10 +89,10 @@ class WorkspaceServiceTest {
         UUID wsId = UUID.randomUUID();
         Workspace w1 = Workspace.builder().id(wsId).name("W1").project(mockProject).createdBy(mockUser).build();
 
-        when(projectService.findProjectInternal(mockProjectId)).thenReturn(mockProject);
-        when(workspaceRepository.findByIdAndProjectId(wsId, mockProjectId)).thenReturn(Optional.of(w1));
+        when(workspaceRepository.findById(wsId)).thenReturn(Optional.of(w1));
+        when(projectService.findProjectInternal(mockProject.getId())).thenReturn(mockProject);
 
-        workspaceService.deleteWorkspace(mockProjectId, wsId);
+        workspaceService.deleteWorkspace(wsId);
 
         verify(workspaceRepository, times(1)).delete(w1);
     }
@@ -100,11 +100,10 @@ class WorkspaceServiceTest {
     @Test
     void deleteWorkspace_notFound_throwsException() {
         UUID wsId = UUID.randomUUID();
-        when(projectService.findProjectInternal(mockProjectId)).thenReturn(mockProject);
-        when(workspaceRepository.findByIdAndProjectId(wsId, mockProjectId)).thenReturn(Optional.empty());
+        when(workspaceRepository.findById(wsId)).thenReturn(Optional.empty());
 
         DomainException ex = assertThrows(DomainException.class,
-                () -> workspaceService.deleteWorkspace(mockProjectId, wsId));
+                () -> workspaceService.deleteWorkspace(wsId));
 
         assertEquals("WORKSPACE_NOT_FOUND", ex.getCode());
     }

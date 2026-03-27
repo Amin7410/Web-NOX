@@ -37,6 +37,11 @@ public class Workspace {
     @Column(nullable = false, length = 50)
     private WorkspaceType type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private WorkspaceStatus status = WorkspaceStatus.DRAFT;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

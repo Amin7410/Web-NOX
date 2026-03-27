@@ -10,6 +10,7 @@ public record WorkspaceResponse(
                 UUID projectId,
                 String name,
                 WorkspaceType type,
+                com.nox.platform.module.engine.domain.WorkspaceStatus status,
                 UUID createdBy,
                 OffsetDateTime createdAt) {
 }
