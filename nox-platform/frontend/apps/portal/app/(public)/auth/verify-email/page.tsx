@@ -37,8 +37,9 @@ export default function VerifyEmailPage() {
                 setState("success");
             } else {
                 const data = await res.json().catch(() => ({}));
+                const errorMsg = data.error?.message || data.message || "Verification failed";
                 setState("error");
-                setErrorMessage(data.message || data.error || "Verification failed");
+                setErrorMessage(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
             }
         } catch (err: any) {
             setState("error");
