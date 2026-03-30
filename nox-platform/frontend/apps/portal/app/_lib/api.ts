@@ -34,6 +34,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         headers.set("Content-Type", "application/json");
     }
 
+    // Attach JWT and Organization Context if available (client-side only)
+    if (typeof window !== "undefined") {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+            headers.set("Authorization", `Bearer ${token}`);
+        }
+
+        const orgId = localStorage.getItem("active_org_id");
+        if (orgId) {
+            headers.set("X-Org-Id", orgId);
+        }
+    }
+
     const response = await fetch(url, {
         ...options,
         headers,

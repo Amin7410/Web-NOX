@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@nox/ui";
+import { api } from "../_lib/api";
 
 type NavItem = {
     href: string;
@@ -34,6 +35,22 @@ function NavLink({ href, label }: NavItem) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+    const router = useRouter();
+
+    const handleSignOut = async () => {
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (refreshToken) {
+            try {
+                await api.post("/auth/logout", { refreshToken });
+            } catch {
+                // ignore — clear tokens regardless
+            }
+        }
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        router.push("/auth/login");
+    };
+
     return (
         <div className="min-h-screen">
             <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
@@ -47,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={handleSignOut}>
                             Sign out
                         </Button>
                     </div>
