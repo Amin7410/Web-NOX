@@ -44,7 +44,17 @@ public class WorkspaceController {
     public ResponseEntity<Void> deleteWorkspace(
             @PathVariable UUID projectId,
             @PathVariable UUID workspaceId) {
-        workspaceService.deleteWorkspace(projectId, workspaceId);
+        workspaceService.deleteWorkspace(workspaceId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{workspaceId}/status")
+    @PreAuthorize("hasAuthority('workspace:manage')")
+    public ResponseEntity<WorkspaceResponse> updateWorkspaceStatus(
+            @PathVariable UUID projectId,
+            @PathVariable UUID workspaceId,
+            @RequestParam com.nox.platform.module.engine.domain.WorkspaceStatus status) {
+        WorkspaceResponse response = workspaceService.updateWorkspaceStatus(workspaceId, status);
+        return ResponseEntity.ok(response);
     }
 }

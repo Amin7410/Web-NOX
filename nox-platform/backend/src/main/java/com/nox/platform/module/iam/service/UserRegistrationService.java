@@ -82,6 +82,7 @@ public class UserRegistrationService {
         }
 
         user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
         userRepository.save(user);
     }
 }
