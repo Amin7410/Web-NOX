@@ -155,6 +155,8 @@ public class ProjectService {
     private ProjectResponse mapToResponse(Project project) {
         return new ProjectResponse(
                 project.getId(),
+                project.getOrganization().getId(),
+                project.getOrganization().getName(),
                 project.getName(),
                 project.getSlug(),
                 project.getDescription(),

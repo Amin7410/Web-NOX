@@ -3,6 +3,7 @@ package com.nox.platform.module.engine.api;
 import com.nox.platform.module.engine.api.request.CreateWorkspaceRequest;
 import com.nox.platform.module.engine.api.response.WorkspaceResponse;
 import com.nox.platform.module.engine.service.WorkspaceService;
+import com.nox.platform.shared.api.ApiResponse;
 import com.nox.platform.shared.util.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,19 +23,20 @@ public class WorkspaceController {
     private final WorkspaceService workspaceService;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('workspace:manage')")
-    public ResponseEntity<WorkspaceResponse> createWorkspace(
+    public ApiResponse<WorkspaceResponse> createWorkspace(
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateWorkspaceRequest request) {
         WorkspaceResponse response = workspaceService.createWorkspace(projectId, request,
                 SecurityUtil.getCurrentUserId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ApiResponse.ok(response);
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('workspace:read')")
-    public ResponseEntity<List<WorkspaceResponse>> getWorkspaces(@PathVariable UUID projectId) {
-        return ResponseEntity.ok(workspaceService.getWorkspacesByProject(projectId));
+    public ApiResponse<List<WorkspaceResponse>> getWorkspaces(@PathVariable UUID projectId) {
+        return ApiResponse.ok(workspaceService.getWorkspacesByProject(projectId));
     }
 
     @DeleteMapping("/{workspaceId}")

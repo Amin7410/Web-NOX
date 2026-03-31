@@ -8,6 +8,8 @@ import java.util.UUID;
 
 public record ProjectResponse(
                 UUID id,
+                UUID orgId,
+                String orgName,
                 String name,
                 String slug,
                 String description,
