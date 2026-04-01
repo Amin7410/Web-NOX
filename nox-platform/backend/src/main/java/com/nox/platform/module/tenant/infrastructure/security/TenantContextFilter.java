@@ -52,7 +52,10 @@ public class TenantContextFilter extends OncePerRequestFilter {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof UserDetails)) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required for tenant access");
+            log.warn("Tenant: Unauthorized access attempt. Auth: {}, Authenticated: {}", 
+                authentication == null ? "NULL" : "PRESENT",
+                authentication == null ? "N/A" : authentication.isAuthenticated());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "TENANT: Authentication required for tenant access");
             return;
         }
 
@@ -66,7 +69,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User context not found");
+            log.warn("Tenant: User context not found for email: {}", email);
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "TENANT: User context not found for " + email);
             return;
         }
 
