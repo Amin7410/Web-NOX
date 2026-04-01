@@ -52,31 +52,31 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/verify-email",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password",
-                                "/api/v1/auth/mfa/verify",
-                                "/api/v1/auth/mfa/verify-backup",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/social-login")
-                        .permitAll();
+                                    "/api/v1/auth/register",
+                                    "/api/v1/auth/login",
+                                    "/api/v1/auth/verify-email",
+                                    "/api/v1/auth/forgot-password",
+                                    "/api/v1/auth/reset-password",
+                                    "/api/v1/auth/mfa/verify",
+                                    "/api/v1/auth/mfa/verify-backup",
+                                    "/api/v1/auth/refresh",
+                                    "/api/v1/auth/social-login")
+                            .permitAll();
 
                     if (exposeDocs) {
                         auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
                     }
 
                     auth.requestMatchers(
-                                "/api/v1/auth/mfa/setup",
-                                "/api/v1/auth/mfa/enable",
-                                "/api/v1/auth/change-password",
-                                "/api/v1/auth/logout")
-                        .authenticated()
-                        .anyRequest().authenticated();
+                                    "/api/v1/auth/mfa/setup",
+                                    "/api/v1/auth/mfa/enable",
+                                    "/api/v1/auth/change-password",
+                                    "/api/v1/auth/logout")
+                            .authenticated()
+                            .anyRequest().authenticated();
                 })
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
@@ -90,6 +90,22 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(tenantContextFilter, JwtAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        // Cấu hình linh hoạt cho môi trường Dev: Cho phép Origin từ Vite
+        configuration.setAllowedOrigins(java.util.List.of("http://localhost:5173", "http://localhost:3000"));
+        // Quan trọng: Cho phép PATCH cho các tác vụ cập nhật từng phần (như kéo thả Block)
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Cache-Control", "Content-Type", "X-Org-Id"));
+        configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(java.util.List.of("Authorization"));
+        
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
