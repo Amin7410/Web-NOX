@@ -50,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 userDetails = this.userDetailsService.loadUserByUsername(userEmail);
             } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
                 // User might have been soft-deleted or removed
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found or deleted");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT: User not found or deleted - " + userEmail);
                 return;
             }
 

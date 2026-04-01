@@ -46,7 +46,7 @@ public class OrganizationService {
                 .build();
         organization = organizationRepository.save(organization);
 
-        Role ownerRole = roleService.createRole(organization, "OWNER", List.of("*"), 100);
+        Role ownerRole = roleService.createRole(organization, "OWNER", List.of("*", "workspace:manage", "workspace:read"), 100);
         roleService.createRole(organization, "ADMIN", List.of("iam:manage", "billing:manage", "workspace:manage"), 50);
         roleService.createRole(organization, "MEMBER", List.of("workspace:read"), 10);
 
