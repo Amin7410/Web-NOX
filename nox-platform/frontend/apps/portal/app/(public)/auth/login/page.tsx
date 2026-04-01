@@ -1,49 +1,41 @@
-"use client";
+'use client';
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Input } from "@nox/ui";
 import { Alert } from "../../../_components/UiBits";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
         setLoading(true);
-
-        const formData = new FormData(e.currentTarget);
-        const email = formData.get("email") as string;
-        const password = formData.get("password") as string;
+        setError(null);
 
         try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
 
             const data = await res.json();
-            
-            if (!res.ok) {
-                const errorMsg = data.error?.message || data.message || "Sign in failed";
-                setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+
+            if (res.ok) {
+                // Redirect to organizations or dashboard after successful login
+                router.push("/organizations");
+                router.refresh();
             } else {
-                // Check if MFA is required
-                if (data.data && data.data.mfaRequired) {
-                    // Redirect to MFA verification page with the mfaToken
-                    router.push(`/auth/mfa/verify?token=${data.data.mfaToken}`);
-                } else {
-                    // Redirect to dashboard/organizations
-                    router.push("/organizations");
-                }
+                setError(data.message || "Invalid email or password");
             }
-        } catch (err: any) {
-            setError(err.message || "An unexpected error occurred");
+        } catch (err) {
+            setError("An error occurred during sign in. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -62,15 +54,27 @@ export default function LoginPage() {
                 <Alert tone="danger" title="Sign in failed" description={error} />
             ) : null}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form className="space-y-3" onSubmit={handleSubmit}>
                 <div className="space-y-1">
                     <label className="text-sm text-zinc-200">Email</label>
-                    <Input name="email" type="email" placeholder="you@example.com" required />
+                    <Input 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        required 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
                 </div>
 
                 <div className="space-y-1">
                     <label className="text-sm text-zinc-200">Password</label>
-                    <Input name="password" type="password" placeholder="••••••••" required />
+                    <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        required 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
                 </div>
 
                 <div className="flex items-center justify-between pt-1">

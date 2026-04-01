@@ -22,7 +22,7 @@ public interface OrgMemberRepository extends JpaRepository<OrgMember, UUID> {
 
     List<OrgMember> findByUserId(UUID userId);
 
-    @Cacheable(value = "org_members", key = "#orgId + '-' + #userId")
+    @EntityGraph(attributePaths = { "user", "role" })
     Optional<OrgMember> findByOrganizationIdAndUserId(UUID orgId, UUID userId);
 
     boolean existsByOrganizationIdAndUserId(UUID orgId, UUID userId);
