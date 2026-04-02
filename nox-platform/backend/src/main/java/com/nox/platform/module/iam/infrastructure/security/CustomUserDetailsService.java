@@ -11,10 +11,12 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 
 @Service
+@Slf4j
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -29,11 +31,20 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     @Cacheable(value = "user_details", key = "#email", unless = "#result == null")
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        log.debug("[LOAD_USER] Loading user details for email: {}", email);
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> {
+                    log.error("[LOAD_USER] User not found: {}", email);
+                    return new UsernameNotFoundException("User not found with email: " + email);
+                });
 
         UserSecurity userSecurity = userSecurityRepository.findById(user.getId())
-                .orElseThrow(() -> new UsernameNotFoundException("Security credentials not found for user: " + email));
+                .orElseThrow(() -> {
+                    log.error("[LOAD_USER] Security credentials not found for user: {}", email);
+                    return new UsernameNotFoundException("Security credentials not found for user: " + email);
+                });
+
+        log.debug("[LOAD_USER] Successfully loaded user: {} (ID: {})", user.getEmail(), user.getId());
 
         String password = userSecurity.getPasswordHash() != null ? userSecurity.getPasswordHash() : "";
 

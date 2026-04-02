@@ -15,6 +15,7 @@ import com.nox.platform.shared.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
         private final AuthenticationService authenticationService;
@@ -39,6 +41,7 @@ public class AuthController {
 
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
+                log.info("[AUTH_API] Received registration request for email: {}", request.email());
                 User user = userRegistrationService.registerUser(request.email(), request.password(),
                                 request.fullName());
 
@@ -51,6 +54,7 @@ public class AuthController {
         public ResponseEntity<ApiResponse<AuthResponse>> login(
                         @Valid @RequestBody AuthRequest request,
                         HttpServletRequest httpRequest) {
+                log.info("[AUTH_API] Received login request for email: {}", request.email());
 
                 String ipAddress = IpUtils.getClientIp(httpRequest);
                 String userAgent = httpRequest.getHeader("User-Agent");
