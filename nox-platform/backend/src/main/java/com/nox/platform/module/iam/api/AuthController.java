@@ -3,6 +3,7 @@ package com.nox.platform.module.iam.api;
 import com.nox.platform.module.iam.api.request.*;
 import com.nox.platform.module.iam.api.response.*;
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.service.AuthenticationService;
 import com.nox.platform.module.iam.service.SocialAuthenticationService;
 import com.nox.platform.module.iam.service.UserSessionService;
@@ -16,17 +17,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import com.nox.platform.module.iam.infrastructure.UserRepository;
-import com.nox.platform.shared.exception.DomainException;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -43,40 +38,13 @@ public class AuthController {
         private final UserRepository userRepository;
 
         @GetMapping("/me")
-        public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
+        public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(Principal principal) {
                 User user = userRepository.findByEmail(principal.getName())
-                        .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
-                
-                return ResponseEntity.ok(ApiResponse.ok(
-                        new UserProfileResponse(
-                                user.getId().toString(),
-                                user.getEmail(),
-                                user.getFullName(),
-                                user.getAvatarUrl(),
-                                user.isEmailVerified()
-                        )
-                ));
-        }
-
-        @PutMapping("/me")
-        public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyProfile(
-                        @Valid @RequestBody UpdateProfileRequest request, Principal principal) {
-                User user = userRepository.findByEmail(principal.getName())
-                        .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
-                
-                user.setFullName(request.fullName());
-                user.setAvatarUrl(request.avatarUrl());
-                userRepository.save(user);
+                                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + principal.getName()));
 
                 return ResponseEntity.ok(ApiResponse.ok(
-                        new UserProfileResponse(
-                                user.getId().toString(),
-                                user.getEmail(),
-                                user.getFullName(),
-                                user.getAvatarUrl(),
-                                user.isEmailVerified()
-                        )
-                ));
+                                new UserResponse(user.getId(), user.getEmail(), user.getFullName(),
+                                                user.getStatus().name())));
         }
 
         @PostMapping("/register")

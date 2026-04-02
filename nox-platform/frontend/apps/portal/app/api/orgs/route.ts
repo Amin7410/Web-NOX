@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { proxyToBackend } from '@/lib/api';
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
         const res = await proxyToBackend('/api/v1/orgs', {
             method: 'GET',
         });
+
         const data = await res.json().catch(() => ({}));
         return NextResponse.json(data, { status: res.status });
     } catch (error) {
