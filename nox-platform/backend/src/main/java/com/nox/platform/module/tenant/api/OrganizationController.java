@@ -14,7 +14,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/orgs")
@@ -31,6 +33,13 @@ public class OrganizationController {
 
         Organization org = organizationService.createOrganization(request.name(), userDetails.getUsername());
         return ApiResponse.ok(mapToResponse(org));
+    }
+
+    @GetMapping
+    public ApiResponse<List<OrganizationResponse>> getOrganizations(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<Organization> orgs = organizationService.getOrganizationsForUser(userDetails.getUsername());
+        return ApiResponse.ok(orgs.stream().map(this::mapToResponse).collect(Collectors.toList()));
     }
 
     @GetMapping("/{id}")
