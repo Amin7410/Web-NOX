@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import com.nox.platform.module.iam.infrastructure.UserRepository;
+import com.nox.platform.shared.exception.DomainException;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -36,6 +40,44 @@ public class AuthController {
         private final UserSessionService userSessionService;
         private final MfaManagementService mfaManagementService;
         private final MfaVerificationService mfaVerificationService;
+        private final UserRepository userRepository;
+
+        @GetMapping("/me")
+        public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
+                User user = userRepository.findByEmail(principal.getName())
+                        .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                
+                return ResponseEntity.ok(ApiResponse.ok(
+                        new UserProfileResponse(
+                                user.getId().toString(),
+                                user.getEmail(),
+                                user.getFullName(),
+                                user.getAvatarUrl(),
+                                user.isEmailVerified()
+                        )
+                ));
+        }
+
+        @PutMapping("/me")
+        public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyProfile(
+                        @Valid @RequestBody UpdateProfileRequest request, Principal principal) {
+                User user = userRepository.findByEmail(principal.getName())
+                        .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                
+                user.setFullName(request.fullName());
+                user.setAvatarUrl(request.avatarUrl());
+                userRepository.save(user);
+
+                return ResponseEntity.ok(ApiResponse.ok(
+                        new UserProfileResponse(
+                                user.getId().toString(),
+                                user.getEmail(),
+                                user.getFullName(),
+                                user.getAvatarUrl(),
+                                user.isEmailVerified()
+                        )
+                ));
+        }
 
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {

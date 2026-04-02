@@ -33,6 +33,15 @@ public class OrganizationController {
         return ApiResponse.ok(mapToResponse(org));
     }
 
+    @GetMapping
+    public ApiResponse<java.util.List<OrganizationResponse>> getMyOrganizations(@AuthenticationPrincipal UserDetails userDetails) {
+        java.util.List<OrganizationResponse> orgs = organizationService.getUserOrganizations(userDetails.getUsername())
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+        return ApiResponse.ok(orgs);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('*') or @tenantSecurity.hasPermission(#id, 'workspace:read')")
     public ApiResponse<OrganizationResponse> getOrganizationById(@PathVariable UUID id) {

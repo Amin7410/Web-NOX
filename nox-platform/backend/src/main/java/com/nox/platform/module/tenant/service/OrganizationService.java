@@ -61,6 +61,15 @@ public class OrganizationService {
         return organization;
     }
 
+    public List<Organization> getUserOrganizations(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+        return orgMemberRepository.findByUserId(user.getId())
+                .stream()
+                .map(OrgMember::getOrganization)
+                .toList();
+    }
+
     public Organization getOrganizationById(UUID orgId) {
         return organizationRepository.findById(orgId)
                 .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
