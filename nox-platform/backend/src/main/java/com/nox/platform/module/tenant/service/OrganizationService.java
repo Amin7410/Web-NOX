@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +33,6 @@ public class OrganizationService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional
     public Organization createOrganization(String name, String creatorEmail) {
         User creator = userRepository.findByEmail(creatorEmail)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user could not be found", 404));
@@ -59,6 +59,17 @@ public class OrganizationService {
         orgMemberRepository.save(ownerMember);
 
         return organization;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Organization> getOrganizationsForUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+
+        return orgMemberRepository.findByUserId(user.getId())
+                .stream()
+                .map(OrgMember::getOrganization)
+                .collect(Collectors.toList());
     }
 
     public Organization getOrganizationById(UUID orgId) {
