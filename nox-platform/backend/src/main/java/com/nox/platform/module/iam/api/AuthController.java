@@ -3,6 +3,7 @@ package com.nox.platform.module.iam.api;
 import com.nox.platform.module.iam.api.request.*;
 import com.nox.platform.module.iam.api.response.*;
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.service.AuthenticationService;
 import com.nox.platform.module.iam.service.SocialAuthenticationService;
 import com.nox.platform.module.iam.service.UserSessionService;
@@ -16,10 +17,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
@@ -36,6 +35,17 @@ public class AuthController {
         private final UserSessionService userSessionService;
         private final MfaManagementService mfaManagementService;
         private final MfaVerificationService mfaVerificationService;
+        private final UserRepository userRepository;
+
+        @GetMapping("/me")
+        public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(Principal principal) {
+                User user = userRepository.findByEmail(principal.getName())
+                                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + principal.getName()));
+
+                return ResponseEntity.ok(ApiResponse.ok(
+                                new UserResponse(user.getId(), user.getEmail(), user.getFullName(),
+                                                user.getStatus().name())));
+        }
 
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
