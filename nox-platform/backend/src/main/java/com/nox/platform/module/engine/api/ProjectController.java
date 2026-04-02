@@ -33,8 +33,10 @@ public class ProjectController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('workspace:read')")
-    public ResponseEntity<Page<ProjectResponse>> getProjects(@PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(projectService.getProjects(pageable));
+    public ResponseEntity<Page<ProjectResponse>> getProjects(
+            @PageableDefault(size = 20) Pageable pageable,
+            @RequestParam(required = false) UUID orgId) {
+        return ResponseEntity.ok(projectService.getProjects(pageable, orgId));
     }
 
     @GetMapping("/{id}")

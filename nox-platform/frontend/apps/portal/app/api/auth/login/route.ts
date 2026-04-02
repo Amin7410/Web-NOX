@@ -20,7 +20,7 @@ export async function POST(request: Request) {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/',
-                maxAge: 5 * 60, // 5 minutes matching backend
+                maxAge: 60 * 60, // 60 minutes (matches backend or more)
             });
             
             if (data.data.refreshToken) {

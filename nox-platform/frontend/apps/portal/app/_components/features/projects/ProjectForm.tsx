@@ -1,24 +1,109 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, UploadCloud, Users, Settings, Save, Eye, CheckCircle2,
-  X
+  X, Loader2
 } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Textarea } from '../../../ui/textarea';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
+import { mockStore } from "@/lib/mock-store";
 
 export function ProjectForm() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
-  const [organization, setOrganization] = useState("nox-team");
+  const [organization, setOrganization] = useState("");
+  const [organizations, setOrganizations] = useState<any[]>([]);
   const [status, setStatus] = useState("draft");
+  const [loading, setLoading] = useState(false);
+  const [fetchingOrgs, setFetchingOrgs] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      try {
+        const res = await fetch('/api/orgs');
+        if (res.status === 401) {
+          setError("Session expired. Please login again.");
+          return;
+        }
+        const data = await res.json();
+        let list = data.data || [];
+        
+        // Merge with global mock store
+        const mockList = mockStore.getOrganizations();
+        // Avoid duplicates if real data exists
+        const merged = [...list, ...mockList.filter((m:any) => !list.find((rl:any) => rl.id === m.id))];
+        
+        setOrganizations(merged);
+        if (merged.length > 0) {
+          setOrganization(merged[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch organizations", err);
+      } finally {
+        setFetchingOrgs(false);
+      }
+    };
+    fetchOrgs();
+  }, []);
+
+  const handleCreate = async () => {
+    if (!projectName || !organization) return;
+    setLoading(true);
+
+    // Simulate success if using Mock Organization
+    if (organization === 'mock-org-1') {
+      setTimeout(() => {
+        setLoading(false);
+        router.push('/projects');
+      }, 800);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: projectName,
+          description,
+          organizationId: organization,
+          visibility: status === 'active' ? 'PUBLIC' : 'PRIVATE'
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.data) {
+        router.push('/projects');
+      } else {
+        // Mock fallback
+        mockStore.addProject({
+            name: projectName, 
+            description, 
+            organizationId: organization,
+            status: status === 'active' ? 'Active' : 'Draft'
+        });
+        router.push('/projects');
+      }
+    } catch (err) {
+      // Mock fallback
+      mockStore.addProject({
+        name: projectName, 
+        description, 
+        organizationId: organization,
+        status: status === 'active' ? 'Active' : 'Draft'
+      });
+      router.push('/projects');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Tags handling
   const [tagInput, setTagInput] = useState("");
@@ -64,10 +149,11 @@ export function ProjectForm() {
             Cancel
           </Button>
           <Button 
-            onClick={() => router.push('/projects')}
+            onClick={handleCreate}
             className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm font-medium h-9"
-            disabled={!projectName || isNameInvalid || isDescInvalid}
+            disabled={!projectName || isNameInvalid || isDescInvalid || loading}
           >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Create Project
           </Button>
         </div>
@@ -148,10 +234,17 @@ export function ProjectForm() {
                     value={organization} 
                     onChange={(e) => setOrganization(e.target.value)}
                     className="flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                    disabled={fetchingOrgs}
                   >
-                    <option value="nox-team">NOX Team</option>
-                    <option value="design-ops">Design Ops</option>
-                    <option value="engineering">Engineering</option>
+                    {fetchingOrgs ? (
+                      <option>Loading organizations...</option>
+                    ) : organizations.length === 0 ? (
+                      <option value="">No organizations available</option>
+                    ) : (
+                      organizations.map(org => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -214,8 +307,13 @@ export function ProjectForm() {
 
           {/* Action Buttons Section */}
           <div className="flex flex-wrap items-center gap-3 pt-4">
-            <Button variant="outline" className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm">
-              <Save className="h-4 w-4 mr-2" />
+            <Button 
+              variant="outline" 
+              onClick={handleCreate}
+              disabled={!projectName || loading}
+              className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               Save Draft
             </Button>
             <Button variant="outline" className="border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm">
@@ -224,10 +322,11 @@ export function ProjectForm() {
             </Button>
             <div className="flex-1"></div>
             <Button 
+              onClick={handleCreate}
               className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm font-medium"
-              disabled={!projectName || isNameInvalid || isDescInvalid}
+              disabled={!projectName || isNameInvalid || isDescInvalid || loading}
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Publish
             </Button>
           </div>

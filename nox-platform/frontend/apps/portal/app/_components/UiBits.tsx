@@ -12,10 +12,10 @@ export function PageHeader({
     actions?: ReactNode;
 }) {
     return (
-        <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-3 border-b border-gray-200 dark:border-white/10 pb-4 md:flex-row md:items-end md:justify-between">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-                {subtitle ? <p className="mt-1 text-sm text-zinc-400">{subtitle}</p> : null}
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">{title}</h1>
+                {subtitle ? <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{subtitle}</p> : null}
             </div>
             {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
         </div>
@@ -34,15 +34,15 @@ export function Card({
     footer?: ReactNode;
 }) {
     return (
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+        <section className="rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 p-5 shadow-sm">
             {title ? (
                 <header className="mb-4">
-                    <div className="text-sm font-semibold">{title}</div>
-                    {description ? <div className="mt-1 text-sm text-zinc-400">{description}</div> : null}
+                    <div className="text-sm font-bold text-gray-900 dark:text-zinc-100 uppercase tracking-wider">{title}</div>
+                    {description ? <div className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{description}</div> : null}
                 </header>
             ) : null}
             <div>{children}</div>
-            {footer ? <footer className="mt-4 border-t border-white/10 pt-4">{footer}</footer> : null}
+            {footer ? <footer className="mt-4 border-t border-gray-200 dark:border-white/10 pt-4">{footer}</footer> : null}
         </section>
     );
 }
