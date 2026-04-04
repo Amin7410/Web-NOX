@@ -12,8 +12,6 @@ import { Input } from '../../../ui/input';
 import { Textarea } from '../../../ui/textarea';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
-import { mockStore } from "@/lib/mock-store";
-
 export function ProjectForm() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
@@ -29,24 +27,16 @@ export function ProjectForm() {
     const fetchOrgs = async () => {
       try {
         const res = await fetch('/api/orgs');
-        if (res.status === 401) {
-          setError("Session expired. Please login again.");
-          return;
-        }
         const data = await res.json();
         let list = data.data || [];
         
-        // Merge with global mock store
-        const mockList = mockStore.getOrganizations();
-        // Avoid duplicates if real data exists
-        const merged = [...list, ...mockList.filter((m:any) => !list.find((rl:any) => rl.id === m.id))];
-        
-        setOrganizations(merged);
-        if (merged.length > 0) {
-          setOrganization(merged[0].id);
+        setOrganizations(list);
+        if (list.length > 0) {
+          setOrganization(list[0].id);
         }
       } catch (err) {
         console.error("Failed to fetch organizations", err);
+        setError("Could not load organizations.");
       } finally {
         setFetchingOrgs(false);
       }
@@ -57,15 +47,6 @@ export function ProjectForm() {
   const handleCreate = async () => {
     if (!projectName || !organization) return;
     setLoading(true);
-
-    // Simulate success if using Mock Organization
-    if (organization === 'mock-org-1') {
-      setTimeout(() => {
-        setLoading(false);
-        router.push('/projects');
-      }, 800);
-      return;
-    }
 
     try {
       const res = await fetch('/api/projects', {
@@ -82,24 +63,12 @@ export function ProjectForm() {
       if (res.ok && data.data) {
         router.push('/projects');
       } else {
-        // Mock fallback
-        mockStore.addProject({
-            name: projectName, 
-            description, 
-            organizationId: organization,
-            status: status === 'active' ? 'Active' : 'Draft'
-        });
-        router.push('/projects');
+        console.error('Failed to create project', data);
+        alert(data.message || 'Failed to create project');
       }
     } catch (err) {
-      // Mock fallback
-      mockStore.addProject({
-        name: projectName, 
-        description, 
-        organizationId: organization,
-        status: status === 'active' ? 'Active' : 'Draft'
-      });
-      router.push('/projects');
+      console.error('Create project exception:', err);
+      alert('Internal Server Error. Please try again.');
     } finally {
       setLoading(false);
     }

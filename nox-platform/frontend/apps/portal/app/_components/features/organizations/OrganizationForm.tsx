@@ -11,8 +11,6 @@ import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
-import { mockStore } from "@/lib/mock-store";
-
 export function OrganizationForm() {
   const router = useRouter();
   const [orgName, setOrgName] = useState("");
@@ -41,16 +39,14 @@ export function OrganizationForm() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.data) {
-        router.push(`/organizations/${data.data.id}`);
+        router.push(`/organizations`);
       } else {
-        // Mock fallback because backend might not have the correct user/perms logic yet
-        const newOrg = mockStore.addOrganization({ name: orgName, slug });
-        router.push(`/organizations/${newOrg.id}`);
+        console.error('Failed to create organization', data);
+        alert(data.message || 'Failed to create organization');
       }
     } catch (error) {
-      // Offline/Network Error fallback
-      const newOrg = mockStore.addOrganization({ name: orgName, slug });
-      router.push(`/organizations/${newOrg.id}`);
+      console.error('Create organization exception:', error);
+      alert('Internal Server Error. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -80,14 +80,6 @@ public class ProjectService {
         }
         
         if (orgId == null) {
-            // Find first org user belongs to if no context
-            List<Organization> userOrgs = organizationRepository.findAll(); // Simple fallback for now
-            if (!userOrgs.isEmpty()) {
-                orgId = userOrgs.get(0).getId();
-            }
-        }
-
-        if (orgId == null) {
             throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
         }
         return projectRepository.findAllByOrganizationId(orgId, pageable)

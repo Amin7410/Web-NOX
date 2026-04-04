@@ -87,7 +87,16 @@ public class TenantContextFilter extends OncePerRequestFilter {
         java.util.List<org.springframework.security.core.GrantedAuthority> authorities = new java.util.ArrayList<>(
                 authentication.getAuthorities());
         if (member.getRole() != null && member.getRole().getPermissions() != null) {
-            member.getRole().getPermissions().forEach(permission -> authorities
+            java.util.List<String> permissions = member.getRole().getPermissions();
+            
+            // Handle Wildcard Permissions (* or ALL)
+            if (permissions.contains("*") || permissions.contains("ALL")) {
+                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("workspace:manage"));
+                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("workspace:read"));
+                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("iam:manage"));
+            }
+            
+            permissions.forEach(permission -> authorities
                     .add(new org.springframework.security.core.authority.SimpleGrantedAuthority(permission)));
         }
 

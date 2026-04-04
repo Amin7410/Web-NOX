@@ -19,7 +19,6 @@ import { Button } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import { Badge } from "../../../ui/badge";
 import { useRouter } from "next/navigation";
-import { mockStore } from "@/lib/mock-store";
 
 export function ProjectsManagement() {
   const router = useRouter();
@@ -33,22 +32,19 @@ export function ProjectsManagement() {
       try {
         setLoading(true);
         const res = await fetch("/api/projects");
-        if (res.status === 401) {
-          setError("Session expired. Please login again.");
-          setLoading(false);
-          return;
-        }
         const responseData = await res.json();
+        
         const projectList = responseData.data?.content || responseData.data || [];
         
-        if (projectList.length === 0) {
-          setProjects(mockStore.getProjects());
-        } else {
+        if (Array.isArray(projectList)) {
           setProjects(projectList);
+        } else {
+          setProjects([]);
         }
       } catch (err) {
         console.error("Failed to fetch projects", err);
-        setProjects(mockStore.getProjects());
+        setError("Failed to load projects. Please try selecting an organization again.");
+        setProjects([]);
       } finally {
         setLoading(false);
       }
