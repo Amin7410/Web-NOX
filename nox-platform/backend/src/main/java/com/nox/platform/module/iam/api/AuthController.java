@@ -38,13 +38,36 @@ public class AuthController {
         private final UserRepository userRepository;
 
         @GetMapping("/me")
-        public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(Principal principal) {
+        public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
                 User user = userRepository.findByEmail(principal.getName())
                                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + principal.getName()));
 
                 return ResponseEntity.ok(ApiResponse.ok(
-                                new UserResponse(user.getId(), user.getEmail(), user.getFullName(),
-                                                user.getStatus().name())));
+                                new UserProfileResponse(
+                                                user.getId().toString(),
+                                                user.getEmail(),
+                                                user.getFullName(),
+                                                user.getAvatarUrl(),
+                                                user.isEmailVerified())));
+        }
+
+        @PutMapping("/me")
+        public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyProfile(
+                        @Valid @RequestBody UpdateProfileRequest request, Principal principal) {
+                User user = userRepository.findByEmail(principal.getName())
+                                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + principal.getName()));
+
+                user.setFullName(request.fullName());
+                user.setAvatarUrl(request.avatarUrl());
+                userRepository.save(user);
+
+                return ResponseEntity.ok(ApiResponse.ok(
+                                new UserProfileResponse(
+                                                user.getId().toString(),
+                                                user.getEmail(),
+                                                user.getFullName(),
+                                                user.getAvatarUrl(),
+                                                user.isEmailVerified())));
         }
 
         @PostMapping("/register")

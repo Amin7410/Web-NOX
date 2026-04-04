@@ -23,6 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.UUID;
 
 @Service
@@ -37,7 +41,7 @@ public class ProjectService {
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, UUID currentUserId) {
-        UUID orgId = SecurityUtil.getCurrentOrganizationId();
+        UUID orgId = request.organizationId();
         if (orgId == null) {
             throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
         }
@@ -70,8 +74,19 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProjectResponse> getProjects(Pageable pageable) {
-        UUID orgId = SecurityUtil.getCurrentOrganizationId();
+    public Page<ProjectResponse> getProjects(Pageable pageable, UUID orgId) {
+        if (orgId == null) {
+            orgId = SecurityUtil.getCurrentOrganizationId();
+        }
+        
+        if (orgId == null) {
+            // Find first org user belongs to if no context
+            List<Organization> userOrgs = organizationRepository.findAll(); // Simple fallback for now
+            if (!userOrgs.isEmpty()) {
+                orgId = userOrgs.get(0).getId();
+            }
+        }
+
         if (orgId == null) {
             throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
         }

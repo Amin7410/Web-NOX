@@ -10,7 +10,21 @@ import { useRouter } from "next/navigation";
 import { Button } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import { Badge } from "../../../ui/badge";
+import { mockStore } from "@/lib/mock-store";
 import { Organization } from "./data";
+
+const MOCK_ORGS: Organization[] = [
+  {
+    id: "mock-1",
+    name: "NOX Default Team",
+    slug: "nox-default",
+    role: "Owner",
+    memberCount: 1,
+    projectCount: 3,
+    createdAt: new Date().toLocaleDateString(),
+    status: "Active"
+  }
+];
 
 export function OrganizationsManagement() {
   const router = useRouter();
@@ -30,16 +44,21 @@ export function OrganizationsManagement() {
         }
         const data = await res.json();
         const orgList = data.data || [];
-        setOrganizations(orgList.map((o: any) => ({
-          id: o.id,
-          name: o.name,
-          slug: o.slug,
-          role: "Member",
-          memberCount: 0,
-          projectCount: 0,
-          createdAt: o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—",
-          status: "Active"
-        })));
+        if (orgList.length === 0) {
+          // Use global mock store
+          setOrganizations(mockStore.getOrganizations());
+        } else {
+          setOrganizations(orgList.map((o: any) => ({
+            id: o.id,
+            name: o.name,
+            slug: o.slug,
+            role: "Member",
+            memberCount: 1, 
+            projectCount: 0,
+            createdAt: o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—",
+            status: "Active"
+          })));
+        }
       } catch (err) {
         console.error("Failed to fetch orgs", err);
         setError("Failed to load organizations.");

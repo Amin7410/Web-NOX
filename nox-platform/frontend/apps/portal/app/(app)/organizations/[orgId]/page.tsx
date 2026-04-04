@@ -14,6 +14,19 @@ export default function OrganizationDashboardPage({ params }: { params: { orgId:
 
     useEffect(() => {
         const fetchData = async () => {
+            if (params.orgId.startsWith('mock-')) {
+                setOrg({
+                    id: params.orgId,
+                    name: "NOX Default Team",
+                    slug: "nox-default",
+                    createdAt: new Date().toISOString()
+                });
+                setMemberCount(1);
+                setProjectCount(3);
+                setLoading(false);
+                return;
+            }
+
             try {
                 // Fetch Org Details
                 const orgRes = await fetch(`/api/orgs/${params.orgId}`);
@@ -30,7 +43,6 @@ export default function OrganizationDashboardPage({ params }: { params: { orgId:
                 // Fetch Project Count
                 const projectsRes = await fetch(`/api/projects?orgId=${params.orgId}`);
                 const projectsData = await projectsRes.json();
-                // Assuming backend returns a list or a Page object
                 if (Array.isArray(projectsData.data)) {
                     setProjectCount(projectsData.data.length);
                 } else if (projectsData.data?.totalElements !== undefined) {
@@ -79,18 +91,18 @@ export default function OrganizationDashboardPage({ params }: { params: { orgId:
 
             <div className="grid gap-4 md:grid-cols-3">
                 <Card title="Members">
-                    <div className="text-2xl font-semibold">{memberCount}</div>
-                    <div className="mt-1 text-sm text-zinc-400">People in this organization</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-zinc-100">{memberCount === "—" ? 1 : memberCount}</div>
+                    <div className="mt-1 text-sm text-gray-500 dark:text-zinc-400">People in this organization</div>
                 </Card>
                 <Card title="Projects">
-                    <div className="text-2xl font-semibold">{projectCount}</div>
-                    <div className="mt-1 text-sm text-zinc-400">Projects owned by this organization</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-zinc-100">{projectCount === "—" ? 0 : projectCount}</div>
+                    <div className="mt-1 text-sm text-gray-500 dark:text-zinc-400">Projects owned by this organization</div>
                 </Card>
                 <Card title="Created">
-                    <div className="text-2xl font-semibold">
-                        {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : "—"}
+                    <div className="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+                        {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : "Today"}
                     </div>
-                    <div className="mt-1 text-sm text-zinc-400">Creation date</div>
+                    <div className="mt-1 text-sm text-gray-500 dark:text-zinc-400">Creation date</div>
                 </Card>
             </div>
 

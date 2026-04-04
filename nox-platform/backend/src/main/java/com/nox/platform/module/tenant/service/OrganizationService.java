@@ -33,6 +33,7 @@ public class OrganizationService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public Organization createOrganization(String name, String creatorEmail) {
         User creator = userRepository.findByEmail(creatorEmail)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user could not be found", 404));
