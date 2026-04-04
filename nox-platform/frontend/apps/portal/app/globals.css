@@ -4,72 +4,182 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --bg-app: 255 255 255;
+    --bg-surface: 248 250 252;
+    --text-main: 0 0 0;
+    --text-sub: 71 85 105;
+    --accent: 2 132 199;
+    --accent-foreground: 255 255 255;
+    --border: 226 232 240;
+    --ring: 2 132 199;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --card-border: rgba(226, 232, 240, 1);
+    --card-border-hover: #0284C7;
+    --interaction-scale: 0.95;
+    --glow-color: 56 189 248;
+    --glow-alpha: 0.18;
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 20px 45px rgba(0, 0, 0, 0.12);
+
+    --background: var(--bg-app);
+    --surface: var(--bg-surface);
+    --foreground: var(--text-main);
+    --muted-foreground: var(--text-sub);
+    --card: 255 255 255;
+    --card-foreground: var(--text-main);
   }
 
+  .dark,
+  [data-theme='dark'] {
+    --bg-app: 0 0 0;
+    --bg-surface: 10 10 10;
+    --text-main: 56 189 248;
+    --text-sub: 226 232 240;
+    --accent: 56 189 248;
+    --accent-foreground: 0 0 0;
+    --border: rgba(56, 189, 248, 0.2);
+    --ring: 56 189 248;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --card-border: rgba(56, 189, 248, 0.2);
+    --card-border-hover: #38BDF8;
+    --interaction-scale: 0.95;
+    --glow-color: 56 189 248;
+    --glow-alpha: 0.18;
+    --card-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+    --card-shadow-hover: 0 24px 55px rgba(0, 0, 0, 0.22);
+
+    --background: var(--bg-app);
+    --surface: var(--bg-surface);
+    --foreground: var(--text-main);
+    --muted-foreground: var(--text-sub);
+    --card: 10 10 10;
+    --card-foreground: var(--text-main);
+  }
+
+  html {
+    color-scheme: light;
+  }
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    color-scheme: dark;
   }
-}
 
-@layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-background text-foreground;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    transition: all 0.2s ease-in-out;
+    line-height: 1.5;
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .bg-white {
+    background-color: rgb(var(--card));
+  }
+
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-white\/5,
+  .bg-white\/10,
+  .bg-white\/20,
+  .hover\:bg-gray-50:hover,
+  .hover\:bg-white:hover {
+    background-color: rgb(var(--surface));
+  }
+
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  .border-white\/10,
+  .border-white\/20 {
+    border-color: rgb(var(--border));
+  }
+
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700 {
+    color: rgb(var(--foreground));
+  }
+
+  .text-gray-600,
+  .text-gray-500,
+  .text-gray-400,
+  .placeholder\:text-gray-500 {
+    color: rgb(var(--muted-foreground));
+  }
+
+  .sidebar-link {
+    position: relative;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .sidebar-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 3px;
+    border-radius: 9999px;
+    background: transparent;
+    transform: translateX(-120%);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .sidebar-link.active::before {
+    background: rgb(var(--accent));
+    transform: translateX(0);
+  }
+
+  .button-interactive:active {
+    transform: scale(var(--interaction-scale));
+  }
+
+  .button-glow:hover {
+    box-shadow: 0 0 0 16px rgba(var(--glow-color), var(--glow-alpha));
+  }
+
+  .card-interactive {
+    transition: all 0.2s ease-in-out;
+    box-shadow: var(--card-shadow);
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: rgb(var(--card-border-hover));
+  }
+
+  .dotted-grid {
+    background-color: rgb(var(--background));
+    background-image:
+      radial-gradient(circle, rgba(var(--border), 0.18) 1px, transparent 1px),
+      radial-gradient(circle, rgba(var(--border), 0.1) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+  }
+
+  p,
+  span,
+  li,
+  label,
+  small,
+  strong,
+  em {
+    color: rgb(var(--text-main)) !important;
+  }
+
+  input,
+  textarea,
+  select,
+  option {
+    color: rgb(var(--text-main)) !important;
+    background-color: rgb(var(--bg-surface)) !important;
+    caret-color: rgb(var(--text-main)) !important;
   }
 }

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+    darkMode: ["class"],
     content: [
         // content paths are defined in the extending configs
     ],
@@ -7,32 +8,34 @@ module.exports = {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#007bff',
-                    foreground: '#ffffff',
+                    DEFAULT: 'rgb(var(--primary))',
+                    foreground: 'rgb(var(--primary-foreground))',
                 },
                 secondary: {
-                    DEFAULT: '#6c757d',
-                    foreground: '#ffffff',
+                    DEFAULT: 'rgb(var(--secondary))',
+                    foreground: 'rgb(var(--secondary-foreground))',
                 },
                 destructive: {
-                    DEFAULT: '#dc3545',
-                    foreground: '#ffffff',
+                    DEFAULT: 'rgb(var(--destructive))',
+                    foreground: 'rgb(var(--destructive-foreground))',
                 },
                 muted: {
-                    DEFAULT: '#f8f9fa',
-                    foreground: '#212529',
+                    DEFAULT: 'rgb(var(--muted))',
+                    foreground: 'rgb(var(--muted-foreground))',
                 },
                 accent: {
-                    DEFAULT: '#ffc107',
-                    foreground: '#212529',
+                    DEFAULT: 'rgb(var(--accent))',
+                    foreground: 'rgb(var(--accent-foreground))',
                 },
-                // Added for Nox Design System
-                border: '#27272a', // zinc-800
-                input: '#27272a',
-                ring: '#3b82f6', // blue-500
-                background: '#09090b', // zinc-950
-                surface: '#09090b', // zinc-950 (user requested nox-surface)
-                foreground: '#fafafa', // zinc-50
+                border: 'rgb(var(--border))',
+                input: 'rgb(var(--input))',
+                ring: 'rgb(var(--ring))',
+                background: 'rgb(var(--background))',
+                card: 'rgb(var(--card))',
+                'card-foreground': 'rgb(var(--card-foreground))',
+                popover: 'rgb(var(--popover))',
+                'popover-foreground': 'rgb(var(--popover-foreground))',
+                foreground: 'rgb(var(--foreground))',
             },
             fontFamily: {
                 sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],

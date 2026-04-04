@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "./Header";
+import { ThemeProvider } from "./ThemeProvider";
 
 export const metadata: Metadata = {
     title: "NOX Portal",
@@ -14,11 +15,13 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body className="antialiased">
-                <Header />
-                <main className="min-h-screen bg-gray-50">
-                    {children}
-                </main>
+            <body className="antialiased bg-[rgb(var(--background))] text-[rgb(var(--foreground))]">
+                <ThemeProvider>
+                    <Header />
+                    <main className="min-h-screen bg-[rgb(var(--background))]">
+                        {children}
+                    </main>
+                </ThemeProvider>
             </body>
         </html>
     );

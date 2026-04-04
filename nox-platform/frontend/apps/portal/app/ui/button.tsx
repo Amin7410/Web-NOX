@@ -2,12 +2,12 @@ import * as React from "react"
 
 const buttonVariants = {
   variants: {
-    default: "bg-[#4F46E5] text-white hover:bg-[#4338CA] focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-200",
-    destructive: "bg-[#EF4444] text-white hover:bg-[#DC2626] focus:ring-2 focus:ring-[#EF4444] focus:ring-offset-2 shadow-sm hover:shadow-md transition-all duration-200",
-    outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 transition-all duration-200",
-    secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200",
-    ghost: "text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200",
-    link: "text-[#4F46E5] underline-offset-4 hover:underline focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 transition-all duration-200",
+    default: "bg-[rgb(var(--accent))] text-[rgb(var(--accent-foreground))] hover:bg-[rgb(var(--accent))]/90 hover:shadow-[0_0_0_16px_rgba(56,189,248,0.18)] active:scale-95 focus:ring-2 focus:ring-[rgb(var(--ring))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--background))] shadow-sm transition-all duration-200 ease-in-out",
+    destructive: "bg-[rgb(var(--destructive))] text-[rgb(var(--destructive-foreground))] hover:bg-[#DC2626] active:scale-95 focus:ring-2 focus:ring-[rgb(var(--destructive))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--background))] shadow-sm transition-all duration-200 ease-in-out",
+    outline: "border border-[rgb(var(--border))] bg-[rgb(var(--surface))] text-[rgb(var(--foreground))] hover:bg-[rgb(var(--surface))] hover:text-[rgb(var(--foreground))] active:scale-95 focus:ring-2 focus:ring-[rgb(var(--ring))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--background))] transition-all duration-200 ease-in-out",
+    secondary: "bg-[rgb(var(--surface))] text-[rgb(var(--foreground))] hover:bg-[rgb(var(--surface))] active:scale-95 focus:ring-2 focus:ring-[rgb(var(--ring))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--background))] transition-all duration-200 ease-in-out",
+    ghost: "text-[rgb(var(--foreground))] hover:bg-[rgb(var(--surface))] hover:text-[rgb(var(--foreground))] active:scale-95 focus:ring-2 focus:ring-[rgb(var(--ring))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--background))] transition-all duration-200 ease-in-out",
+    link: "text-[rgb(var(--accent))] underline-offset-4 hover:underline active:scale-95 focus:ring-2 focus:ring-[rgb(var(--ring))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--background))] transition-all duration-200 ease-in-out",
   },
   sizes: {
     default: "h-10 px-4 py-2 text-sm font-medium rounded-lg inline-flex items-center gap-2",

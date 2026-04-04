@@ -6,13 +6,17 @@ import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
 import com.nox.platform.shared.exception.DomainException;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
@@ -33,23 +37,31 @@ public class AuthenticationService {
     private int refreshTokenExpirationDays;
 
     public AuthResult authenticate(String email, String plaintextPassword, String ipAddress, String userAgent) {
-        email = email.trim().toLowerCase();
+        log.info("🔐 [AUTH_DEBUG] Bắt đầu xác thực cho email: {}", email);
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401));
+                .orElseThrow(() -> {
+                    log.warn("❌ [AUTH_DEBUG] Không tìm thấy User với email: {}", email);
+                    return new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);
+                });
 
         if (user.getSecurity().isLocked()) {
+            log.warn("🔒 [AUTH_DEBUG] Tài khoản {} đang bị KHÓA (locked).", email);
             throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to too many failed attempts",
                     423);
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
+            log.warn("⚠️ [AUTH_DEBUG] Tài khoản {} đang ở trạng thái: {}. Cần kích hoạt.", email, user.getStatus());
             throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email", 403);
         }
 
         try {
+            log.info("⚙️ [AUTH_DEBUG] Đang kiểm tra mật khẩu cho User: {}...", email);
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, plaintextPassword));
+            log.info("✅ [AUTH_DEBUG] Mật khẩu HỢP LỆ cho User: {}", email);
             internalSecurityStateService.resetFailedLogins(user.getId());
-        } catch (Exception e) {
+        } catch (BadCredentialsException e) {
+            log.error("❌ [AUTH_DEBUG] Sai mật khẩu cho User: {}. Chi tiết lỗi: {}", email, e.getMessage());
             internalSecurityStateService.incrementFailedLogins(user.getId());
 
             // Since internalSecurityStateService mutates state natively, we must consider
