@@ -5,6 +5,7 @@ import com.nox.platform.module.engine.api.request.UpdateCoreBlockRequest;
 import com.nox.platform.module.engine.api.response.CoreBlockResponse;
 import com.nox.platform.module.engine.service.CoreBlockService;
 import com.nox.platform.module.iam.infrastructure.security.CustomUserDetails;
+import com.nox.platform.shared.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,24 +24,24 @@ public class StudioBlockController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CoreBlockResponse createBlock(
+    public ApiResponse<CoreBlockResponse> createBlock(
             @PathVariable UUID workspaceId,
             @Valid @RequestBody CreateCoreBlockRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return coreBlockService.createBlock(workspaceId, request, userDetails.getId());
+        return ApiResponse.ok(coreBlockService.createBlock(workspaceId, request, userDetails.getId()));
     }
 
     @GetMapping
-    public List<CoreBlockResponse> getBlocks(@PathVariable UUID workspaceId) {
-        return coreBlockService.getWorkspaceBlocks(workspaceId);
+    public ApiResponse<List<CoreBlockResponse>> getBlocks(@PathVariable UUID workspaceId) {
+        return ApiResponse.ok(coreBlockService.getWorkspaceBlocks(workspaceId));
     }
 
     @PatchMapping("/{blockId}")
-    public CoreBlockResponse updateBlock(
+    public ApiResponse<CoreBlockResponse> updateBlock(
             @PathVariable UUID workspaceId,
             @PathVariable UUID blockId,
             @Valid @RequestBody UpdateCoreBlockRequest request) {
-        return coreBlockService.updateBlock(workspaceId, blockId, request);
+        return ApiResponse.ok(coreBlockService.updateBlock(workspaceId, blockId, request));
     }
 
     @DeleteMapping("/{blockId}")

@@ -22,12 +22,26 @@ import { useRouter } from "next/navigation";
 
 export function ProjectsManagement() {
   const router = useRouter();
+  
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [authData, setAuthData] = useState<{ token: string, orgId: string } | null>(null);
 
   useEffect(() => {
+    const fetchAuthData = async () => {
+      try {
+        const res = await fetch('/api/auth/token');
+        if (res.ok) {
+          const data = await res.json();
+          setAuthData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch auth data", err);
+      }
+    };
+    fetchAuthData();
     const fetchProjects = async () => {
       try {
         setLoading(true);
@@ -193,11 +207,28 @@ export function ProjectsManagement() {
               </div>
 
               <div className="flex items-center gap-2 mt-auto pt-4 border-t border-gray-100">
+                <Button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    const token = authData?.token || '';
+                    const orgId = authData?.orgId || '';
+                    window.open(`http://localhost:5173/?project=${project.id}&token=${token}&orgId=${orgId}`, '_blank');
+                  }} 
+                  disabled={!authData?.token}
+                  className="flex-1 bg-[#4F46E5] text-white hover:bg-[#4338CA] text-sm h-9 font-semibold shadow-sm transition-all"
+                >
+                  Explore
+                </Button>
                 <Button variant="outline" onClick={(e) => { e.stopPropagation(); router.push(`/projects/${project.id}`); }} className="flex-1 bg-white border-gray-200 text-gray-700 hover:bg-gray-50 text-sm h-9 font-medium">
                   View
                 </Button>
-                <Button variant="outline" onClick={(e) => { e.stopPropagation(); }} className="flex-1 bg-white border-red-100 text-[#EF4444] hover:bg-red-50 text-sm h-9 font-medium">
-                  Delete
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={(e) => { e.stopPropagation(); }} 
+                  className="h-9 w-9 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <Inbox className="h-4 w-4" />
                 </Button>
               </div>
             </div>

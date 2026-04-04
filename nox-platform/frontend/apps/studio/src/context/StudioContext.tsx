@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange, Connection, addEdge, MarkerType } from 'reactflow';
 import { StudioState, SavedBlock, NoxNodeData, NavigationStep, SavedInvader, InvaderInstance } from '../types/studio';
 import { StudioApi } from '../services/studioApi';
+import { apiClient } from '../services/apiClient';
 import { v4 as uuidv4 } from 'uuid';
 
 const StudioContext = createContext<StudioState | undefined>(undefined);
@@ -12,6 +13,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
   const [nodes, setNodes] = useState<Node<NoxNodeData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  
   const [navigationPath, setNavigationPath] = useState<NavigationStep[]>([
     { id: 'root', label: 'Root' }
   ]);
@@ -143,7 +147,59 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           console.error('Failed to parse Soul Library', e);
        }
     }
+
+    // 3. Khởi tạo Project & Workspace từ URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const pid = urlParams.get('project');
+    if (pid) {
+      console.log(`[Studio] Đang tải dự án: ${pid}`);
+      setProjectId(pid);
+    }
   }, []);
+
+  // Sync Logic: Tải Workspaces khi có ProjectId
+  useEffect(() => {
+    if (!projectId) return;
+
+    const loadWorkspace = async () => {
+      try {
+        // 1. Lấy danh sách workspace của dự án
+        // Chú ý: Backend Endpoint cho WorkspaceController là /api/v1/projects/{projectId}/workspaces
+        const res = await apiClient.get(`/v1/projects/${projectId}/workspaces`);
+        const workspaces = res.data.data || res.data || [];
+        
+        if (workspaces.length > 0) {
+          const ws = workspaces[0];
+          setWorkspaceId(ws.id);
+          console.log(`[Studio] Đã chọn Workspace: ${ws.name} (${ws.id})`);
+          
+          // 2. Tải Blocks cho Workspace này
+          const blocksRes = await StudioApi.getWorkspaceBlocks(ws.id);
+          const blocksData = blocksRes.data || blocksRes || [];
+          
+          // Map backend blocks sang React Flow nodes
+          const mappedNodes = blocksData.map((b: any) => ({
+            id: b.id,
+            type: 'noxNode',
+            position: b.visual?.position || { x: 100, y: 100 },
+            data: { 
+              label: b.name, 
+              type: b.type,
+              parentId: b.parentBlockId,
+              invaders: b.invaders || []  // Sẽ fetch chi tiết sau nếu cần
+            }
+          }));
+          
+          setNodes(mappedNodes);
+          console.log(`[Studio] Đã tải ${mappedNodes.length} blocks lên Canvas.`);
+        }
+      } catch (err) {
+        console.error("❌ [Studio] Lỗi khi tải dữ liệu thiết kế:", err);
+      }
+    };
+
+    loadWorkspace();
+  }, [projectId]);
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(savedBlocks));
@@ -267,7 +323,20 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const dispatchNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
-  }, []);
+    
+    // API Call logic for deletion (Optimistic UI)
+    if (workspaceId) {
+      changes.forEach(change => {
+        if (change.type === 'remove') {
+          console.log(`[Studio] Đang xóa Block (ID: ${change.id})...`);
+          StudioApi.deleteBlock(workspaceId, change.id).catch(err => {
+            console.error(`❌ [Studio] Lỗi khi xóa Block:`, err);
+            // Có thể bổ sung Toast Component báo lỗi tại đây
+          });
+        }
+      });
+    }
+  }, [workspaceId]);
 
   const dispatchEdgesChange = useCallback((changes: EdgeChange[]) => {
     setEdges((eds) => applyEdgeChanges(changes, eds));
@@ -365,6 +434,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       enterNode, 
       exitToStep, 
       currentParentId,
+      workspaceId,
       teleportToNode,
 
       // Workspace Data

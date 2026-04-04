@@ -13,23 +13,39 @@ export const apiClient = axios.create({
 // Request Interceptor: Nơi lý tưởng để tự động gắn Bearer Token (JWT) sau này
 apiClient.interceptors.request.use(
     (config) => {
-        // 1. Kiểm tra URL xem có token chuyển tiếp từ Portal không
+        // 1. Kiểm tra URL xem có token/orgId chuyển tiếp từ Portal không
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
             const urlToken = urlParams.get('token');
-            if (urlToken) {
+            const urlOrgId = urlParams.get('orgId');
+            
+            if (urlToken && urlToken !== 'null') {
                 localStorage.setItem('nox_token', urlToken);
-                // Xóa token khỏi URL để bảo mật và làm sạch thanh địa chỉ
-                const newUrl = window.location.pathname;
-                window.history.replaceState({}, '', newUrl);
+            }
+            if (urlOrgId && urlOrgId !== 'null') {
+                localStorage.setItem('nox_org_id', urlOrgId);
+            }
+
+            // Xóa token khỏi URL để bảo mật và làm sạch thanh địa chỉ (chỉ khi có token/orgId mới xóa)
+            if (urlToken || urlOrgId) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('token');
+                url.searchParams.delete('orgId');
+                window.history.replaceState({}, '', url.pathname + url.search);
             }
         }
 
-        // 2. Lấy token từ LocalStorage
+        // 2. Lấy Token & OrgId từ LocalStorage
         const token = typeof window !== 'undefined' ? localStorage.getItem('nox_token') : null;
-        if (token) {
+        const orgId = typeof window !== 'undefined' ? localStorage.getItem('nox_org_id') : null;
+
+        if (token && token !== 'null') {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        if (orgId && orgId !== 'null') {
+            config.headers['X-Org-Id'] = orgId;
+        }
+        
         return config;
     },
     (error) => {

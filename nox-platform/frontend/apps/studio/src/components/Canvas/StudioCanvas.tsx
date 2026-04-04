@@ -21,6 +21,7 @@ import { ContextMenu } from '../UI/ContextMenu';
 import { useStudio } from '../../context/StudioContext';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useCanvasDnD } from '../../hooks/useCanvasDnD';
+import { StudioApi } from '../../services/studioApi';
 import 'reactflow/dist/style.css';
 
 const nodeTypes = {
@@ -41,7 +42,7 @@ export const StudioCanvas = () => {
     nodes, setNodes, onNodesChange,
     edges, setEdges, onEdgesChange,
     onConnect, currentParentId, enterNode, saveBlock,
-    isConnectMode
+    isConnectMode, workspaceId
   } = useStudio();
   
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
@@ -96,6 +97,18 @@ export const StudioCanvas = () => {
     if (['noxJunction', 'noxInputTerminal', 'noxOutputTerminal'].includes(node.type || '')) return; 
     enterNode(node.id, node.data.label);
   }, [enterNode]);
+
+  // Interaction: Drag Stop logic (API Sync)
+  const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
+    if (workspaceId) {
+      console.log(`[Studio] Cập nhật tọa độ Block ${node.id} (${node.position.x}, ${node.position.y})`);
+      StudioApi.updateBlock(workspaceId, node.id, {
+        visual: { position: node.position }
+      }).catch(err => {
+        console.error("❌ [Studio] Lỗi cập nhật tọa độ Block:", err);
+      });
+    }
+  }, [workspaceId]);
 
   // Context Menu logic (Generic for Nodes and Edges)
   const handleContextMenu = useCallback(
@@ -188,6 +201,7 @@ export const StudioCanvas = () => {
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}

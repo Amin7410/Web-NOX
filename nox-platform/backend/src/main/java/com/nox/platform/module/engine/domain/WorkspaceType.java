@@ -4,5 +4,6 @@ public enum WorkspaceType {
     FRONTEND,
     BACKEND,
     DATABASE,
+    CANVAS,
     MIXED
 }

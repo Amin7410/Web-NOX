@@ -3,6 +3,7 @@ import { ReactFlowInstance, Node, XYPosition, Edge } from 'reactflow';
 import { NoxNodeData, NoxNodeType, SavedBlock } from '../types/studio';
 import { useStudio } from '../context/StudioContext';
 import { v4 as uuidv4 } from 'uuid';
+import { StudioApi } from '../services/studioApi';
 
 interface DnDProps {
   reactFlowInstance: ReactFlowInstance | null;
@@ -13,7 +14,7 @@ interface DnDProps {
 // Removed manual getId in favor of global standard UUIDv4
 
 export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: DnDProps) => {
-  const { currentParentId, savedBlocks, setEdges } = useStudio();
+  const { currentParentId, savedBlocks, setEdges, workspaceId } = useStudio();
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -116,15 +117,18 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
       }
 
       // Default instantiation
+      const newNodeId = uuidv4();
+      const nodeName = noxType === 'junction' ? 'Junction Point' : 
+                 (noxType === 'inputTerminal' ? 'Incoming Bridge' : 
+                 (noxType === 'outputTerminal' ? 'Outgoing Bridge' : 
+                 (isCustom ? `Clone: ${noxType.toUpperCase()}` : (isDefined ? `New ${noxType.toUpperCase()} Module` : 'New Conceptual Block'))));
+
       const newNode: Node<NoxNodeData> = {
-        id: uuidv4(),
+        id: newNodeId,
         type: rfType,
         position: snappedPosition,
         data: { 
-          label: noxType === 'junction' ? 'Junction Point' : 
-                 (noxType === 'inputTerminal' ? 'Incoming Bridge' : 
-                 (noxType === 'outputTerminal' ? 'Outgoing Bridge' : 
-                 (isCustom ? `Clone: ${noxType.toUpperCase()}` : (isDefined ? `New ${noxType.toUpperCase()} Module` : 'New Conceptual Block')))),
+          label: nodeName,
           type: noxType,
           invaders: (isDefined && !['junction', 'inputTerminal', 'outputTerminal'].includes(noxType)) ? ['Placeholder-Invader'] : [],
           isDefined: isDefined || isCustom,
@@ -137,8 +141,21 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
       };
 
       setNodes((nds) => nds.concat(newNode));
+      
+      // API Call logic for creation (Optimistic UI)
+      if (workspaceId) {
+        console.log(`[Studio] Đang đẩy Block mới lên server...`);
+        StudioApi.createBlock(workspaceId, {
+          type: noxType === 'undefined' ? 'undefined' : noxType, // Dùng noxType gốc hoặc 'undefined'
+          name: nodeName,
+          visual: { position: snappedPosition },
+          parentBlockId: currentParentId || undefined
+        }).catch(err => {
+          console.error(`❌ [Studio] Lỗi tạo Block trên server:`, err);
+        });
+      }
     },
-    [reactFlowInstance, setNodes, setEdges, reactFlowWrapper, currentParentId, savedBlocks]
+    [reactFlowInstance, setNodes, setEdges, reactFlowWrapper, currentParentId, savedBlocks, workspaceId]
   );
 
   return { onDragOver, onDrop };

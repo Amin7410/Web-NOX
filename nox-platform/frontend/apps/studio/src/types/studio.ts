@@ -77,6 +77,7 @@ export interface StudioState {
   enterNode: (id: string, label: string) => void;
   exitToStep: (index: number) => void;
   currentParentId: string | null;
+  workspaceId: string | null;
 
   // Workspace Data (Scoping Layer)
   nodes: Node<NoxNodeData>[];
