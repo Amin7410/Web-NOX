@@ -1,5 +1,5 @@
 import React from 'react';
-import { Boxes, Settings, LucideIcon, Network } from 'lucide-react';
+import { Boxes, Settings, LucideIcon, Network, Zap } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -7,7 +7,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type TabId = 'blocks' | 'relations' | 'settings';
+export type TabId = 'blocks' | 'invaders' | 'relations' | 'settings';
 
 interface RailItemProps {
   icon: LucideIcon;
@@ -54,6 +54,12 @@ export const MainRail = ({ activeTab, onTabChange }: MainRailProps) => {
           label="Blocks" 
           active={activeTab === 'blocks'} 
           onClick={() => onTabChange('blocks')}
+        />
+        <RailItem 
+          icon={Zap} 
+          label="Invaders" 
+          active={activeTab === 'invaders'} 
+          onClick={() => onTabChange('invaders')}
         />
         <RailItem 
           icon={Network} 

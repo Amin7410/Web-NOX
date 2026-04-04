@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { ReactFlowInstance, Node, XYPosition, Edge } from 'reactflow';
 import { NoxNodeData, NoxNodeType, SavedBlock } from '../types/studio';
 import { useStudio } from '../context/StudioContext';
+import { v4 as uuidv4 } from 'uuid';
 
 interface DnDProps {
   reactFlowInstance: ReactFlowInstance | null;
@@ -9,7 +10,7 @@ interface DnDProps {
   setNodes: React.Dispatch<React.SetStateAction<Node<NoxNodeData>[]>>;
 }
 
-const getId = () => `nox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Removed manual getId in favor of global standard UUIDv4
 
 export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: DnDProps) => {
   const { currentParentId, savedBlocks, setEdges } = useStudio();
@@ -26,6 +27,7 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
       // Read ReactFlow type (noxNode/noxJunction/noxInputTerminal/noxOutputTerminal)
       const rfType = event.dataTransfer.getData('application/reactflow') || 'noxNode';
       const noxType = event.dataTransfer.getData('application/nox-type') as NoxNodeType;
+      const noxId = event.dataTransfer.getData('application/nox-id');
       const isDefinedStr = event.dataTransfer.getData('application/nox-defined');
       const isCustomStr = event.dataTransfer.getData('application/nox-custom');
       
@@ -49,13 +51,12 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
       };
 
       if (isCustom) {
-        // Deep Clone Mega Pattern
-        const label = event.dataTransfer.getData('text/plain');
-        const savedBlock = savedBlocks.find(b => b.label === label);
+        // Deep Clone Mega Pattern using ID for precision
+        const savedBlock = savedBlocks.find(b => b.id === noxId || b.label === event.dataTransfer.getData('text/plain'));
         
         if (savedBlock && savedBlock.childrenNodes) {
           const idMap = new Map<string, string>();
-          const newRootId = getId();
+          const newRootId = uuidv4();
 
           const newNodes: Node<NoxNodeData>[] = [];
           const newEdges: Edge[] = [];
@@ -77,7 +78,7 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
           newNodes.push(rootNode);
 
           savedBlock.childrenNodes.forEach(child => {
-            idMap.set(child.id, getId());
+            idMap.set(child.id, uuidv4());
           });
 
           savedBlock.childrenNodes.forEach(child => {
@@ -101,7 +102,7 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
 
               newEdges.push({
                 ...edge,
-                id: `e_${getId()}`,
+                id: uuidv4(),
                 source: newSource,
                 target: newTarget
               });
@@ -116,22 +117,21 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
 
       // Default instantiation
       const newNode: Node<NoxNodeData> = {
-        id: getId(),
+        id: uuidv4(),
         type: rfType,
         position: snappedPosition,
         data: { 
           label: noxType === 'junction' ? 'Junction Point' : 
-                 (noxType === 'inputTerminal' ? 'Input Bridge' : 
-                 (noxType === 'outputTerminal' ? 'Output Bridge' : 
+                 (noxType === 'inputTerminal' ? 'Incoming Bridge' : 
+                 (noxType === 'outputTerminal' ? 'Outgoing Bridge' : 
                  (isCustom ? `Clone: ${noxType.toUpperCase()}` : (isDefined ? `New ${noxType.toUpperCase()} Module` : 'New Conceptual Block')))),
           type: noxType,
           invaders: (isDefined && !['junction', 'inputTerminal', 'outputTerminal'].includes(noxType)) ? ['Placeholder-Invader'] : [],
           isDefined: isDefined || isCustom,
           parentId: currentParentId,
-          // Initialize terminal config if applicable
           terminalConfig: (noxType === 'inputTerminal' || noxType === 'outputTerminal') ? {
             direction: noxType === 'inputTerminal' ? 'input' : 'output',
-            parentHandle: 'top' // Default to top mapping
+            parentHandle: 'top'
           } : undefined
         },
       };

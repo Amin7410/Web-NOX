@@ -27,8 +27,8 @@ const IconMap = {
   system: Cpu
 };
 
-export const NoxNode = memo(({ data, selected }: NodeProps<NoxNodeData>) => {
-  const { isConnectMode } = useStudio();
+export const NoxNode = memo(({ id, data, selected }: NodeProps<NoxNodeData>) => {
+  const { isConnectMode, toggleRightSidebar } = useStudio();
   const Icon = IconMap[data.type as keyof typeof IconMap] || Box;
   const isUndefined = data.type === 'undefined';
 
@@ -40,16 +40,31 @@ export const NoxNode = memo(({ data, selected }: NodeProps<NoxNodeData>) => {
   return (
     <div 
       className={cn(
-        "group relative min-w-[180px] rounded-lg bg-zinc-900 shadow-2xl transition-all duration-300",
+        "group relative min-w-[200px] rounded-lg bg-zinc-900 shadow-2xl transition-all duration-300",
         selected 
           ? "ring-2 ring-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)]" 
           : "border border-white/20",
         isUndefined && "border-dashed opacity-80"
       )}
     >
+      {/* Refined Ergonomic Soul Hub (Offset from corner) */}
+      <div className="absolute -top-[20px] left-3 flex h-[20px] items-center rounded-t-md bg-zinc-900 border-t border-l border-r border-white/20 shadow-lg z-0 overflow-hidden">
+        {/* Tactile Chip Button */}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleRightSidebar(true, id);
+          }}
+          className="flex items-center justify-center px-2 h-full hover:bg-purple-500/10 transition-colors group/soulbtn"
+          title="Access Soul Control"
+        >
+          <Cpu size={10} className="text-zinc-600 group-hover/soulbtn:text-purple-400 transition-all" />
+        </button>
+      </div>
+
       {/* Header */}
       <div className={cn(
-        "flex items-center gap-2 px-3 py-2 border-b border-white/10",
+        "flex items-center gap-2 px-3 py-2 border-b border-white/10 rounded-t-lg",
         selected ? "bg-indigo-500/10" : "bg-white/5"
       )}>
         <div className={cn(
@@ -68,29 +83,31 @@ export const NoxNode = memo(({ data, selected }: NodeProps<NoxNodeData>) => {
         </div>
       </div>
 
-      {/* Body / Invader Stack */}
-      <div className="p-3">
-        {data.invaders && data.invaders.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            {data.invaders.map((invader, idx) => (
-              <div 
-                key={idx} 
-                className="flex items-center gap-2 px-2 py-1.5 rounded bg-zinc-950 border border-white/5 group/invader hover:border-indigo-500/30 transition-colors"
-              >
-                <div className="h-1 w-1 rounded-full bg-indigo-500 shadow-[0_0_4px_rgba(99,102,241,0.5)]" />
-                <span className="text-[10px] font-mono text-zinc-400 group-hover/invader:text-zinc-200 uppercase">
-                  {invader}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-4 border border-dashed border-white/5 rounded flex items-center justify-center">
-             <span className="text-[9px] text-zinc-600 uppercase tracking-[0.2em] font-light italic">
-               No Soul Attached
-             </span>
-          </div>
-        )}
+      {/* Content / Architectural Specification */}
+      <div className="p-4 space-y-3">
+        <div className="space-y-2 opacity-60">
+           <div className="flex justify-between items-center text-[8px] font-mono tracking-widest uppercase">
+              <span className="text-zinc-500 italic">ARCHITECT_ID</span>
+              <span className="text-zinc-300">B-0{Math.floor(Math.random() * 99 + 1)}</span>
+           </div>
+           <div className="flex justify-between items-center text-[8px] font-mono tracking-widest uppercase">
+              <span className="text-zinc-500 italic">MODULE_TYPE</span>
+              <span className="text-zinc-300">{data.type}</span>
+           </div>
+           <div className="flex justify-between items-center text-[8px] font-mono tracking-widest uppercase">
+              <span className="text-zinc-500 italic">SYSTEM_STATUS</span>
+              <span className="text-emerald-500/70">READY</span>
+           </div>
+        </div>
+
+        {/* Minimalist Soul Bank Visual (Placeholder) */}
+        <div className="mt-4 pt-3 border-t border-white/5">
+           <div className="h-10 rounded border border-dashed border-white/10 flex items-center justify-center bg-black/10">
+              <span className="text-[7px] text-zinc-700 uppercase tracking-[0.3em] font-bold italic">
+                Architectural Core
+              </span>
+           </div>
+        </div>
       </div>
 
       {/* Connection Handles (Technically Styled) */}

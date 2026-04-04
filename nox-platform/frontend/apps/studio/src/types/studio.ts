@@ -22,20 +22,40 @@ export interface TerminalConfig {
   mappingId?: string; 
 }
 
+export interface InvaderInstance {
+  id: string;
+  templateId?: string;
+  name: string;
+  type: 'logic' | 'aesthetic' | 'data' | 'system';
+  config?: Record<string, any>;
+}
+
 export interface NoxNodeData {
   label: string;
   type: NoxNodeType;
-  invaders?: string[];
-  isDefined?: boolean;
-  parentId?: string | null;
-  terminalConfig?: TerminalConfig;
+  invaders: InvaderInstance[];
+  blueprintContext?: string; // Human instructions for AI execution
+  isDefined: boolean;
+  parentId?: string;
+  terminalConfig?: {
+    direction: 'input' | 'output';
+    parentHandle: string;
+  };
+}
+
+export interface SavedInvader {
+  id: string;
+  name: string;
+  type: 'logic' | 'aesthetic' | 'data' | 'system';
+  config?: Record<string, any>;
+  createdAt: number;
 }
 
 export interface SavedBlock {
   id: string;
   label: string;
   type: NoxNodeType;
-  invaders: string[];
+  invaders: InvaderInstance[];
   createdAt: number;
   childrenNodes?: Node<NoxNodeData>[];
   internalEdges?: Edge[];
@@ -83,4 +103,18 @@ export interface StudioState {
   // Style Management
   updateEdgeStyle: (edgeId: string, style: { color?: string, dashed?: boolean }) => void;
   updateNodeOutputStyle: (nodeId: string, style: { color?: string, dashed?: boolean }) => void;
+
+  // Invader Management & Dashboard
+  activeSoulNodeId: string | null;
+  isRightSidebarOpen: boolean;
+  toggleRightSidebar: (open: boolean, nodeId?: string) => void;
+  addInvaderToNode: (nodeId: string) => void;
+  updateInvaderOrder: (nodeId: string, newOrder: InvaderInstance[]) => void;
+  
+  // Library Control
+  savedInvaders: SavedInvader[];
+  saveInvader: (nodeId: string, invaderId: string) => void;
+  deleteInvaderFromNode: (nodeId: string, invaderId: string) => void;
+  removeSavedInvader: (invaderId: string) => void;
+  spawnInvaderFromLibrary: (nodeId: string, templateId: string) => void;
 }

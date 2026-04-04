@@ -15,6 +15,7 @@ import { Undo2, Redo2, ListTree } from 'lucide-react';
 import { NoxNode } from './Nodes/NoxNode';
 import { NoxJunctionNode } from './Nodes/NoxJunctionNode';
 import { NoxTerminalNode } from './Nodes/NoxTerminalNode';
+import { NoxInvaderHub } from './Nodes/NoxInvaderHub';
 import NoxEdge from './UI/NoxEdge';
 import { ContextMenu } from '../UI/ContextMenu';
 import { useStudio } from '../../context/StudioContext';
@@ -27,6 +28,7 @@ const nodeTypes = {
   noxJunction: NoxJunctionNode,
   noxInputTerminal: NoxTerminalNode,
   noxOutputTerminal: NoxTerminalNode,
+  noxInvaderHub: NoxInvaderHub,
 };
 
 const edgeTypes = {
@@ -161,10 +163,13 @@ export const StudioCanvas = () => {
   }), []);
 
   const miniMapStyle = useMemo(() => ({
-    backgroundColor: '#18181b',
-    borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#09090B',
+    borderRadius: '4px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
     overflow: 'hidden' as const,
+    width: 160,
+    height: 100,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
   }), []);
 
   return (

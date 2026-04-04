@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange, Connection, addEdge, MarkerType } from 'reactflow';
-import { StudioState, SavedBlock, NoxNodeData, NavigationStep } from '../types/studio';
+import { StudioState, SavedBlock, NoxNodeData, NavigationStep, SavedInvader, InvaderInstance } from '../types/studio';
+import { StudioApi } from '../services/studioApi';
+import { v4 as uuidv4 } from 'uuid';
 
 const StudioContext = createContext<StudioState | undefined>(undefined);
 
@@ -17,21 +19,139 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnectMode, setIsConnectMode] = useState(false);
   const [edgeColor, setEdgeColor] = useState('rgba(99, 102, 241, 0.6)');
 
+  // Soul Dashboard 2.0 State
+  const [activeSoulNodeId, setActiveSoulNodeId] = useState<string | null>(null);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [savedInvaders, setSavedInvaders] = useState<SavedInvader[]>([]);
+
+  const toggleRightSidebar = useCallback((open: boolean, nodeId?: string) => {
+    setIsRightSidebarOpen(open);
+    if (nodeId) setActiveSoulNodeId(nodeId);
+    else if (!open) setActiveSoulNodeId(null);
+  }, []);
+
+  const addInvaderToNode = useCallback(async (nodeId: string) => {
+    // 1. Tạo UUID thật ngay từ Frontend (Figma Style)
+    const newInvaderId = uuidv4(); 
+    const nextNum = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    
+    const newInvader: InvaderInstance = {
+      id: newInvaderId,
+      name: `Invader ${nextNum}`,
+      type: 'logic',
+      config: {}
+    };
+
+    // 2. GỌI XUỐNG BACKEND (Dùng UUID thật)
+    try {
+       console.log(`[Fullstack Sync] Đang gắn Invader ${newInvaderId} vào Block...`);
+       await StudioApi.attachInvader(nodeId, {
+          invaderAssetId: '39a7a9e1-9f7a-4b9e-8c9d-1a2b3c4d5e6f', // Giả lập Invader Definition UUID (Cần fetch từ Warehouse sau)
+          configSnapshot: newInvader.config
+       });
+       console.log(`✅ [Fullstack Sync] Backend đã chấp nhận UUID: ${newInvaderId}`);
+    } catch (error) {
+       console.warn(`⚠️ [Fullstack Sync] Backend tạm từ chối (có thể do chưa sync định nghĩa Invader). UI vẫn hiển thị mượt mà.`, error);
+    }
+
+    // 3. Cập nhật Local UI State để Canvas luôn mượt mà.
+    setNodes((nds: Node<NoxNodeData>[]) => nds.map((node: Node<NoxNodeData>) => {
+      if (node.id === nodeId) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            invaders: [...(node.data.invaders || []), newInvader]
+          }
+        };
+      }
+      return node;
+    }));
+  }, []);
+
+  const updateInvaderOrder = useCallback((nodeId: string, newOrder: InvaderInstance[]) => {
+    setNodes((nds) => nds.map((node) => {
+      if (node.id === nodeId) {
+        return { ...node, data: { ...node.data, invaders: newOrder } };
+      }
+      return node;
+    }));
+  }, []);
+
+  const saveInvader = useCallback((nodeId: string, invaderId: string) => {
+    const node = nodes.find((n: Node<NoxNodeData>) => n.id === nodeId);
+    const invader = node?.data.invaders?.find((i: InvaderInstance) => i.id === invaderId);
+
+    if (invader) {
+      setSavedInvaders((prev: SavedInvader[]) => {
+        const alreadySaved = prev.some((i: SavedInvader) => i.name === invader.name && i.type === invader.type);
+        if (alreadySaved) return prev;
+
+        const newInvader: SavedInvader = {
+           id: uuidv4(),
+           name: invader.name,
+           type: invader.type,
+           config: invader.config,
+           createdAt: Date.now()
+        };
+        return [newInvader, ...prev];
+      });
+    }
+  }, [nodes]);
+
+  const deleteInvaderFromNode = useCallback(async (nodeId: string, invaderId: string) => {
+    // 1. Sync Backend
+    try {
+       await StudioApi.detachInvader(nodeId, invaderId);
+    } catch (error) {
+       console.error(`❌ [Fullstack Sync] Lỗi khi tháo Invader:`, error);
+    }
+
+    // 2. Local State update
+    setNodes((nds: Node<NoxNodeData>[]) => nds.map((node: Node<NoxNodeData>) => {
+      if (node.id === nodeId) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            invaders: (node.data.invaders || []).filter((i: InvaderInstance) => i.id !== invaderId)
+          }
+        };
+      }
+      return node;
+    }));
+  }, []);
+
   // Persistence logic
+  const LS_SOUL_KEY = 'nox_soul_library';
+
   useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY);
-    if (stored) {
+    const storedBlocks = localStorage.getItem(LS_KEY);
+    if (storedBlocks) {
       try {
-        setSavedBlocks(JSON.parse(stored));
+        setSavedBlocks(JSON.parse(storedBlocks));
       } catch (e) {
         console.error('Failed to parse Studio Library', e);
       }
+    }
+
+    const storedSouls = localStorage.getItem(LS_SOUL_KEY);
+    if (storedSouls) {
+       try {
+          setSavedInvaders(JSON.parse(storedSouls));
+       } catch (e) {
+          console.error('Failed to parse Soul Library', e);
+       }
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(savedBlocks));
   }, [savedBlocks]);
+
+  useEffect(() => {
+     localStorage.setItem(LS_SOUL_KEY, JSON.stringify(savedInvaders));
+  }, [savedInvaders]);
 
   // Hierarchical Helpers
   const getDescendants = useCallback((parentId: string) => {
@@ -55,7 +175,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       internalEdges = edges.filter(e => childIds.has(e.source) && childIds.has(e.target));
     }
     const newBlock: SavedBlock = {
-      id: `sb_${Date.now()}`,
+      id: uuidv4(),
       label: nodeData.label,
       type: nodeData.type,
       invaders: nodeData.invaders ? [...nodeData.invaders] : [],
@@ -154,9 +274,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const onConnect = useCallback((connection: Connection) => {
-    // Find source node to inherit its default output style if possible
+    // 1. Tạo UUID thật cho Edge
+    const id = uuidv4();
+    
+    // 2. Tương lai: Báo xuống Backend tạo Relation
+    // StudioApi.createRelation(...)
+
     setEdges((eds) => {
-      const id = `edge_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       return addEdge({
         ...connection,
         id,
@@ -189,21 +313,89 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
   }, []);
 
+  const removeSavedInvader = useCallback((invaderId: string) => {
+    setSavedInvaders((prev) => {
+      const updated = prev.filter(inv => inv.id !== invaderId);
+      localStorage.setItem(LS_SOUL_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const spawnInvaderFromLibrary = useCallback((nodeId: string, templateId: string) => {
+    const template = savedInvaders.find(inv => inv.id === templateId);
+    if (!template) return;
+
+    setNodes((nds) => nds.map((node) => {
+      if (node.id === nodeId) {
+        const newInvader: InvaderInstance = {
+          id: uuidv4(),
+          templateId: template.id,
+          name: template.name,
+          type: template.type,
+          config: template.config
+        };
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            invaders: [...(node.data.invaders || []), newInvader]
+          }
+        };
+      }
+      return node;
+    }));
+  }, [savedInvaders]);
+
+  // ==========================================================================
+  // RENDER & EXPORT
+  // ==========================================================================
+
   return (
     <StudioContext.Provider value={{ 
-      savedBlocks, saveBlock, removeSavedBlock,
-      navigationPath, enterNode, exitToStep, currentParentId,
-      nodes, setNodes, edges, setEdges,
+      // Persistence & Library
+      savedBlocks, 
+      saveBlock, 
+      removeSavedBlock,
+      savedInvaders,
+      saveInvader,
+      removeSavedInvader,
+
+      // Navigation & Layers
+      navigationPath, 
+      enterNode, 
+      exitToStep, 
+      currentParentId,
+      teleportToNode,
+
+      // Workspace Data
+      nodes, 
+      setNodes, 
+      edges, 
+      setEdges,
       onNodesChange: dispatchNodesChange,
       onEdgesChange: dispatchEdgesChange,
       onConnect,
-      isConnectMode, setIsConnectMode,
-      edgeColor, setEdgeColor,
+
+      // Linking & Routing
+      isConnectMode, 
+      setIsConnectMode,
+      edgeColor, 
+      setEdgeColor,
       updateEdgeWaypoint,
       addEdgeWaypoint,
-      teleportToNode,
+
+      // Styling
       updateEdgeStyle,
-      updateNodeOutputStyle
+      updateNodeOutputStyle,
+
+      // Invader Management (Dashboard)
+      activeSoulNodeId,
+      isRightSidebarOpen,
+      toggleRightSidebar,
+      addInvaderToNode,
+      updateInvaderOrder,
+      deleteInvaderFromNode,
+      spawnInvaderFromLibrary
     }}>
       {children}
     </StudioContext.Provider>

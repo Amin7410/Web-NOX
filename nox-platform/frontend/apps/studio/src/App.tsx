@@ -2,6 +2,7 @@ import React from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import { Header } from './components/Header/Header';
 import { Sidebar } from './components/Sidebar/Sidebar';
+import { RightSidebar } from './components/Sidebar/RightSidebar';
 import { StudioCanvas } from './components/Canvas/StudioCanvas';
 import { Breadcrumbs } from './components/Header/Breadcrumbs';
 
@@ -15,15 +16,18 @@ function App() {
       <Breadcrumbs />
 
       <div className="flex flex-1 w-full relative z-10 flex-row overflow-hidden">
-        {/* 3. Side Panel (Dual-Layer Sidebar) */}
+        {/* 3. Left Side Panel (Templates & Tools) */}
         <Sidebar />
 
         {/* 4. Main Workspace (Architectural Canvas) */}
         <main className="flex-1 relative h-full w-full overflow-hidden bg-[#09090B]">
           <ReactFlowProvider>
-            <StudioCanvas />
+             <StudioCanvas />
           </ReactFlowProvider>
         </main>
+
+        {/* 5. Right Side Panel (Soul & Invader Controller) */}
+        <RightSidebar />
       </div>
 
       {/* Ultra-subtle Monochrome Scanline Effect */}
