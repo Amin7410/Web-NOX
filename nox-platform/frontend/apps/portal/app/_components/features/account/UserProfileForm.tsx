@@ -58,11 +58,36 @@ export function UserProfileForm() {
       setError(null);
       setSuccess(false);
       
-      // Mocking save for now as there is no backend update endpoint yet
-      setTimeout(() => {
-          setSaving(false);
+      try {
+          const response = await fetch('/api/v1/auth/profile', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                  fullName: profile.fullName,
+                  avatarUrl: profile.avatarUrl,
+              }),
+          });
+
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || 'Failed to update profile');
+          }
+
+          const data = await response.json();
+          setProfile({
+              fullName: data.data.fullName || profile.fullName,
+              email: data.data.email || profile.email,
+              avatarUrl: data.data.avatarUrl || profile.avatarUrl,
+          });
           setSuccess(true);
-      }, 1000);
+          setTimeout(() => setSuccess(false), 5000);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'An error occurred while saving profile');
+      } finally {
+          setSaving(false);
+      }
   };
 
   return (

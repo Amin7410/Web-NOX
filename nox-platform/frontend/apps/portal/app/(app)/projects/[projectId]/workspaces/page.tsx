@@ -1,12 +1,91 @@
+'use client';
+
 import Link from "next/link";
 import { Button } from "@nox/ui";
-import { Card, PageHeader } from "../../../../_components/UiBits";
+import { Card, PageHeader, Alert } from "../../../../_components/UiBits";
+import { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
+
+interface Workspace {
+    id: string;
+    name: string;
+    type: 'MAIN' | 'EXPERIMENT' | 'SANDBOX';
+    createdAt: string;
+    status?: string;
+}
 
 export default function WorkspacesPage({ params }: { params: { projectId: string } }) {
-    const workspaces = [
-        { id: "w_1", name: "Main workspace", type: "MAIN", createdAt: "2026-03-16" },
-        { id: "w_2", name: "Experiment A", type: "EXPERIMENT", createdAt: "2026-03-16" },
-    ];
+    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchWorkspaces = async () => {
+            try {
+                const response = await fetch(`/api/v1/projects/${params.projectId}/workspaces`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setWorkspaces(data.data || []);
+                } else {
+                    setError('Failed to load workspaces');
+                }
+            } catch (err) {
+                console.error('Failed to fetch workspaces:', err);
+                setError('An error occurred while loading workspaces');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchWorkspaces();
+    }, [params.projectId]);
+
+    const handleDeleteWorkspace = async (workspaceId: string) => {
+        if (!confirm('Are you sure you want to delete this workspace? This action cannot be undone.')) {
+            return;
+        }
+
+        setDeletingId(workspaceId);
+        setError(null);
+
+        try {
+            const response = await fetch(`/api/v1/projects/${params.projectId}/workspaces/${workspaceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete workspace');
+            }
+
+            setWorkspaces(workspaces.filter(w => w.id !== workspaceId));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <PageHeader
+                    title="Workspaces"
+                    subtitle="Different environments inside this project."
+                />
+                <div className="text-zinc-400">Loading workspaces...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -19,6 +98,10 @@ export default function WorkspacesPage({ params }: { params: { projectId: string
                     </Button>
                 }
             />
+
+            {error && (
+                <Alert type="error" title="Error" message={error} />
+            )}
 
             {workspaces.length === 0 ? (
                 <Card title="No workspaces yet" description="Create a workspace to start designing in Studio.">
@@ -45,7 +128,7 @@ export default function WorkspacesPage({ params }: { params: { projectId: string
                                             <div className="font-medium">{w.name}</div>
                                         </td>
                                         <td className="py-3 pr-4">{w.type}</td>
-                                        <td className="py-3 pr-4">{w.createdAt}</td>
+                                        <td className="py-3 pr-4">{new Date(w.createdAt).toLocaleDateString()}</td>
                                         <td className="py-3 text-right">
                                             <div className="inline-flex gap-2">
                                                 <Button asChild size="sm" variant="outline">
@@ -59,9 +142,20 @@ export default function WorkspacesPage({ params }: { params: { projectId: string
                                                         target="_blank"
                                                         rel="noreferrer"
                                                     >
-                                                        Open in Studio
+                                                        Studio
                                                     </a>
                                                 </Button>
+                                                {w.type !== 'MAIN' && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost"
+                                                        onClick={() => handleDeleteWorkspace(w.id)}
+                                                        disabled={deletingId === w.id}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
