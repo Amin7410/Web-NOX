@@ -75,7 +75,7 @@ export function Header() {
                   src="https://images.unsplash.com/photo-1655249481446-25d575f1c054?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBlcnNvbiUyMHBvcnRyYWl0fGVufDF8fHx8MTc3MzgyODg4OXww&ixlib=rb-4.1.0&q=80&w=1080"
                   alt="User avatar" 
                 />
-                <AvatarFallback className="bg-[#4F46E5] text-white font-medium">
+                <AvatarFallback className="bg-[#4F46E5] text-[rgb(var(--accent-foreground))] font-medium">
                   U
                 </AvatarFallback>
               </Avatar>

@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Folder, Building2, User, Star } from "lucide-react";
 import type { ReactNode } from "react";
 
 type NavItem = {
     href: string;
     label: string;
+    icon: React.ReactNode;
 };
 
 const nav: NavItem[] = [
-    { href: "/projects", label: "Projects" },
-    { href: "/organizations", label: "Organizations" },
-    { href: "/account/profile", label: "Account" },
+    { href: "/projects", label: "Projects", icon: <Folder className="h-4 w-4" /> },
+    { href: "/organizations", label: "Organizations", icon: <Building2 className="h-4 w-4" /> },
+    { href: "/account/profile", label: "Account", icon: <User className="h-4 w-4" /> },
 ];
 
-function NavLink({ href, label }: NavItem) {
+function NavLink({ href, label, icon }: NavItem) {
     const pathname = usePathname();
     const active = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -23,12 +25,13 @@ function NavLink({ href, label }: NavItem) {
         <Link
             href={href}
             className={[
-                "flex items-center rounded-lg px-3 py-2 text-sm transition-all duration-200",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
                 active 
                     ? "sidebar-link active bg-[rgb(var(--accent))] text-[rgb(var(--accent-foreground))] shadow-sm ring-1 ring-[color:var(--card-border)] font-semibold" 
                     : "sidebar-link text-[rgb(var(--text-main))] hover:bg-[rgb(var(--surface))] hover:text-[rgb(var(--text-main))] hover:shadow-sm",
             ].join(" ")}
         >
+            {icon}
             {label}
         </Link>
     );
@@ -37,7 +40,7 @@ function NavLink({ href, label }: NavItem) {
 export function AppShell({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-screen">
-            <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 py-8 md:grid-cols-[200px_1fr] lg:px-8">
+            <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 py-8 md:grid-cols-[160px_1fr] lg:px-8">
                 <aside className="md:sticky md:top-24 md:self-start">
                     <div className="flex flex-col gap-6">
                         <div>
@@ -49,6 +52,21 @@ export function AppShell({ children }: { children: ReactNode }) {
                                     <NavLink key={item.href} {...item} />
                                 ))}
                             </nav>
+                        </div>
+                        
+                        <div className="border-t border-[rgb(var(--border))] pt-4">
+                            <h3 className="mb-3 px-3 text-[11px] font-bold uppercase tracking-widest text-[rgb(var(--muted-foreground))]">
+                                Starred
+                            </h3>
+                            <div className="flex flex-col gap-1.5">
+                                <Link
+                                    href="/projects/1"
+                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[rgb(var(--text-main))] hover:bg-[rgb(var(--surface))] transition-all"
+                                >
+                                    <Star className="h-4 w-4 text-[#38BDF8]" />
+                                    <span className="truncate text-xs">Website Redesign</span>
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </aside>
