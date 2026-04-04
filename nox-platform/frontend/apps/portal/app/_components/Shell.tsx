@@ -63,11 +63,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PublicShell({ children }: { children: ReactNode }) {
     return (
-        <div className="flex min-h-screen items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_0_30px_-20px_rgba(0,0,0,0.8)]">
-                {children}
+        <div className="relative flex min-h-screen items-center justify-center px-4 py-20 overflow-hidden bg-slate-50/50 dark:bg-zinc-950">
+            {/* Ambient Background Decorative Elements */}
+            <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-blob"></div>
+            <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-blob animation-delay-2000"></div>
+            <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-blob animation-delay-4000"></div>
+            
+            <div className="relative w-full max-w-md">
+                <div className="overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.5)]">
+                    {children}
+                </div>
+                
+                <div className="mt-8 text-center text-sm text-muted-foreground">
+                    &copy; {new Date().getFullYear()} NOX Platform. All rights reserved.
+                </div>
             </div>
         </div>
     );
 }
-

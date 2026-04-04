@@ -6,37 +6,77 @@ module.exports = {
     theme: {
         extend: {
             colors: {
+                border: "hsl(var(--border))",
+                input: "hsl(var(--input))",
+                ring: "hsl(var(--ring))",
+                background: "hsl(var(--background))",
+                foreground: "hsl(var(--foreground))",
                 primary: {
-                    DEFAULT: '#007bff',
-                    foreground: '#ffffff',
+                    DEFAULT: "hsl(var(--primary))",
+                    foreground: "hsl(var(--primary-foreground))",
                 },
                 secondary: {
-                    DEFAULT: '#6c757d',
-                    foreground: '#ffffff',
+                    DEFAULT: "hsl(var(--secondary))",
+                    foreground: "hsl(var(--secondary-foreground))",
                 },
                 destructive: {
-                    DEFAULT: '#dc3545',
-                    foreground: '#ffffff',
+                    DEFAULT: "hsl(var(--destructive))",
+                    foreground: "hsl(var(--destructive-foreground))",
                 },
                 muted: {
-                    DEFAULT: '#f8f9fa',
-                    foreground: '#212529',
+                    DEFAULT: "hsl(var(--muted))",
+                    foreground: "hsl(var(--muted-foreground))",
                 },
                 accent: {
-                    DEFAULT: '#ffc107',
-                    foreground: '#212529',
+                    DEFAULT: "hsl(var(--accent))",
+                    foreground: "hsl(var(--accent-foreground))",
                 },
-                // Added for Nox Design System
-                border: '#27272a', // zinc-800
-                input: '#27272a',
-                ring: '#3b82f6', // blue-500
-                background: '#09090b', // zinc-950
-                surface: '#09090b', // zinc-950 (user requested nox-surface)
-                foreground: '#fafafa', // zinc-50
+                popover: {
+                    DEFAULT: "hsl(var(--popover))",
+                    foreground: "hsl(var(--popover-foreground))",
+                },
+                card: {
+                    DEFAULT: "hsl(var(--card))",
+                    foreground: "hsl(var(--card-foreground))",
+                },
+            },
+            borderRadius: {
+                lg: "var(--radius)",
+                md: "calc(var(--radius) - 2px)",
+                sm: "calc(var(--radius) - 4px)",
+            },
+            keyframes: {
+                "accordion-down": {
+                    from: { height: "0" },
+                    to: { height: "var(--radix-accordion-content-height)" },
+                },
+                "accordion-up": {
+                    from: { height: "var(--radix-accordion-content-height)" },
+                    to: { height: "0" },
+                },
+                blob: {
+                    "0%": {
+                        transform: "translate(0px, 0px) scale(1)",
+                    },
+                    "33%": {
+                        transform: "translate(30px, -50px) scale(1.1)",
+                    },
+                    "66%": {
+                        transform: "translate(-20px, 20px) scale(0.9)",
+                    },
+                    "100%": {
+                        transform: "translate(0px, 0px) scale(1)",
+                    },
+                },
+            },
+            animation: {
+                "accordion-down": "accordion-down 0.2s ease-out",
+                "accordion-up": "accordion-up 0.2s ease-out",
+                blob: "blob 10s infinite",
             },
             fontFamily: {
-                sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+                sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
             },
         },
     },

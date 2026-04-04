@@ -26,37 +26,35 @@ export const Button = React.forwardRef<
 
     const baseStyles =
       "inline-flex items-center justify-center " +
-      "rounded-lg font-medium " +
-      "border border-white/50 " +
+      "rounded-lg font-semibold " +
       "transition-all duration-200 " +
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 " +
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 " +
       "disabled:opacity-50 disabled:pointer-events-none " +
-      "ring-offset-background active:scale-[0.90]"
+      "ring-offset-background active:scale-[0.96]"
       ;
 
     const variants = {
       primary:
-        "bg-blue-600 text-white " +
-        "hover:bg-blue-600/90 " +
-        "shadow-[0_0_20px_-5px_rgba(37,99,235,0.4)] " +
-        "hover:shadow-[0_0_25px_-5px_rgba(37,99,235,0.6)] " +
-        "border border-blue-500/50",
+        "bg-primary text-primary-foreground " +
+        "hover:bg-primary/90 " +
+        "shadow-[0_8px_16px_-6px_rgba(59,130,246,0.3)] " +
+        "hover:shadow-[0_12px_20px_-6px_rgba(59,130,246,0.5)] ",
 
       secondary:
-        "bg-white/10 text-white " +
-        "hover:bg-white/20 " +
-        "border border-white/10 backdrop-blur-sm",
+        "bg-secondary text-secondary-foreground " +
+        "hover:bg-secondary/80 " +
+        "border border-input backdrop-blur-sm",
 
       outline:
-        "border border-white/20 bg-transparent " +
-        "hover:bg-white/5 text-white",
+        "border border-input bg-transparent " +
+        "hover:bg-accent hover:text-accent-foreground text-foreground",
 
       ghost:
-        "hover:bg-white/10 text-white",
+        "hover:bg-accent hover:text-accent-foreground text-foreground",
 
       destructive:
-        "bg-red-500/10 text-red-400 " +
-        "hover:bg-red-500/20 border border-red-500/20",
+        "bg-destructive text-destructive-foreground " +
+        "hover:bg-destructive/90 border border-destructive/20",
     };
 
     const sizes = {

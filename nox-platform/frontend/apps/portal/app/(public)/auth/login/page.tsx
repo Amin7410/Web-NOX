@@ -1,101 +1,164 @@
 'use client';
 
-import Link from "next/link";
-import { Button, Input } from "@nox/ui";
-import { Alert } from "../../../_components/UiBits";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Alert } from '../../../_components/UiBits';
+import { AuthInput, Logo, PrimaryButton } from '../../../_components/auth';
 
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [keepSignedIn, setKeepSignedIn] = useState(false);
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [apiError, setApiError] = useState<string | null>(null);
+
+    const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [field]: e.target.value });
+        if (errors[field]) {
+            const newErrors = { ...errors };
+            delete newErrors[field];
+            setErrors(newErrors);
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors: Record<string, string> = {};
+
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
+        }
+
+        if (!formData.password) {
+            newErrors.password = 'Password is required';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!validateForm()) return;
+
         setLoading(true);
-        setError(null);
+        setApiError(null);
 
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ 
+                    email: formData.email, 
+                    password: formData.password 
+                }),
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                // Redirect to organizations or dashboard after successful login
                 router.push("/organizations");
                 router.refresh();
             } else {
-                setError(data.message || "Invalid email or password");
+                setApiError(data.message || "Invalid email or password");
             }
         } catch (err) {
-            setError("An error occurred during sign in. Please try again.");
+            setApiError("An error occurred during sign in. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="space-y-5">
-            <div>
-                <div className="text-xl font-semibold">Sign in to NOX Portal</div>
-                <div className="mt-1 text-sm text-zinc-400">
-                    Access your projects and organizations.
-                </div>
+        <div className="flex flex-col gap-8">
+            <Logo />
+            
+            <div className="flex flex-col gap-2">
+                <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Welcome back</h2>
+                <p className="text-zinc-500 dark:text-zinc-400 font-medium">Sign in to your account to continue</p>
             </div>
 
-            {error ? (
-                <Alert tone="danger" title="Sign in failed" description={error} />
+            {apiError ? (
+                <Alert tone="danger" title="Authentication Error" description={apiError} />
             ) : null}
 
-            <form className="space-y-3" onSubmit={handleSubmit}>
-                <div className="space-y-1">
-                    <label className="text-sm text-zinc-200">Email</label>
-                    <Input 
-                        type="email" 
-                        placeholder="you@example.com" 
-                        required 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                </div>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                <AuthInput
+                    label="Email address"
+                    type="email"
+                    icon={Mail}
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={handleChange('email')}
+                    error={errors.email}
+                    autoFocus
+                />
 
-                <div className="space-y-1">
-                    <label className="text-sm text-zinc-200">Password</label>
-                    <Input 
-                        type="password" 
-                        placeholder="••••••••" 
-                        required 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                </div>
+                <AuthInput
+                    label="Password"
+                    type="password"
+                    icon={Lock}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange('password')}
+                    error={errors.password}
+                />
 
-                <div className="flex items-center justify-between pt-1">
-                    <label className="flex items-center gap-2 text-sm text-zinc-300">
-                        <input type="checkbox" className="accent-blue-600" />
-                        Remember this device
+                <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                checked={keepSignedIn}
+                                onChange={(e) => setKeepSignedIn(e.target.checked)}
+                                className="w-5 h-5 rounded-lg border-2 border-input appearance-none cursor-pointer
+                                         checked:bg-primary checked:border-transparent transition-all duration-200
+                                         group-hover:border-primary/50"
+                            />
+                            {keepSignedIn && (
+                                <svg
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={3}
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground select-none">Keep me signed in</span>
                     </label>
-                    <Link href="/auth/forgot-password" className="text-sm text-blue-400 hover:text-blue-300">
-                        Forgot your password?
+
+                    <Link 
+                        href="/auth/forgot-password" 
+                        className="text-sm text-primary font-semibold hover:underline transition-colors"
+                    >
+                        Forgot password?
                     </Link>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? "Signing in..." : "Sign in"}
-                </Button>
+                <div className="pt-2">
+                    <PrimaryButton type="submit" loading={loading} className="gap-2">
+                        <span>Sign in</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </PrimaryButton>
+                </div>
             </form>
 
-            <div className="text-sm text-zinc-400">
-                Don&apos;t have an account?{" "}
-                <Link href="/auth/register" className="text-blue-400 hover:text-blue-300">
-                    Sign up
+            <div className="text-center text-sm border-t border-border pt-6">
+                <span className="text-muted-foreground">Don&apos;t have an account? </span>
+                <Link href="/auth/register" className="font-bold text-primary hover:underline group">
+                    Create account
+                    <ArrowRight className="inline-block w-3.5 h-3.5 ml-1 transition-transform group-hover:translate-x-1" />
                 </Link>
             </div>
         </div>

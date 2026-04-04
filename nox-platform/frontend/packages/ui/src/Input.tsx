@@ -29,19 +29,19 @@ export const Input = React.forwardRef<
   ) => {
 
     const baseStyles =
-      "flex w-full rounded-md border " +
-      "bg-zinc-950/50 px-3 py-1 text-base " +
-      "shadow-sm transition-all duration-200 " +
+      "flex w-full rounded-lg border " +
+      "bg-zinc-50 dark:bg-zinc-900/50 backdrop-blur-sm px-3 py-1 text-base " +
+      "ring-offset-background selection:bg-primary/20 selection:text-foreground " +
+      "shadow-inner transition-all duration-200 " +
       "file:border-0 file:bg-transparent file:text-sm file:font-medium " +
-      "placeholder:text-zinc-500 " +
-      "focus-visible:outline-none focus-visible:ring-2 " +
+      "placeholder:text-zinc-500 dark:placeholder:text-zinc-400 " +
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 " +
       "disabled:cursor-not-allowed disabled:opacity-50 " +
-      "text-zinc-100";
+      "text-zinc-900 dark:text-zinc-100";
 
     const variants = {
       default:
-        "border-zinc-800 " +
-        "focus-visible:border-primary focus-visible:ring-primary/20",
+        "border-input/50 hover:border-input focus-visible:border-primary",
 
       error:
         "border-red-500/50 " +
