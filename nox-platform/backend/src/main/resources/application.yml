@@ -41,7 +41,7 @@ springdoc:
 
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B2D5051535546566D59}
-  expiration-minutes: 5
+  expiration-minutes: 60
 
 app:
   frontend:
