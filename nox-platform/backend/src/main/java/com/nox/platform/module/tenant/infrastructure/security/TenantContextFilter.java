@@ -29,11 +29,33 @@ public class TenantContextFilter extends OncePerRequestFilter {
     private final OrgMemberRepository orgMemberRepository;
     private final UserRepository userRepository;
 
+    // Danh sách các Endpoint công khai không áp dụng Tenant Filter (để tránh chặn login/register)
+    private static final java.util.List<String> PUBLIC_PATHS = java.util.List.of(
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/social-login",
+            "/api/v1/auth/verify-email",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/reset-password",
+            "/api/v1/auth/mfa/verify",
+            "/api/v1/auth/mfa/verify-backup",
+            "/api/v1/auth/refresh",
+            "/api/v1/workspaces/blocks/public" // Nếu có
+    );
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
+
+        String path = request.getServletPath();
+        
+        // 1. Bypass Filter nếu là Endpoint công khai
+        if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String tenantIdHeader = request.getHeader(TENANT_HEADER);
         if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
