@@ -21,6 +21,8 @@ public interface CoreRelationRepository extends JpaRepository<CoreRelation, UUID
 
     List<CoreRelation> findBySourceBlock_IdOrTargetBlock_Id(UUID sourceBlockId, UUID targetBlockId);
 
+    List<CoreRelation> findBySourceBlock_IdAndTargetBlock_Id(UUID sourceBlockId, UUID targetBlockId);
+
     @Modifying
     @Query("UPDATE CoreRelation r SET r.deletedAt = CURRENT_TIMESTAMP WHERE (r.sourceBlock.id IN :blockIds OR r.targetBlock.id IN :blockIds) AND r.deletedAt IS NULL")
     void softDeleteRelationsByBlockIds(@Param("blockIds") List<UUID> blockIds);

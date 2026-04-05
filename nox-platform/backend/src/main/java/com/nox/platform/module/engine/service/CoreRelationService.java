@@ -41,13 +41,22 @@ public class CoreRelationService {
             throw new DomainException("INVALID_WORKSPACE", "Both blocks must be in the same current workspace..", 403);
         }
 
-        // Enforce unique index idx_core_relations_source_target
-        boolean exists = coreRelationRepository.findBySourceBlock_IdOrTargetBlock_Id(
+        // Check if there's already a relation with EXACT same handles (Optimized for Multi-wire)
+        // Note: The database index now handles this, but a service level check is good for DomainException mapping.
+        // We only block if ALL 4 parameters match.
+        boolean duplicate = coreRelationRepository.findBySourceBlock_IdAndTargetBlock_Id(
                 request.sourceBlockId(), request.targetBlockId()).stream()
-                .anyMatch(r -> r.getSourceBlock().getId().equals(request.sourceBlockId())
-                            && r.getTargetBlock().getId().equals(request.targetBlockId()));
-        if (exists) {
-            throw new DomainException("RELATION_EXISTS", "Relation between these blocks already exists", 400);
+                .anyMatch(r -> {
+                    String sH = (String) r.getVisual().get("sourceHandle");
+                    String tH = (String) r.getVisual().get("targetHandle");
+                    String newSH = (String) request.visual().get("sourceHandle");
+                    String newTH = (String) request.visual().get("targetHandle");
+                    return (sH == null ? "" : sH).equals(newSH == null ? "" : newSH) 
+                        && (tH == null ? "" : tH).equals(newTH == null ? "" : newTH);
+                });
+
+        if (duplicate) {
+            throw new DomainException("RELATION_EXISTS", "This exact port connection already exists", 400);
         }
 
         CoreRelation relation = CoreRelation.builder()

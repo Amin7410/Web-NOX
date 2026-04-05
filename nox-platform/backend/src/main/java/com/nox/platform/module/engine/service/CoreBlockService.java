@@ -60,6 +60,7 @@ public class CoreBlockService {
         }
 
         CoreBlock block = CoreBlock.builder()
+                .id(request.id())
                 .workspace(workspace)
                 .parentBlock(parentBlock)
                 .originAsset(originAsset)
@@ -81,11 +82,13 @@ public class CoreBlockService {
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace", 404));
 
-        CustomUserDetails currentUser = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (block.getLockedBy() != null && !block.getLockedBy().equals(currentUser.getId())) {
-            // Give 2 minutes grace period for stale locks
-            if (block.getLockedAt().plusMinutes(2).isAfter(OffsetDateTime.now())) {
-                throw new DomainException("BLOCK_LOCKED", "Block is currently locked by another user", 423);
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof CustomUserDetails currentUser) {
+            if (block.getLockedBy() != null && !block.getLockedBy().equals(currentUser.getId())) {
+                // Give 2 minutes grace period for stale locks
+                if (block.getLockedAt().plusMinutes(2).isAfter(OffsetDateTime.now())) {
+                    throw new DomainException("BLOCK_LOCKED", "Block is currently locked by another user", 423);
+                }
             }
         }
 

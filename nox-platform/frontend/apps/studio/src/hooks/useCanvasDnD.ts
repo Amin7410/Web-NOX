@@ -142,11 +142,12 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
 
       setNodes((nds) => nds.concat(newNode));
       
-      // API Call logic for creation (Optimistic UI)
+      // API Call logic for creation (Optimistic UI Sync)
       if (workspaceId) {
-        console.log(`[Studio] Đang đẩy Block mới lên server...`);
+        console.log(`[Studio] Đang đẩy Block mới lên server với ID: ${newNodeId}`);
         StudioApi.createBlock(workspaceId, {
-          type: noxType === 'undefined' ? 'undefined' : noxType, // Dùng noxType gốc hoặc 'undefined'
+          id: newNodeId, // Đồng bộ ID từ Frontend xuống Backend
+          type: noxType === 'undefined' ? 'undefined' : noxType,
           name: nodeName,
           visual: { position: snappedPosition },
           parentBlockId: currentParentId || undefined

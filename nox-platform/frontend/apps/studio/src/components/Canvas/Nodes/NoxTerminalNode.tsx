@@ -78,9 +78,10 @@ export const NoxTerminalNode = memo(({ id, data, selected }: NodeProps<NoxNodeDa
         <Handle 
           type="source" 
           position={Position.Right} 
+          id="source-port"
           className={cn(
-            "!w-2 !h-2 !bg-zinc-950 !border !transition-all duration-200",
-            isInput ? "!border-emerald-500/60" : "!border-amber-500/60",
+            "!w-3 !h-3 !bg-zinc-950 !border !transition-all duration-200 !z-50 hover:!scale-125",
+            isInput ? "!border-emerald-500" : "!border-amber-500",
             isConnectMode ? "opacity-100 scale-100" : "opacity-0 scale-0"
           )}
           isConnectable={isConnectMode}
@@ -89,9 +90,10 @@ export const NoxTerminalNode = memo(({ id, data, selected }: NodeProps<NoxNodeDa
         <Handle 
           type="target" 
           position={Position.Left} 
+          id="target-port"
           className={cn(
-            "!w-2 !h-2 !bg-zinc-950 !border !transition-all duration-200",
-            isInput ? "!border-emerald-500/60" : "!border-amber-500/60",
+            "!w-3 !h-3 !bg-zinc-950 !border !transition-all duration-200 !z-50 hover:!scale-125",
+            isInput ? "!border-emerald-500" : "!border-amber-500",
             isConnectMode ? "opacity-100 scale-100" : "opacity-0 scale-0"
           )}
           isConnectable={isConnectMode}

@@ -4,6 +4,7 @@ import { StudioState, SavedBlock, NoxNodeData, NavigationStep, SavedInvader, Inv
 import { StudioApi } from '../services/studioApi';
 import { apiClient } from '../services/apiClient';
 import { v4 as uuidv4 } from 'uuid';
+import { debounce } from '../utils/sync';
 
 const StudioContext = createContext<StudioState | undefined>(undefined);
 
@@ -177,21 +178,52 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const blocksRes = await StudioApi.getWorkspaceBlocks(ws.id);
           const blocksData = blocksRes.data || blocksRes || [];
           
-          // Map backend blocks sang React Flow nodes
-          const mappedNodes = blocksData.map((b: any) => ({
-            id: b.id,
-            type: 'noxNode',
-            position: b.visual?.position || { x: 100, y: 100 },
-            data: { 
-              label: b.name, 
-              type: b.type,
-              parentId: b.parentBlockId,
-              invaders: b.invaders || []  // Sẽ fetch chi tiết sau nếu cần
-            }
-          }));
-          
+          // Map backend blocks sang các loại Node chuyên biệt của Studio
+          const mappedNodes = blocksData.map((b: any) => {
+            let rfType = 'noxNode';
+            if (b.type === 'junction') rfType = 'noxJunction';
+            else if (b.type === 'inputTerminal') rfType = 'noxInputTerminal';
+            else if (b.type === 'outputTerminal') rfType = 'noxOutputTerminal';
+            else if (b.type === 'invaderHub') rfType = 'noxInvaderHub';
+
+            return {
+              id: b.id,
+              type: rfType,
+              position: b.visual?.position || { x: 100, y: 100 },
+              data: { 
+                label: b.name, 
+                type: b.type,
+                parentId: b.parentBlockId,
+                invaders: b.invaders || [],
+                terminalConfig: b.visual?.terminalConfig || {}
+              }
+            };
+          });
+
           setNodes(mappedNodes);
           console.log(`[Studio] Đã tải ${mappedNodes.length} blocks lên Canvas.`);
+
+          // 3. Tải Relations cho Workspace này
+          const relationsRes = await StudioApi.getWorkspaceRelations(ws.id);
+          const relationsData = relationsRes.data || relationsRes || [];
+
+          const mappedEdges = relationsData.map((r: any) => ({
+            id: r.id,
+            source: r.sourceBlockId,
+            target: r.targetBlockId,
+            sourceHandle: r.visual?.sourceHandle, // Đưa ra ngoài cấp cao nhất
+            targetHandle: r.visual?.targetHandle, // Đưa ra ngoài cấp cao nhất
+            type: 'noxEdge',
+            data: { 
+              formalId: r.id, 
+              waypoints: r.visual?.waypoints || [] 
+            },
+            style: r.visual?.style || { stroke: edgeColor, strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: (r.visual?.style?.stroke || edgeColor) }
+          }));
+
+          setEdges(mappedEdges);
+          console.log(`[Studio] Đã tải ${mappedEdges.length} dây nối (Relations) cho Workspace.`);
         }
       } catch (err) {
         console.error("❌ [Studio] Lỗi khi tải dữ liệu thiết kế:", err);
@@ -208,6 +240,42 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
      localStorage.setItem(LS_SOUL_KEY, JSON.stringify(savedInvaders));
   }, [savedInvaders]);
+
+  // Sync Debouncer for Visual Properties
+  const syncEdgeDebounced = useMemo(() => 
+    debounce(async (wsId: string, edge: Edge) => {
+      console.log(`[Sync] Đồng bộ hình ảnh Relation: ${edge.id}...`);
+      try {
+        await StudioApi.updateRelation(wsId, edge.id, {
+          visual: {
+            sourceHandle: edge.sourceHandle,
+            targetHandle: edge.targetHandle,
+            waypoints: edge.data?.waypoints || [],
+            style: {
+              stroke: edge.style?.stroke,
+              strokeWidth: edge.style?.strokeWidth,
+              dashed: edge.data?.dashed
+            }
+          }
+        });
+      } catch (err) {
+        console.error(`❌ [Sync] Lỗi đồng bộ Relation:`, err);
+      }
+    }, 1000), [workspaceId]);
+
+  const syncBlockDebounced = useMemo(() => 
+    debounce(async (wsId: string, node: Node<NoxNodeData>) => {
+      console.log(`[Sync] Đồng bộ vị trí Block: ${node.id}...`);
+      try {
+        await StudioApi.updateBlock(wsId, node.id, {
+          visual: {
+            position: node.position
+          }
+        });
+      } catch (err) {
+        console.error(`❌ [Sync] Lỗi đồng bộ Block:`, err);
+      }
+    }, 1000), [workspaceId]);
 
   // Hierarchical Helpers
   const getDescendants = useCallback((parentId: string) => {
@@ -288,21 +356,29 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Style Orchestration
   const updateEdgeStyle = useCallback((edgeId: string, style: { color?: string, dashed?: boolean }) => {
-    setEdges((eds) => eds.map((e) => {
-      if (e.id === edgeId) {
-        return { 
-          ...e, 
-          style: { 
-            ...e.style, 
-            stroke: style.color || e.style?.stroke,
-            strokeDasharray: style.dashed ? '5,5' : (style.dashed === false ? '0' : e.style?.strokeDasharray)
-          },
-          data: { ...e.data, dashed: style.dashed !== undefined ? style.dashed : e.data?.dashed }
-        };
-      }
-      return e;
-    }));
-  }, []);
+    setEdges((eds) => {
+      const newEdges = eds.map((e) => {
+        if (e.id === edgeId) {
+          const updatedEdge = { 
+            ...e, 
+            style: { 
+              ...e.style, 
+              stroke: style.color || e.style?.stroke,
+              strokeDasharray: style.dashed ? '5,5' : (style.dashed === false ? '0' : e.style?.strokeDasharray)
+            },
+            data: { ...e.data, dashed: style.dashed !== undefined ? style.dashed : e.data?.dashed }
+          };
+          
+          if (workspaceId && !edgeId.startsWith('local_')) {
+            syncEdgeDebounced(workspaceId, updatedEdge);
+          }
+          return updatedEdge;
+        }
+        return e;
+      });
+      return newEdges;
+    });
+  }, [workspaceId, syncEdgeDebounced]);
 
   const updateNodeOutputStyle = useCallback((nodeId: string, style: { color?: string, dashed?: boolean }) => {
     setEdges((eds) => eds.map((e) => {
@@ -331,56 +407,136 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           console.log(`[Studio] Đang xóa Block (ID: ${change.id})...`);
           StudioApi.deleteBlock(workspaceId, change.id).catch(err => {
             console.error(`❌ [Studio] Lỗi khi xóa Block:`, err);
-            // Có thể bổ sung Toast Component báo lỗi tại đây
+          });
+        }
+        // Handle drag/position sync
+        if (change.type === 'position' && change.position) {
+          const node = nodes.find(n => n.id === change.id);
+          if (node && !change.id.startsWith('local_')) {
+             syncBlockDebounced(workspaceId, { ...node, position: change.position });
+          }
+        }
+      });
+    }
+  }, [workspaceId, nodes, syncBlockDebounced]);
+
+  const dispatchEdgesChange = useCallback((changes: EdgeChange[]) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+
+    // API Call logic for deletion (Optimistic UI)
+    if (workspaceId) {
+      changes.forEach(change => {
+        if (change.type === 'remove') {
+          console.log(`[Studio] Đang xóa Relation (ID: ${change.id})...`);
+          StudioApi.deleteRelation(workspaceId, change.id).catch(err => {
+            console.error(`❌ [Studio] Lỗi khi xóa Relation:`, err);
           });
         }
       });
     }
   }, [workspaceId]);
 
-  const dispatchEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-  }, []);
-
   const onConnect = useCallback((connection: Connection) => {
-    // 1. Tạo UUID thật cho Edge
-    const id = uuidv4();
-    
-    // 2. Tương lai: Báo xuống Backend tạo Relation
-    // StudioApi.createRelation(...)
+    // 0. Chuẩn bị Handle ID (Dùng default nếu null)
+    const effectiveSourceHandle = connection.sourceHandle || 'source-default';
+    const effectiveTargetHandle = connection.targetHandle || 'target-default';
 
-    setEdges((eds) => {
-      return addEdge({
-        ...connection,
-        id,
-        type: 'noxEdge',
-        data: { waypoints: [] },
-        style: { stroke: edgeColor, strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor }
-      }, eds);
-    });
-  }, [edgeColor]);
+    // 1. Kiểm tra trùng lặp (Exact Port Match)
+    const exists = edges.some(e => 
+      e.source === connection.source && 
+      e.target === connection.target &&
+      e.sourceHandle === effectiveSourceHandle &&
+      e.targetHandle === effectiveTargetHandle
+    );
+
+    if (exists) {
+      console.warn(`[Studio] Kết nối giữa ${connection.source} (${effectiveSourceHandle}) và ${connection.target} (${effectiveTargetHandle}) đã tồn tại.`);
+      return;
+    }
+
+    // 2. Tạo ID tạm thời
+    const tempId = uuidv4();
+
+    const newEdge: Edge = {
+      ...connection,
+      id: tempId,
+      sourceHandle: effectiveSourceHandle,
+      targetHandle: effectiveTargetHandle,
+      type: 'noxEdge',
+      data: { waypoints: [] },
+      style: { stroke: edgeColor, strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor }
+    };
+
+    // 2. Cập nhật UI ngay lập tức (Optimistic)
+    setEdges((eds) => addEdge(newEdge, eds));
+
+    // 3. Đồng bộ Backend
+    if (workspaceId && connection.source && connection.target) {
+      console.log(`[Studio] Đang lưu Relation mới: ${connection.source} (${effectiveSourceHandle}) -> ${connection.target} (${effectiveTargetHandle})`);
+      StudioApi.createRelation(workspaceId, {
+        sourceBlockId: connection.source,
+        targetBlockId: connection.target,
+        type: 'GENERAL', // Default type
+        visual: {
+          sourceHandle: effectiveSourceHandle,
+          targetHandle: effectiveTargetHandle,
+          style: {
+            stroke: edgeColor,
+            strokeWidth: 2,
+            dashed: false
+          }
+        }
+      }).then(res => {
+        const formalId = res.data?.id || res.id;
+        console.log(`✅ [Studio] Relation đã được lưu. ID chính thức: ${formalId}`);
+        
+        // Cập nhật lại ID tạm bằng ID thật từ DB để các thao tác update/delete sau này chính xác
+        setEdges((eds) => eds.map(e => e.id === tempId ? { ...e, id: formalId } : e));
+      }).catch(err => {
+        console.error("❌ [Studio] Lỗi khi tạo Relation:", err);
+        // Rollback UI (xóa edge tạm)
+        setEdges((eds) => eds.filter(e => e.id !== tempId));
+      });
+    }
+  }, [edgeColor, workspaceId, edges]);
 
   const updateEdgeWaypoint = useCallback((edgeId: string, index: number, position: { x: number, y: number }) => {
-    setEdges((eds) => eds.map((e) => {
-      if (e.id === edgeId) {
-        const waypoints = [...(e.data?.waypoints || [])];
-        waypoints[index] = position;
-        return { ...e, data: { ...e.data, waypoints } };
-      }
-      return e;
-    }));
-  }, []);
+    setEdges((eds) => {
+      const newEdges = eds.map((e) => {
+        if (e.id === edgeId) {
+          const waypoints = [...(e.data?.waypoints || [])];
+          waypoints[index] = position;
+          const updatedEdge = { ...e, data: { ...e.data, waypoints } };
+          
+          if (workspaceId && !edgeId.startsWith('local_')) {
+            syncEdgeDebounced(workspaceId, updatedEdge);
+          }
+          return updatedEdge;
+        }
+        return e;
+      });
+      return newEdges;
+    });
+  }, [workspaceId, syncEdgeDebounced]);
 
   const addEdgeWaypoint = useCallback((edgeId: string, position: { x: number, y: number }) => {
-    setEdges((eds) => eds.map((e) => {
-      if (e.id === edgeId) {
-        const waypoints = [...(e.data?.waypoints || []), position];
-        return { ...e, data: { ...e.data, waypoints } };
-      }
-      return e;
-    }));
-  }, []);
+    setEdges((eds) => {
+      const newEdges = eds.map((e) => {
+        if (e.id === edgeId) {
+          const waypoints = [...(e.data?.waypoints || []), position];
+          const updatedEdge = { ...e, data: { ...e.data, waypoints } };
+          
+          if (workspaceId && !edgeId.startsWith('local_')) {
+            syncEdgeDebounced(workspaceId, updatedEdge);
+          }
+          return updatedEdge;
+        }
+        return e;
+      });
+      return newEdges;
+    });
+  }, [workspaceId, syncEdgeDebounced]);
 
   const removeSavedInvader = useCallback((invaderId: string) => {
     setSavedInvaders((prev) => {
