@@ -37,10 +37,7 @@ export interface NoxNodeData {
   blueprintContext?: string; // Human instructions for AI execution
   isDefined: boolean;
   parentId?: string;
-  terminalConfig?: {
-    direction: 'input' | 'output';
-    parentHandle: string;
-  };
+  terminalConfig?: TerminalConfig;
 }
 
 export interface SavedInvader {

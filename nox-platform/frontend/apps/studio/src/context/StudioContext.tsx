@@ -437,6 +437,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [workspaceId]);
 
   const onConnect = useCallback((connection: Connection) => {
+    // 0. Kiểm tra an toàn dữ liệu
+    if (!connection.source || !connection.target) return;
+
     // 0. Chuẩn bị Handle ID (Dùng default nếu null)
     const effectiveSourceHandle = connection.sourceHandle || 'source-default';
     const effectiveTargetHandle = connection.targetHandle || 'target-default';
@@ -458,8 +461,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const tempId = uuidv4();
 
     const newEdge: Edge = {
-      ...connection,
       id: tempId,
+      source: connection.source!,
+      target: connection.target!,
       sourceHandle: effectiveSourceHandle,
       targetHandle: effectiveTargetHandle,
       type: 'noxEdge',
