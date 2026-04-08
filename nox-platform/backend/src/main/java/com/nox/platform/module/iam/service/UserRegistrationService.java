@@ -84,5 +84,8 @@ public class UserRegistrationService {
         user.setStatus(UserStatus.ACTIVE);
         user.setEmailVerified(true);
         userRepository.save(user);
+
+        // Publish event to trigger warehouse provisioning for the new active user
+        eventPublisher.publishEvent(new com.nox.platform.shared.event.UserCreatedEvent(user.getId(), user.getEmail()));
     }
 }

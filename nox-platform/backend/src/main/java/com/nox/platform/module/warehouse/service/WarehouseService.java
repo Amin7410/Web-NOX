@@ -27,7 +27,11 @@ public class WarehouseService {
     @Transactional
     public Warehouse createWarehouse(UUID ownerId, OwnerType ownerType, String name, boolean isSystem) {
         validateWriteOwnership(ownerId, ownerType);
+        return internalCreateWarehouse(ownerId, ownerType, name, isSystem);
+    }
 
+    @Transactional
+    public Warehouse internalCreateWarehouse(UUID ownerId, OwnerType ownerType, String name, boolean isSystem) {
         if (warehouseRepository.findByOwnerIdAndOwnerType(ownerId, ownerType).isPresent()) {
             throw new DomainException("WAREHOUSE_EXISTS", "Warehouse already exists for this owner", 400);
         }

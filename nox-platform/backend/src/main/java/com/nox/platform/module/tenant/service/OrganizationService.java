@@ -47,7 +47,8 @@ public class OrganizationService {
                 .build();
         organization = organizationRepository.save(organization);
 
-        Role ownerRole = roleService.createRole(organization, "OWNER", List.of("*", "workspace:manage", "workspace:read"), 100);
+        Role ownerRole = roleService.createRole(organization, "OWNER",
+                List.of("*", "workspace:manage", "workspace:read"), 100);
         roleService.createRole(organization, "ADMIN", List.of("iam:manage", "billing:manage", "workspace:manage"), 50);
         roleService.createRole(organization, "MEMBER", List.of("workspace:read"), 10);
 
@@ -58,6 +59,9 @@ public class OrganizationService {
                 .invitedBy(creator) // Self-invited essentially
                 .build();
         orgMemberRepository.save(ownerMember);
+
+        // Publish event for downstream provisioning (e.g. Warehouse)
+        eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationCreatedEvent(organization.getId(), creator.getId()));
 
         return organization;
     }

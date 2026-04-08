@@ -35,7 +35,7 @@ public class BlockInvaderUsageService {
 
         InvaderDefinition invader = invaderRepository.findById(request.invaderAssetId())
                 .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found", 404));
-        
+
         // Prevent duplicate attach
         if (usageRepository.findByBlock_IdAndInvaderAsset_Id(blockId, request.invaderAssetId()).isPresent()) {
             throw new DomainException("INVADER_ALREADY_ATTACHED", "Invader already attached to this block", 400);
@@ -56,9 +56,9 @@ public class BlockInvaderUsageService {
     public void detachInvader(UUID usageId) {
         BlockInvaderUsage usage = usageRepository.findById(usageId)
                 .orElseThrow(() -> new DomainException("USAGE_NOT_FOUND", "Invader usage not found", 404));
-        
+
         workspaceService.getWorkspaceInternal(usage.getBlock().getWorkspace().getId());
-        
+
         usageRepository.delete(usage);
     }
 
@@ -88,7 +88,6 @@ public class BlockInvaderUsageService {
                 usage.getInvaderAsset().getId(), // NOPMD
                 usage.getAppliedVersion(),
                 usage.getConfigSnapshot(),
-                usage.getCreatedAt()
-        );
+                usage.getCreatedAt());
     }
 }

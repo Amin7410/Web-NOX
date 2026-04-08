@@ -57,6 +57,12 @@ public class AssetTemplateService {
         return blockTemplateRepository.findByWarehouseId(warehouseId);
     }
 
+    public List<BlockTemplate> getBlockTemplatesByOrg(UUID orgId) {
+        Warehouse warehouse = warehouseService.getWarehouseForOwner(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        warehouseService.validateReadOwnership(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        return blockTemplateRepository.findByWarehouseId(warehouse.getId());
+    }
+
     @Transactional
     public BlockTemplate updateBlockTemplate(UUID warehouseId, UUID id, String name, String description,
             String thumbnailUrl,
@@ -137,6 +143,12 @@ public class AssetTemplateService {
         Warehouse warehouse = warehouseService.getWarehouseById(warehouseId);
         warehouseService.validateReadOwnership(warehouse.getOwnerId(), warehouse.getOwnerType());
         return invaderDefinitionRepository.findByWarehouseId(warehouseId);
+    }
+
+    public List<InvaderDefinition> getInvaderDefinitionsByOrg(UUID orgId) {
+        Warehouse warehouse = warehouseService.getWarehouseForOwner(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        warehouseService.validateReadOwnership(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        return invaderDefinitionRepository.findByWarehouseId(warehouse.getId());
     }
 
     @Transactional

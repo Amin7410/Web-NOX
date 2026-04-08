@@ -46,4 +46,54 @@ public class WarehouseEventListener {
             warehouseService.internalDeleteWarehouse(warehouse.getId());
         });
     }
+
+    @EventListener
+    public void onOrganizationCreated(com.nox.platform.shared.event.OrganizationCreatedEvent event) {
+        log.info("Received OrganizationCreatedEvent for org {}. Creating default warehouse...", event.organizationId());
+        
+        // Ensure idempotency: Check if warehouse already exists
+        boolean exists = warehouseRepository.findByOwnerIdAndOwnerType(event.organizationId(), OwnerType.ORG).isPresent();
+        if (exists) {
+            log.info("Warehouse already exists for org {}. Skipping creation.", event.organizationId());
+            return;
+        }
+
+        try {
+            // We use internalCreateWarehouse to bypass SecurityContext/RBAC during auto-provisioning
+            warehouseService.internalCreateWarehouse(
+                event.organizationId(), 
+                OwnerType.ORG, 
+                "Default Warehouse", 
+                false
+            );
+            log.info("Successfully auto-created Warehouse for org: {}", event.organizationId());
+        } catch (Exception e) {
+            log.error("Failed to auto-create Warehouse for org: {}. Error: {}", event.organizationId(), e.getMessage());
+        }
+    }
+
+    @EventListener
+    public void onUserCreated(com.nox.platform.shared.event.UserCreatedEvent event) {
+        log.info("Received UserCreatedEvent for user {}. Creating personal warehouse...", event.userId());
+
+        // Ensure idempotency: Check if warehouse already exists
+        boolean exists = warehouseRepository.findByOwnerIdAndOwnerType(event.userId(), OwnerType.USER).isPresent();
+        if (exists) {
+            log.info("Personal warehouse already exists for user {}. Skipping creation.", event.userId());
+            return;
+        }
+
+        try {
+            // We use internalCreateWarehouse to bypass SecurityContext/RBAC during auto-provisioning
+            warehouseService.internalCreateWarehouse(
+                event.userId(), 
+                OwnerType.USER, 
+                "Personal Warehouse", 
+                false
+            );
+            log.info("Successfully auto-created Personal Warehouse for user: {}", event.userId());
+        } catch (Exception e) {
+            log.error("Failed to auto-create Personal Warehouse for user: {}. Error: {}", event.userId(), e.getMessage());
+        }
+    }
 }
