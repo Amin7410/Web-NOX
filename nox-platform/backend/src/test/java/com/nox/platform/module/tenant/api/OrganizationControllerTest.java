@@ -1,6 +1,5 @@
 package com.nox.platform.module.tenant.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.security.JwtService;
 import com.nox.platform.module.tenant.domain.Organization;
@@ -30,9 +29,6 @@ class OrganizationControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @MockBean
     private OrganizationService organizationService;

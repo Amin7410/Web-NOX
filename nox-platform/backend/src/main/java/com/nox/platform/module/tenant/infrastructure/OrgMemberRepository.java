@@ -1,7 +1,6 @@
 package com.nox.platform.module.tenant.infrastructure;
 
 import com.nox.platform.module.tenant.domain.OrgMember;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
