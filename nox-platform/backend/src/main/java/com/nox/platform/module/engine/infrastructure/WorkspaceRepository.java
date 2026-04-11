@@ -21,4 +21,15 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
     @Modifying
     @Query("UPDATE Workspace w SET w.deletedAt = CURRENT_TIMESTAMP WHERE w.project.id = :projectId")
     void softDeleteByProjectId(@Param("projectId") UUID projectId);
+
+    @Modifying
+    @Query(value = """
+            DELETE FROM workspaces 
+            WHERE id IN (
+                SELECT id FROM workspaces 
+                WHERE deleted_at < :threshold 
+                LIMIT :limit
+            )
+            """, nativeQuery = true)
+    int deleteOldWorkspacesInBatch(@Param("threshold") java.time.OffsetDateTime threshold, @Param("limit") int limit);
 }
