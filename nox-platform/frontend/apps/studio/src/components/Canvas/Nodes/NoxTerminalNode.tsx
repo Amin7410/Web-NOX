@@ -73,32 +73,29 @@ export const NoxTerminalNode = memo(({ id, data, selected }: NodeProps<NoxNodeDa
         {isConflict ? "Signal Conflict: No Partner" : (isInput ? `Entry from ${parentSide}` : `Exit to ${parentSide}`)}
       </div>
 
-      {/* Smart Handles */}
-      {isInput ? (
-        <Handle 
-          type="source" 
-          position={Position.Right} 
-          id="source-port"
-          className={cn(
-            "!w-3 !h-3 !bg-zinc-950 !border !transition-all duration-200 !z-50 hover:!scale-125",
-            isInput ? "!border-emerald-500" : "!border-amber-500",
-            isConnectMode ? "opacity-100 scale-100" : "opacity-0 scale-0"
-          )}
-          isConnectable={isConnectMode}
-        />
-      ) : (
-        <Handle 
-          type="target" 
-          position={Position.Left} 
-          id="target-port"
-          className={cn(
-            "!w-3 !h-3 !bg-zinc-950 !border !transition-all duration-200 !z-50 hover:!scale-125",
-            isInput ? "!border-emerald-500" : "!border-amber-500",
-            isConnectMode ? "opacity-100 scale-100" : "opacity-0 scale-0"
-          )}
-          isConnectable={isConnectMode}
-        />
-      )}
+      {/* Dual smart handles for maximum flexibility */}
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        id="target-in"
+        className={cn(
+          "!w-3 !h-3 !bg-zinc-950 !border !transition-all duration-200 !z-[100] hover:!scale-150",
+          isInput ? "!border-emerald-500" : "!border-amber-500",
+          isConnectMode ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none"
+        )}
+        isConnectable={isConnectMode}
+      />
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        id="source-out"
+        className={cn(
+          "!w-3 !h-3 !bg-zinc-950 !border !transition-all duration-200 !z-[100] hover:!scale-150",
+          isInput ? "!border-emerald-500" : "!border-amber-500",
+          isConnectMode ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none"
+        )}
+        isConnectable={isConnectMode}
+      />
     </div>
   );
 });

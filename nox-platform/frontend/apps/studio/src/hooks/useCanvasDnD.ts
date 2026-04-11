@@ -152,7 +152,7 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
           visual: { position: snappedPosition },
           parentBlockId: currentParentId || undefined
         }).catch(err => {
-          console.error(`❌ [Studio] Lỗi tạo Block trên server:`, err);
+          console.error(` [Studio] Lỗi tạo Block trên server:`, err);
         });
       }
     },
