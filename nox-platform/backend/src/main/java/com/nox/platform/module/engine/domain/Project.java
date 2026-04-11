@@ -69,7 +69,7 @@ public class Project {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "project", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default
     @JsonIgnore // Break cycles during serialization
     private List<Workspace> workspaces = new ArrayList<>();

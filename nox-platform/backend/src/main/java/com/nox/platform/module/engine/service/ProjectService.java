@@ -131,6 +131,7 @@ public class ProjectService {
     public void deleteProject(UUID id) {
         Project project = findProjectInternal(id);
         snapshotRepository.softDeleteByProjectId(project.getId());
+        workspaceRepository.softDeleteByProjectId(project.getId());
         projectRepository.delete(project);
     }
 
