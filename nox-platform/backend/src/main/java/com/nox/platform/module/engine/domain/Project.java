@@ -20,7 +20,6 @@ import java.util.List;
 @SQLDelete(sql = "UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -29,32 +28,40 @@ public class Project extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnore
+    @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
     @Column(nullable = false, length = 255)
+    @Setter(AccessLevel.PROTECTED)
     private String name;
 
     @Column(nullable = false, length = 255)
+    @Setter(AccessLevel.PROTECTED)
     private String slug;
 
     @Column(columnDefinition = "TEXT")
+    @Setter
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     @Builder.Default
+    @Setter
     private ProjectVisibility visibility = ProjectVisibility.PRIVATE;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private ProjectStatus status = ProjectStatus.ACTIVE;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private User createdBy;
 
     @Column(name = "deleted_at")
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
     @OneToMany(mappedBy = "project", cascade = { CascadeType.PERSIST, CascadeType.MERGE })

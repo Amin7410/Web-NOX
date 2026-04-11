@@ -16,7 +16,6 @@ import java.time.OffsetDateTime;
 @SQLDelete(sql = "UPDATE org_members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -24,30 +23,38 @@ public class OrgMember extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private Role role;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by")
+    @Setter(AccessLevel.PROTECTED)
     private User invitedBy;
 
     @Column(name = "joined_at", nullable = false)
     @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime joinedAt = OffsetDateTime.now();
 
     @Column(name = "deleted_at")
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
     public void softDelete() {
         this.deletedAt = OffsetDateTime.now();
     }
+
+    // --- Domain Methods (Stage 4) ---
 
     public boolean canAssignRole(Role targetRole) {
         if (this.role == null || targetRole == null) return false;

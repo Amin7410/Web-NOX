@@ -45,7 +45,7 @@ public class MfaManagementService {
         }
 
         String secret = mfaService.generateSecretKey();
-        user.getSecurity().setTempMfaSecret(secret);
+        user.getSecurity().initMfa(secret);
         userRepository.save(user);
 
         String qrCodeUri = mfaService.getQrCodeUri(secret, user.getEmail());
@@ -66,9 +66,7 @@ public class MfaManagementService {
             throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Verification failed.", 400);
         }
 
-        user.getSecurity().setMfaEnabled(true);
-        user.getSecurity().setMfaSecret(tempSecret);
-        user.getSecurity().setTempMfaSecret(null);
+        user.getSecurity().activateMfa(tempSecret);
         userRepository.save(user);
 
         userMfaBackupCodeRepository.deleteByUser(user);
@@ -116,9 +114,7 @@ public class MfaManagementService {
             throw new DomainException("USER_NOT_FOUND", "User not found", 404);
         }
 
-        user.getSecurity().setMfaEnabled(false);
-        user.getSecurity().setMfaSecret(null);
-        user.getSecurity().setTempMfaSecret(null);
+        user.getSecurity().disableMfa();
         userRepository.save(user);
 
         userMfaBackupCodeRepository.deleteByUser(user);

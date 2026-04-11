@@ -74,7 +74,7 @@ public class SocialAuthenticationService {
                         .user(user)
                         .isPasswordSet(false)
                         .build();
-                user.setSecurity(security);
+                user.linkSecurity(security);
                 user = userRepository.save(user);
             }
 

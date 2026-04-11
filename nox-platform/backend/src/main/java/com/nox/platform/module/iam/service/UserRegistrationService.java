@@ -59,7 +59,7 @@ public class UserRegistrationService {
                 .passwordHash(hashedPassword)
                 .isPasswordSet(true)
                 .build();
-        user.setSecurity(security);
+        user.linkSecurity(security);
         user = userRepository.save(user);
 
         OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.VERIFY_EMAIL);
@@ -81,8 +81,7 @@ public class UserRegistrationService {
             throw new DomainException("USER_ALREADY_ACTIVE", "This account is already verified.", 400);
         }
 
-        user.setStatus(UserStatus.ACTIVE);
-        user.setEmailVerified(true);
+        user.verifyEmail();
         userRepository.save(user);
 
         // Publish event to trigger warehouse provisioning for the new active user

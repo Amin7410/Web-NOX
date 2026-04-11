@@ -17,7 +17,6 @@ import java.util.List;
 @Table(name = "roles")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -25,21 +24,26 @@ public class Role extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
     @Column(nullable = false, length = 100)
+    @Setter(AccessLevel.PROTECTED)
     private String name;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]", nullable = false)
     @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private List<String> permissions = new ArrayList<>();
 
     @Column(nullable = false)
     @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private int level = 0;
 
     @Column(name = "deleted_at")
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
     public void softDelete() {
@@ -48,6 +52,8 @@ public class Role extends BaseEntity {
         }
         this.deletedAt = OffsetDateTime.now();
     }
+
+    // --- Domain Methods (Stage 4) ---
 
     public boolean isOwnerRole() {
         return "OWNER".equalsIgnoreCase(this.name);

@@ -15,7 +15,6 @@ import java.time.OffsetDateTime;
 @SQLDelete(sql = "UPDATE workspaces SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -24,25 +23,31 @@ public class Workspace extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnore
+    @Setter(AccessLevel.PROTECTED)
     private Project project;
 
     @Column(nullable = false, length = 255)
+    @Setter
     private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
+    @Setter(AccessLevel.PROTECTED)
     private WorkspaceType type;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private WorkspaceStatus status = WorkspaceStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private User createdBy;
 
     @Column(name = "deleted_at")
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
     // --- Domain Methods (Stage 2) ---
