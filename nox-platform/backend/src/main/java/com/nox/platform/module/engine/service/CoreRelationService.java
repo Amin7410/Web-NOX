@@ -13,10 +13,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -104,7 +106,16 @@ public class CoreRelationService {
     @Transactional
     public void deleteRelationsForBlocks(List<UUID> blockIds) {
         if (blockIds != null && !blockIds.isEmpty()) {
-            coreRelationRepository.softDeleteRelationsByBlockIds(blockIds);
+            List<CoreRelation> relationsToSoftDelete = coreRelationRepository.findByBlockIdsActive(blockIds);
+            
+            // 1. Phân loại và sắp xếp ID để tránh Graph Deadlock (Deterministic Ordering)
+            // Ngăn chặn tình trạng AB-BA deadlock khi 2 Transaction đồng thời xóa chéo.
+            relationsToSoftDelete.sort(Comparator.comparing(CoreRelation::getId));
+            
+            for (CoreRelation rel : relationsToSoftDelete) {
+                rel.setDeletedAt(OffsetDateTime.now());
+            }
+            coreRelationRepository.saveAll(relationsToSoftDelete);
         }
     }
 
