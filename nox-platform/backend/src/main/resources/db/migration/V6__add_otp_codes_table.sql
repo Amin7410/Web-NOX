@@ -1,3 +1,9 @@
+-- =========================================================================
+-- Migration: V6__add_otp_codes_table.sql
+-- Description: Introduces a dedicated table for One-Time Password (OTP) lifecycle management.
+-- =========================================================================
+
+-- Table: otp_codes
 CREATE TABLE otp_codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,

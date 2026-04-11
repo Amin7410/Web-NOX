@@ -1,5 +1,7 @@
--- Flyway Migration: Backfill warehouses for existing users
--- Goal: Ensure every active user has at least one personal warehouse
+-- =========================================================================
+-- Migration: V23__backfill_user_warehouses.sql
+-- Description: DML Translation: Backfills personal warehouses for all active users.
+-- =========================================================================
 
 INSERT INTO warehouses (id, owner_id, owner_type, name, is_system, created_at, updated_at)
 SELECT 

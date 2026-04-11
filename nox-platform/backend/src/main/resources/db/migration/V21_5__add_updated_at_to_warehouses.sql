@@ -1,4 +1,6 @@
--- Flyway Migration: Add updated_at to warehouses table for consistency and to support backfill scripts
--- Added before V22 to ensure columns exist when V22/V23 run
+-- =========================================================================
+-- Migration: V21_5__add_updated_at_to_warehouses.sql
+-- Description: Standardizes warehouse entities with update tracking timestamps.
+-- =========================================================================
 
 ALTER TABLE warehouses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();

@@ -1,5 +1,7 @@
--- Flyway Migration: Backfill warehouses for existing organizations
--- Goal: Ensure every organization has at least one default warehouse
+-- =========================================================================
+-- Migration: V22__backfill_org_warehouses.sql
+-- Description: DML Translation: Backfills default warehouses for all existing organizations.
+-- =========================================================================
 
 INSERT INTO warehouses (id, owner_id, owner_type, name, is_system, created_at, updated_at)
 SELECT 

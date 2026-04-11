@@ -1,6 +1,10 @@
--- 3. WAREHOUSE & ASSETS
+-- =========================================================================
+-- Migration: V2__init_warehouse_schema.sql
+-- Description: Initializes Warehouse and Asset Library management tables.
+-- =========================================================================
 
 -- Table: warehouses
+-- Purpose: Logical capability boundary for managing libraries of block templates and invader assets, scoped to a User or an Organization.
 CREATE TABLE warehouses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID NOT NULL,
@@ -14,6 +18,7 @@ CREATE TABLE warehouses (
 CREATE UNIQUE INDEX idx_warehouses_owner ON warehouses (owner_id, owner_type) WHERE deleted_at IS NULL;
 
 -- Table: asset_collections
+-- Purpose: Hierarchical folder structure to organize templates and invaders within a Specific Warehouse.
 CREATE TABLE asset_collections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     warehouse_id UUID NOT NULL REFERENCES warehouses(id),
@@ -26,6 +31,7 @@ CREATE UNIQUE INDEX idx_asset_collections_warehouse_name ON asset_collections (w
 CREATE INDEX idx_asset_collections_parent ON asset_collections (parent_collection_id);
 
 -- Table: assets_block_templates
+-- Purpose: Reusable block templates containing semantic structure and default configurations for Canvas instantiation.
 CREATE TABLE assets_block_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     warehouse_id UUID NOT NULL REFERENCES warehouses(id),
@@ -44,6 +50,7 @@ CREATE INDEX idx_assets_block_templates_warehouse_created ON assets_block_templa
 CREATE INDEX idx_assets_block_templates_collection ON assets_block_templates (collection_id);
 
 -- Table: assets_invader_definitions
+-- Purpose: Defines lifecycle hooks, JSON schemas, and compiler rules for Invaders (plugins/extensions) attachable to core blocks.
 CREATE TABLE assets_invader_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     warehouse_id UUID NOT NULL REFERENCES warehouses(id),

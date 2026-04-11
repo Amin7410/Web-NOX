@@ -1,8 +1,10 @@
--- ==========================================
--- SECTION 2 (REMAINDER): MULTI-TENANCY & BILLING
--- ==========================================
+-- =========================================================================
+-- Migration: V4__complete_schema.sql
+-- Description: Initializes Billing, Collaboration, and System Operations capabilities.
+-- =========================================================================
 
--- Subscriptions
+-- Table: subscriptions
+-- Purpose: Manages SaaS billing plans, lifecycle states, and Stripe integration quotas per Organization.
 CREATE TABLE subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL UNIQUE,
@@ -20,7 +22,8 @@ CREATE TABLE subscriptions (
 
 CREATE INDEX idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
--- Org Usage Metrics
+-- Table: org_usage_metrics
+-- Purpose: Tracks aggregated operational metrics to enforce subscription quota boundaries.
 CREATE TABLE org_usage_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL,
@@ -35,7 +38,8 @@ CREATE TABLE org_usage_metrics (
 
 CREATE INDEX idx_org_usage_metrics_org ON org_usage_metrics(org_id);
 
--- API Keys
+-- Table: api_keys
+-- Purpose: Manages hashed programmatic access tokens (API Keys) representing User/Org identities for external integrations.
 CREATE TABLE api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key_hash VARCHAR(255) NOT NULL UNIQUE,
@@ -55,12 +59,8 @@ CREATE TABLE api_keys (
 CREATE INDEX idx_api_keys_user ON api_keys(user_id);
 CREATE INDEX idx_api_keys_org ON api_keys(org_id);
 
-
--- ==========================================
--- SECTION 5: COLLABORATION & OPS
--- ==========================================
-
--- Comments
+-- Table: comments
+-- Purpose: Polymorphic commenting system attachable to diverse target entities (Blocks, Projects, Canvases, etc.).
 CREATE TABLE comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     author_id UUID NOT NULL,
@@ -79,7 +79,8 @@ CREATE INDEX idx_comments_target ON comments(target_type, target_id, created_at)
 CREATE INDEX idx_comments_author ON comments(author_id);
 CREATE INDEX idx_comments_parent ON comments(parent_comment_id);
 
--- Notes
+-- Table: notes
+-- Purpose: Lightweight rich-text notes and internal documentation scoped to a polymorphic owner type.
 CREATE TABLE notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_type VARCHAR(50) NOT NULL, -- e.g., 'PROJECT', 'USER'
@@ -92,7 +93,8 @@ CREATE TABLE notes (
 
 CREATE INDEX idx_notes_owner ON notes(owner_type, owner_id);
 
--- Chat Rooms
+-- Table: chat_rooms
+-- Purpose: Logical conversation boundary for real-time multiplayer coordination channels.
 CREATE TABLE chat_rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL,
@@ -106,11 +108,12 @@ CREATE TABLE chat_rooms (
 CREATE INDEX idx_chat_rooms_org ON chat_rooms(org_id);
 CREATE INDEX idx_chat_rooms_project ON chat_rooms(project_id);
 
--- Chat Messages
+-- Table: chat_messages
+-- Purpose: Time-series event log containing precise message payloads exchanged within a Chat Room.
 CREATE TABLE chat_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id UUID NOT NULL,
-    sender_id UUID, -- Nullable if system message or user deleted? Design said Set Null
+    sender_id UUID,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
@@ -121,7 +124,8 @@ CREATE TABLE chat_messages (
 CREATE INDEX idx_chat_messages_room_time ON chat_messages(room_id, created_at);
 CREATE INDEX idx_chat_messages_sender ON chat_messages(sender_id);
 
--- Files
+-- Table: files
+-- Purpose: Centralized metadata registry abstracting S3/Blob storage assets uploaded securely to the platform.
 CREATE TABLE files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     uploader_id UUID NOT NULL,
@@ -140,7 +144,8 @@ CREATE TABLE files (
 CREATE INDEX idx_files_project_time ON files(project_id, created_at);
 CREATE INDEX idx_files_uploader ON files(uploader_id);
 
--- File Attachments
+-- Table: file_attachments
+-- Purpose: M-to-M polymorphic routing table mapping tracked files onto target system resources.
 CREATE TABLE file_attachments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     file_id UUID NOT NULL,
@@ -153,7 +158,8 @@ CREATE TABLE file_attachments (
 CREATE UNIQUE INDEX uq_file_attachments_file_target ON file_attachments(file_id, target_type, target_id);
 CREATE INDEX idx_file_attachments_target ON file_attachments(target_type, target_id);
 
--- Audit Logs
+-- Table: audit_logs
+-- Purpose: Immutable security and compliance audit trail recording granular user actions and system mutations.
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL,
@@ -174,7 +180,8 @@ CREATE INDEX idx_audit_logs_org_time ON audit_logs(org_id, created_at);
 CREATE INDEX idx_audit_logs_target ON audit_logs(target_type, target_id);
 CREATE INDEX idx_audit_logs_actor ON audit_logs(actor_id);
 
--- Edit Locks
+-- Table: edit_locks
+-- Purpose: Pessimistic concurrency locking mechanism (Mutex) preventing simultaneous structural modifications by colliders.
 CREATE TABLE edit_locks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     resource_type VARCHAR(50) NOT NULL,
@@ -188,7 +195,8 @@ CREATE TABLE edit_locks (
 
 CREATE INDEX idx_edit_locks_user ON edit_locks(locked_by);
 
--- Feature Flags
+-- Table: feature_flags
+-- Purpose: Global registry defining system-wide modular capabilities and their fallback state definitions.
 CREATE TABLE feature_flags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key VARCHAR(100) NOT NULL UNIQUE,
@@ -196,7 +204,8 @@ CREATE TABLE feature_flags (
     default_value JSONB NOT NULL
 );
 
--- Org Feature Overrides
+-- Table: org_feature_overrides
+-- Purpose: Granular overrides allowing specific Organizations to diverge from baseline Feature Flag defaults.
 CREATE TABLE org_feature_overrides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL,
