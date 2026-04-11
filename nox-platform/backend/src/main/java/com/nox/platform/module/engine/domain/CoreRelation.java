@@ -1,8 +1,9 @@
 package com.nox.platform.module.engine.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -10,7 +11,6 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 @Entity
 @Table(name = "core_relations")
@@ -18,18 +18,14 @@ import java.util.UUID;
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
-@NoArgsConstructor
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
-public class CoreRelation {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class CoreRelation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id", nullable = false)
-    @JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -55,9 +51,4 @@ public class CoreRelation {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
-
-    @Column(name = "created_at", nullable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
 }

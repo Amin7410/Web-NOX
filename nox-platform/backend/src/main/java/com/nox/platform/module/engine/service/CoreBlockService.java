@@ -165,7 +165,7 @@ public class CoreBlockService {
     public void deleteBlock(UUID workspaceId, UUID blockId) {
         workspaceService.getWorkspaceInternal(workspaceId);
 
-        CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
+        coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace", 404));
 
         List<UUID> descendantBlockIds = coreBlockRepository.findDescendantBlockIdsByRootId(blockId);

@@ -1,10 +1,11 @@
 package com.nox.platform.module.engine.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.warehouse.domain.BlockTemplate;
+import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -20,23 +21,19 @@ import java.util.UUID;
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
-@NoArgsConstructor
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
-public class CoreBlock {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class CoreBlock extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id", nullable = false)
-    @JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_block_id")
-    @JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private CoreBlock parentBlock;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,14 +60,6 @@ public class CoreBlock {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
-    @Column(name = "updated_at", nullable = false)
-    @Builder.Default
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
-
-    @Column(name = "created_at", nullable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
@@ -79,14 +68,4 @@ public class CoreBlock {
 
     @Column(name = "locked_at")
     private OffsetDateTime lockedAt;
-
-    @Version
-    @Column(name = "version", nullable = false)
-    @Builder.Default
-    private Long version = 0L;
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
 }

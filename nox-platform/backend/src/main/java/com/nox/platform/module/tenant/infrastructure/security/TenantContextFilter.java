@@ -84,11 +84,6 @@ public class TenantContextFilter extends OncePerRequestFilter {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String email = userDetails.getUsername();
 
-        UUID originalUserId = null;
-        if (userDetails instanceof com.nox.platform.shared.security.NoxUserDetails noxUser) {
-            originalUserId = noxUser.getId();
-        }
-
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             log.warn("Tenant: User context not found for email: {}", email);

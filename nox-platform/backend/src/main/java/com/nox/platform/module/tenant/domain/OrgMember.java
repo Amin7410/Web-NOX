@@ -1,26 +1,14 @@
 package com.nox.platform.module.tenant.domain;
 
 import com.nox.platform.module.iam.domain.User;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.nox.platform.shared.model.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
-
-import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.SQLDelete;
 
 @Entity
 @Table(name = "org_members")
@@ -28,12 +16,10 @@ import org.hibernate.annotations.SQLDelete;
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OrgMember {
-
-    @Id
-    @GeneratedValue
-    private UUID id;
+@AllArgsConstructor
+public class OrgMember extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
@@ -52,25 +38,11 @@ public class OrgMember {
     private User invitedBy;
 
     @Column(name = "joined_at", nullable = false)
-    private OffsetDateTime joinedAt;
+    @Builder.Default
+    private OffsetDateTime joinedAt = OffsetDateTime.now();
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
-
-    @Builder
-    public OrgMember(Organization organization, User user, Role role, User invitedBy) {
-        this.organization = organization;
-        this.user = user;
-        this.role = role;
-        this.invitedBy = invitedBy;
-    }
-
-    @PrePersist
-    public void prePersist() {
-        if (this.joinedAt == null) {
-            this.joinedAt = OffsetDateTime.now();
-        }
-    }
 
     public void softDelete() {
         this.deletedAt = OffsetDateTime.now();

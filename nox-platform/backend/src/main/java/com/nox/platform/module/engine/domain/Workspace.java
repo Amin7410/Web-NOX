@@ -1,14 +1,14 @@
 package com.nox.platform.module.engine.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "workspaces")
@@ -16,18 +16,14 @@ import java.util.UUID;
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
-@NoArgsConstructor
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
-public class Workspace {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class Workspace extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    @JsonIgnore // Break cycles during serialization
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Project project;
 
     @Column(nullable = false, length = 255)
@@ -46,11 +42,6 @@ public class Workspace {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
-
 }

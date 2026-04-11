@@ -1,17 +1,17 @@
 package com.nox.platform.module.engine.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.tenant.domain.Organization;
+import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "projects", uniqueConstraints = {
@@ -21,18 +21,14 @@ import java.util.UUID;
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
-@NoArgsConstructor
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
-public class Project {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class Project extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
-    @JsonIgnore // Prevent infinite loops
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Organization organization;
 
     @Column(nullable = false, length = 255)
@@ -58,24 +54,11 @@ public class Project {
     @JoinColumn(name = "created_by_id", nullable = false)
     private User createdBy;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
-    @Column(name = "updated_at", nullable = false)
-    @Builder.Default
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
-
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    @OneToMany(mappedBy = "project", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @OneToMany(mappedBy = "project", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @Builder.Default
-    @JsonIgnore // Break cycles during serialization
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Workspace> workspaces = new ArrayList<>();
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
 }

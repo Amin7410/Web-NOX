@@ -1,20 +1,12 @@
 package com.nox.platform.module.warehouse.domain;
 
 import com.nox.platform.shared.model.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
@@ -26,7 +18,10 @@ import java.util.Map;
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@AttributeOverride(name = "version", column = @Column(name = "version_lock"))
 public class InvaderDefinition extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -48,30 +43,20 @@ public class InvaderDefinition extends BaseEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "config_schema", columnDefinition = "jsonb", nullable = false)
+    @Builder.Default
     private Map<String, Object> configSchema = Map.of();
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "compiler_hooks", columnDefinition = "jsonb", nullable = false)
+    @Builder.Default
     private Map<String, Object> compilerHooks = Map.of();
 
     @Column(name = "version", length = 20)
-    private String version;
+    @Builder.Default
+    private String templateVersion = "1.0.0";
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
-
-    @Builder
-    public InvaderDefinition(Warehouse warehouse, AssetCollection collection, String code, String name, String category,
-            Map<String, Object> configSchema, Map<String, Object> compilerHooks, String version) {
-        this.warehouse = warehouse;
-        this.collection = collection;
-        this.code = code;
-        this.name = name;
-        this.category = category;
-        this.configSchema = configSchema != null ? configSchema : Map.of();
-        this.compilerHooks = compilerHooks != null ? compilerHooks : Map.of();
-        this.version = version != null ? version : "1.0.0";
-    }
 
     public void softDelete() {
         this.deletedAt = OffsetDateTime.now();

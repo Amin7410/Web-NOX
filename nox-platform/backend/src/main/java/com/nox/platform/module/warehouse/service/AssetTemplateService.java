@@ -45,7 +45,7 @@ public class AssetTemplateService {
                 .description(description)
                 .thumbnailUrl(thumbnailUrl)
                 .structureData(structureData)
-                .version(version)
+                .templateVersion(version)
                 .build();
 
         return blockTemplateRepository.save(template);
@@ -86,7 +86,7 @@ public class AssetTemplateService {
         if (structureData != null)
             template.setStructureData(structureData);
         if (version != null)
-            template.setVersion(version);
+            template.setTemplateVersion(version);
 
         return blockTemplateRepository.save(template);
     }
@@ -133,7 +133,7 @@ public class AssetTemplateService {
                 .category(category)
                 .configSchema(configSchema)
                 .compilerHooks(compilerHooks)
-                .version(version)
+                .templateVersion(version)
                 .build();
 
         return invaderDefinitionRepository.save(definition);
@@ -174,7 +174,7 @@ public class AssetTemplateService {
         if (compilerHooks != null)
             definition.setCompilerHooks(compilerHooks);
         if (version != null)
-            definition.setVersion(version);
+            definition.setTemplateVersion(version);
 
         return invaderDefinitionRepository.save(definition);
     }
