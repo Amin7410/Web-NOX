@@ -101,23 +101,19 @@ public class ProjectService {
     @Transactional
     public ProjectResponse updateProject(UUID id, UpdateProjectRequest request) {
         Project project = findProjectInternal(id);
-
+        
+        String newSlug = project.getSlug();
         if (request.name() != null && !request.name().equals(project.getName())) {
-            project.setName(request.name());
-            project.setSlug(generateSlug(request.name(), project.getOrganization().getId()));
+            newSlug = generateSlug(request.name(), project.getOrganization().getId());
         }
 
-        if (request.description() != null) {
-            project.setDescription(request.description());
-        }
-
-        if (request.visibility() != null) {
-            project.setVisibility(request.visibility());
-        }
-
-        if (request.status() != null) {
-            project.setStatus(request.status());
-        }
+        project.updateMetadata(
+            request.name(),
+            newSlug,
+            request.description(),
+            request.visibility(),
+            request.status()
+        );
 
         project = projectRepository.save(project);
         return mapToResponse(project);

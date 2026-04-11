@@ -1,7 +1,6 @@
 package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.Invitation;
-import com.nox.platform.module.iam.domain.InvitationStatus;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.InvitationRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
@@ -59,21 +58,10 @@ public class InvitationService {
         Invitation invitation = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new DomainException("INVALID_INVITATION", "Invitation token is invalid", 400));
 
-        if (invitation.getStatus() != InvitationStatus.PENDING) {
-            throw new DomainException("INVITATION_HANDLED", "This invitation is no longer pending", 400);
-        }
-        if (invitation.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            invitation.setStatus(InvitationStatus.EXPIRED);
-            invitationRepository.save(invitation);
-            throw new DomainException("EXPIRED_INVITATION", "This invitation has expired", 400);
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
-        if (!user.getEmail().equalsIgnoreCase(invitation.getEmail())) {
-            throw new DomainException("EMAIL_MISMATCH", "This invitation was sent to a different email address", 403);
-        }
+        invitation.accept(user);
 
         Organization org = organizationRepository.findById(invitation.getOrgId())
                 .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization no longer exists", 404));
@@ -84,8 +72,6 @@ public class InvitationService {
         User inviter = userRepository.findById(invitation.getInvitedById()).orElse(null);
 
         if (orgMemberRepository.existsByOrganizationIdAndUserId(org.getId(), user.getId())) {
-            invitation.setStatus(InvitationStatus.ACCEPTED);
-            invitation.setAcceptedAt(OffsetDateTime.now());
             invitationRepository.save(invitation);
             return; // Already a member
         }
@@ -98,8 +84,6 @@ public class InvitationService {
                 .build();
         orgMemberRepository.save(member);
 
-        invitation.setStatus(InvitationStatus.ACCEPTED);
-        invitation.setAcceptedAt(OffsetDateTime.now());
         invitationRepository.save(invitation);
     }
 }

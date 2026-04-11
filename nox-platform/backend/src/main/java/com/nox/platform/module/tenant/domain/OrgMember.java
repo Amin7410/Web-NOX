@@ -1,6 +1,7 @@
 package com.nox.platform.module.tenant.domain;
 
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -46,5 +47,18 @@ public class OrgMember extends BaseEntity {
 
     public void softDelete() {
         this.deletedAt = OffsetDateTime.now();
+    }
+
+    public boolean canAssignRole(Role targetRole) {
+        if (this.role == null || targetRole == null) return false;
+        return this.role.getLevel() >= targetRole.getLevel();
+    }
+
+    public void changeRole(Role newRole, OrgMember manager) {
+        if (manager == null || !manager.canAssignRole(newRole)) {
+            throw new DomainException("INSUFFICIENT_PRIVILEGE", 
+                "You cannot assign a role with a higher level than your own", 403);
+        }
+        this.role = newRole;
     }
 }

@@ -57,7 +57,7 @@ public class OrgMemberService {
             throw new DomainException("UNAUTHORIZED", "Inviter must be a member of the organization", 403);
         }
 
-        if (inviterMember.getRole().getLevel() < role.getLevel()) {
+        if (!inviterMember.canAssignRole(role)) {
             throw new DomainException("INSUFFICIENT_PRIVILEGE",
                     "You cannot assign a role with a higher level than your own", 403);
         }

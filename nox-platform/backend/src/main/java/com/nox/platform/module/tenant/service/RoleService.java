@@ -65,11 +65,7 @@ public class RoleService {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
 
-        if ("OWNER".equalsIgnoreCase(role.getName())) {
-            throw new DomainException("IMMUTABLE_ROLE", "Cannot modify permissions of the OWNER role", 400);
-        }
-
-        role.setPermissions(permissions);
+        role.updatePermissions(permissions);
         return roleRepository.save(role);
     }
 
@@ -79,15 +75,12 @@ public class RoleService {
         Role role = roleRepository.findByOrganizationIdAndName(orgId, roleName)
                 .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
 
-        if ("OWNER".equalsIgnoreCase(role.getName())) {
-            throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted", 400);
-        }
-
         long memberCount = orgMemberRepository.countByOrganizationIdAndRoleName(orgId, roleName);
         if (memberCount > 0) {
             throw new DomainException("ROLE_IN_USE", "Cannot delete role while it is assigned to members", 400);
         }
 
-        roleRepository.delete(role);
+        role.softDelete();
+        roleRepository.save(role);
     }
 }

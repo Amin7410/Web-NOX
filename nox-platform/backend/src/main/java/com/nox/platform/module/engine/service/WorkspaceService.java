@@ -62,7 +62,7 @@ public class WorkspaceService {
     @Transactional
     public WorkspaceResponse updateWorkspaceStatus(UUID workspaceId, WorkspaceStatus newStatus) {
         Workspace workspace = getWorkspaceInternal(workspaceId);
-        workspace.setStatus(newStatus);
+        workspace.updateStatus(newStatus);
         workspace = workspaceRepository.save(workspace);
         return mapToResponse(workspace);
     }

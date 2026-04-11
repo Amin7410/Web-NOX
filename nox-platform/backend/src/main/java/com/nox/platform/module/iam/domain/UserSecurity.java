@@ -17,10 +17,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Domain entity representing the security credentials and settings of a User.
- * Shared PK with User table.
- */
+
 @Entity
 @Table(name = "user_security")
 @Getter
@@ -78,6 +75,9 @@ public class UserSecurity {
 
     public void incrementFailedLogins() {
         this.failedLoginAttempts++;
+        if (this.failedLoginAttempts >= 5) {
+            lockAccount(30); 
+        }
     }
 
     public void resetFailedLogins() {
@@ -88,6 +88,9 @@ public class UserSecurity {
 
     public void incrementFailedMfaAttempts() {
         this.failedMfaAttempts++;
+        if (this.failedMfaAttempts >= 3) {
+            lockAccount(60);
+        }
     }
 
     public void lockAccount(long minutes) {

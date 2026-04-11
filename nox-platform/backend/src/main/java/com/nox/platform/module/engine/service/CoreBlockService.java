@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,7 +32,6 @@ public class CoreBlockService {
     private final BlockTemplateRepository blockTemplateRepository;
     private final UserRepository userRepository;
     
-    // Injecting via Lazy to prevent any potential unforeseen bean cycle, though architecturally safe here
     @Lazy
     private final CoreRelationService coreRelationService;
     @Lazy
@@ -42,15 +40,12 @@ public class CoreBlockService {
     @Transactional
     public CoreBlockResponse createBlock(UUID workspaceId, CreateCoreBlockRequest request, UUID currentUserId) {
         Workspace workspace = workspaceService.getWorkspaceInternal(workspaceId);
-
         User user = userRepository.getReferenceById(currentUserId);
 
         CoreBlock parentBlock = null;
         if (request.parentBlockId() != null) {
             parentBlock = coreBlockRepository.findByIdAndWorkspace_Id(request.parentBlockId(), workspaceId)
                     .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Parent block not found in this workspace", 404));
-
-            validateParentAssignment(null, parentBlock);
         }
 
         BlockTemplate originAsset = null;
@@ -62,7 +57,7 @@ public class CoreBlockService {
         CoreBlock block = CoreBlock.builder()
                 .id(request.id())
                 .workspace(workspace)
-                .parentBlock(parentBlock)
+                .parentBlock(null) // Assigned via domain method later for validation
                 .originAsset(originAsset)
                 .type(request.type())
                 .name(request.name())
@@ -71,6 +66,10 @@ public class CoreBlockService {
                 .createdBy(user)
                 .build();
 
+        if (parentBlock != null) {
+            block.moveTo(parentBlock);
+        }
+
         block = coreBlockRepository.save(block);
         return mapToResponse(block);
     }
@@ -78,38 +77,22 @@ public class CoreBlockService {
     @Transactional
     public CoreBlockResponse updateBlock(UUID workspaceId, UUID blockId, UpdateCoreBlockRequest request) {
         workspaceService.getWorkspaceInternal(workspaceId);
-
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace", 404));
 
+        UUID currentUserId = null;
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (principal instanceof CustomUserDetails currentUser) {
-            if (block.getLockedBy() != null && !block.getLockedBy().equals(currentUser.getId())) {
-                // Give 2 minutes grace period for stale locks
-                if (block.getLockedAt().plusMinutes(2).isAfter(OffsetDateTime.now())) {
-                    throw new DomainException("BLOCK_LOCKED", "Block is currently locked by another user", 423);
-                }
-            }
+            currentUserId = currentUser.getId();
         }
 
-        if (request.name() != null) {
-            block.setName(request.name());
-        }
+        block.updateContent(request.name(), request.config(), request.visual(), currentUserId);
 
         if (request.parentBlockId() != null) {
             CoreBlock parentBlock = coreBlockRepository.findByIdAndWorkspace_Id(request.parentBlockId(), workspaceId)
                     .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Parent block not found in this workspace", 404));
             
-            validateParentAssignment(block.getId(), parentBlock);
-            block.setParentBlock(parentBlock);
-        }
-
-        if (request.config() != null) {
-            block.setConfig(request.config()); // NOPMD
-        }
-
-        if (request.visual() != null) {
-            block.setVisual(request.visual()); // NOPMD
+            block.moveTo(parentBlock);
         }
 
         block = coreBlockRepository.save(block);
@@ -122,13 +105,7 @@ public class CoreBlockService {
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
 
-        if (block.getLockedBy() != null && !block.getLockedBy().equals(userId)) {
-            if (block.getLockedAt().plusMinutes(2).isAfter(OffsetDateTime.now())) {
-                throw new DomainException("BLOCK_LOCKED", "Block is already locked by another user", 423);
-            }
-        }
-        block.setLockedBy(userId);
-        block.setLockedAt(OffsetDateTime.now());
+        block.lock(userId);
         coreBlockRepository.save(block);
     }
 
@@ -138,27 +115,8 @@ public class CoreBlockService {
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
 
-        if (userId.equals(block.getLockedBy())) {
-            block.setLockedBy(null);
-            block.setLockedAt(null);
-            coreBlockRepository.save(block);
-        }
-    }
-
-    private void validateParentAssignment(UUID currentBlockId, CoreBlock targetParent) {
-        int depth = 1;
-        CoreBlock current = targetParent;
-        while (current != null) {
-            if (depth > 10) {
-                throw new DomainException("MAX_DEPTH_REACHED", "Cannot nest blocks deeper than 10 levels.", 400);
-            }
-            if (currentBlockId != null && current.getId().equals(currentBlockId)) {
-                throw new DomainException("CIRCULAR_DEPENDENCY", "Circular dependency detected: a block cannot be moved inside its own descendant.", 400);
-            }
-            // Fetch parent object if lazy initialization requires it, but in our case, parentBlock is already an entity.
-            current = current.getParentBlock();
-            depth++;
-        }
+        block.unlock(userId);
+        coreBlockRepository.save(block);
     }
 
     @Transactional
@@ -189,14 +147,14 @@ public class CoreBlockService {
     private CoreBlockResponse mapToResponse(CoreBlock block) {
         return new CoreBlockResponse(
                 block.getId(),
-                block.getWorkspace().getId(), // NOPMD
-                block.getParentBlock() != null ? block.getParentBlock().getId() : null, // NOPMD
-                block.getOriginAsset() != null ? block.getOriginAsset().getId() : null, // NOPMD
+                block.getWorkspace().getId(),
+                block.getParentBlock() != null ? block.getParentBlock().getId() : null,
+                block.getOriginAsset() != null ? block.getOriginAsset().getId() : null,
                 block.getType(),
                 block.getName(),
                 block.getConfig(),
                 block.getVisual(),
-                block.getCreatedBy() != null ? block.getCreatedBy().getId() : null, // NOPMD
+                block.getCreatedBy() != null ? block.getCreatedBy().getId() : null,
                 block.getUpdatedAt(),
                 block.getDeletedAt()
         );

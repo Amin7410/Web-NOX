@@ -1,5 +1,6 @@
 package com.nox.platform.module.iam.domain;
 
+import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @SuperBuilder
-@NoArgsConstructor
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class Invitation extends BaseEntity {
 
@@ -56,4 +57,26 @@ public class Invitation extends BaseEntity {
 
     @Column(name = "last_sent_at")
     private OffsetDateTime lastSentAt;
+
+    public boolean isExpired() {
+        return this.expiresAt != null && this.expiresAt.isBefore(OffsetDateTime.now());
+    }
+
+    public void accept(User user) {
+        if (this.status != InvitationStatus.PENDING) {
+            throw new DomainException("INVITATION_NOT_PENDING", "This invitation is no longer pending", 400);
+        }
+
+        if (isExpired()) {
+            this.status = InvitationStatus.EXPIRED;
+            throw new DomainException("INVITATION_EXPIRED", "This invitation has expired", 400);
+        }
+
+        if (user == null || !user.getEmail().equalsIgnoreCase(this.email)) {
+            throw new DomainException("EMAIL_MISMATCH", "This invitation was sent to a different email address", 403);
+        }
+
+        this.status = InvitationStatus.ACCEPTED;
+        this.acceptedAt = OffsetDateTime.now();
+    }
 }

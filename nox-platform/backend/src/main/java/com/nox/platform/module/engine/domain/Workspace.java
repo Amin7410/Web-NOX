@@ -44,4 +44,17 @@ public class Workspace extends BaseEntity {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    // --- Domain Methods (Stage 2) ---
+
+    public void updateMetadata(String name, WorkspaceType type) {
+        if (name != null) this.name = name;
+        if (type != null) this.type = type;
+    }
+
+    public void updateStatus(WorkspaceStatus newStatus) {
+        if (newStatus != null) {
+            this.status = newStatus;
+        }
+    }
 }

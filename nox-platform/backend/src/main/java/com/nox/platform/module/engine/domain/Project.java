@@ -61,4 +61,15 @@ public class Project extends BaseEntity {
     @Builder.Default
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Workspace> workspaces = new ArrayList<>();
+
+    // --- Domain Methods (Stage 2) ---
+
+    public void updateMetadata(String name, String slug, String description, 
+                              ProjectVisibility visibility, ProjectStatus status) {
+        if (name != null) this.name = name;
+        if (slug != null) this.slug = slug;
+        if (description != null) this.description = description;
+        if (visibility != null) this.visibility = visibility;
+        if (status != null) this.status = status;
+    }
 }

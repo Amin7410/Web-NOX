@@ -1,5 +1,6 @@
 package com.nox.platform.module.tenant.domain;
 
+import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,25 @@ public class Role extends BaseEntity {
     private OffsetDateTime deletedAt;
 
     public void softDelete() {
+        if (isOwnerRole()) {
+            throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted", 400);
+        }
         this.deletedAt = OffsetDateTime.now();
+    }
+
+    public boolean isOwnerRole() {
+        return "OWNER".equalsIgnoreCase(this.name);
+    }
+
+    public void updatePermissions(List<String> newPermissions) {
+        if (isOwnerRole()) {
+            throw new DomainException("IMMUTABLE_ROLE", "Cannot modify permissions of the OWNER role", 400);
+        }
+        this.permissions = newPermissions != null ? newPermissions : new ArrayList<>();
+    }
+
+    public boolean canBeManagedBy(Role managerRole) {
+        if (managerRole == null) return false;
+        return managerRole.getLevel() >= this.level;
     }
 }
