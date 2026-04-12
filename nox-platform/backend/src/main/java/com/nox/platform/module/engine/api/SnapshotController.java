@@ -3,7 +3,8 @@ package com.nox.platform.module.engine.api;
 import com.nox.platform.module.engine.api.request.CreateSnapshotRequest;
 import com.nox.platform.module.engine.api.response.SnapshotResponse;
 import com.nox.platform.module.engine.service.EngineSnapshotService;
-import com.nox.platform.shared.util.SecurityUtil;
+import com.nox.platform.shared.abstraction.SecurityProvider;
+import com.nox.platform.shared.exception.DomainException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,14 +22,18 @@ import java.util.UUID;
 public class SnapshotController {
 
     private final EngineSnapshotService engineSnapshotService;
+    private final SecurityProvider securityProvider;
 
     @PostMapping("/commit")
     @PreAuthorize("hasAuthority('workspace:manage')")
     public ResponseEntity<SnapshotResponse> commitDesignState(
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateSnapshotRequest request) {
-        SnapshotResponse response = engineSnapshotService.saveDesignSnapshot(projectId, request,
-                SecurityUtil.getCurrentUserId());
+        
+        UUID currentUserId = securityProvider.getCurrentUserId()
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "User not authenticated"));
+
+        SnapshotResponse response = engineSnapshotService.saveDesignSnapshot(projectId, request, currentUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

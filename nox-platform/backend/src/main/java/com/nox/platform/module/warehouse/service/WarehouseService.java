@@ -30,7 +30,7 @@ public class WarehouseService {
     public Warehouse createWarehouse(UUID ownerId, OwnerType ownerType, String name, boolean isSystem) {
         accessValidator.validateWriteAccess(ownerId, ownerType);
         if (existsByOwner(ownerId, ownerType)) {
-            throw new DomainException("WAREHOUSE_EXISTS", "Warehouse already exists for this owner", 400);
+            throw new DomainException("WAREHOUSE_EXISTS", "Warehouse already exists for this owner");
         }
         return internalCreateWarehouse(ownerId, ownerType, name, isSystem);
     }
@@ -47,19 +47,19 @@ public class WarehouseService {
 
     public Warehouse getWarehouseForOwner(UUID ownerId, OwnerType ownerType) {
         return warehouseRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
-                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found", 404));
+                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found"));
     }
 
     public Warehouse getWarehouseById(UUID id) {
         Warehouse warehouse = warehouseRepository.findById(id)
-                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found", 404));
+                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found"));
         accessValidator.validateReadAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
         return warehouse;
     }
 
     public List<Warehouse> getWarehousesByOwner(UUID ownerId) {
         UUID currentUserId = securityProvider.getCurrentUserId()
-                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required"));
 
         OwnerType ownerType = currentUserId.equals(ownerId) ? OwnerType.USER : OwnerType.ORG;
         accessValidator.validateReadAccess(ownerId, ownerType);
@@ -89,3 +89,4 @@ public class WarehouseService {
         assetCollectionService.softDeleteAllByWarehouse(id, now);
     }
 }
+

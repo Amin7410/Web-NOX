@@ -35,7 +35,7 @@ public class OrgMemberController {
             @Valid @RequestBody AddMemberRequest request) {
 
         String inviterEmail = securityProvider.getCurrentUserEmail()
-                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required"));
 
         AddMemberCommand command = new AddMemberCommand(
                 orgId,
@@ -89,3 +89,4 @@ public class OrgMemberController {
                 member.getJoinedAt());
     }
 }
+

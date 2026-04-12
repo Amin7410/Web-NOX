@@ -8,9 +8,12 @@ import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.service.command.CreateOrganizationCommand;
 import com.nox.platform.module.tenant.service.command.UpdateOrganizationCommand;
+import com.nox.platform.shared.abstraction.SlugGenerator;
+import com.nox.platform.shared.abstraction.TimeProvider;
+import com.nox.platform.shared.event.OrganizationCreatedEvent;
+import com.nox.platform.shared.event.OrganizationDeletedEvent;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
-import com.nox.platform.shared.util.SlugGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -28,14 +31,14 @@ public class OrganizationService {
     private final RoleService roleService;
     private final OrgMemberService orgMemberService;
     private final UserRepository userRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final SlugGenerator slugGenerator;
 
     @Transactional
     public Organization createOrganization(CreateOrganizationCommand command) {
         User creator = userRepository.findByEmail(command.creatorEmail())
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user not found"));
 
         Organization organization = Organization.create(
                 command.name(),
@@ -47,7 +50,7 @@ public class OrganizationService {
         roleService.provisionDefaultRoles(organization);
         orgMemberService.provisionInitialOwner(organization, creator);
 
-        eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationCreatedEvent(organization.getId(), creator.getId()));
+        eventPublisher.publishEvent(new OrganizationCreatedEvent(organization.getId(), creator.getId()));
 
         return organization;
     }
@@ -55,7 +58,7 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public List<Organization> getOrganizationsForUser(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         return orgMemberService.getOrganizationsForUser(user.getId())
                 .stream()
@@ -65,12 +68,12 @@ public class OrganizationService {
 
     public Organization getOrganizationById(UUID orgId) {
         return organizationRepository.findById(orgId)
-                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found"));
     }
 
     public Organization getOrganizationBySlug(String slug) {
         return organizationRepository.findBySlug(slug)
-                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found"));
     }
 
     @Transactional
@@ -100,7 +103,7 @@ public class OrganizationService {
         orgMemberService.softDeleteByOrgId(orgId, now);
         roleService.softDeleteByOrgId(orgId, now);
 
-        eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationDeletedEvent(orgId));
+        eventPublisher.publishEvent(new OrganizationDeletedEvent(orgId));
     }
 
     private String generateUniqueSlug(String name) {
@@ -109,14 +112,15 @@ public class OrganizationService {
         int counter = 1;
 
         while (organizationRepository.existsBySlug(finalSlug)) {
-            String randomHash = UUID.randomUUID().toString().substring(0, 6);
+            String randomHash = UUID.randomUUID().toString().substring(0);
             finalSlug = baseSlug + "-" + randomHash;
             counter++;
             if (counter > 20) {
-                throw new DomainException("SLUG_GENERATION_FAILED",
-                        "Failed to generate a unique slug after 20 attempts.", 500);
+                throw new DomainException("SLUG_GENERATION_FAILED", "Failed to generate a unique slug after 20 attempts.");
             }
         }
         return finalSlug;
     }
 }
+
+

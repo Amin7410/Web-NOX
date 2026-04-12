@@ -75,7 +75,7 @@ public class WorkspaceService {
 
     public Workspace getWorkspaceInternal(UUID workspaceId) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new DomainException("WORKSPACE_NOT_FOUND", "Workspace missing or invalid bounds", 404));
+                .orElseThrow(() -> new DomainException("WORKSPACE_NOT_FOUND", "Workspace missing or invalid bounds"));
         projectService.findProjectInternal(workspace.getProject().getId());
         return workspace;
     }
@@ -91,3 +91,4 @@ public class WorkspaceService {
                 workspace.getCreatedAt());
     }
 }
+

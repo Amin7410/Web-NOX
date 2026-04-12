@@ -54,10 +54,10 @@ public class BlockTemplateService {
     @Transactional
     public BlockTemplate updateBlockTemplate(UUID warehouseId, UUID id, UpdateBlockTemplateCommand command) {
         BlockTemplate template = blockTemplateRepository.findById(id)
-                .orElseThrow(() -> new DomainException("TEMPLATE_NOT_FOUND", "Block template not found", 404));
+                .orElseThrow(() -> new DomainException("TEMPLATE_NOT_FOUND", "Block template not found"));
 
         if (!template.getWarehouse().getId().equals(warehouseId)) {
-            throw new DomainException("INVALID_WAREHOUSE", "Template access mismatch", 400);
+            throw new DomainException("INVALID_WAREHOUSE", "Template access mismatch");
         }
 
         accessValidator.validateWriteAccess(template.getWarehouse().getOwnerId(),
@@ -72,10 +72,10 @@ public class BlockTemplateService {
     @Transactional
     public void deleteBlockTemplate(UUID warehouseId, UUID id) {
         BlockTemplate template = blockTemplateRepository.findById(id)
-                .orElseThrow(() -> new DomainException("TEMPLATE_NOT_FOUND", "Block template not found", 404));
+                .orElseThrow(() -> new DomainException("TEMPLATE_NOT_FOUND", "Block template not found"));
 
         if (!template.getWarehouse().getId().equals(warehouseId)) {
-            throw new DomainException("INVALID_WAREHOUSE", "Template access mismatch", 400);
+            throw new DomainException("INVALID_WAREHOUSE", "Template access mismatch");
         }
 
         accessValidator.validateWriteAccess(template.getWarehouse().getOwnerId(),
@@ -89,8 +89,9 @@ public class BlockTemplateService {
 
     private Warehouse getWarehouseAndValidateRead(UUID warehouseId) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
-                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found", 404));
+                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found"));
         accessValidator.validateReadAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
         return warehouse;
     }
 }
+

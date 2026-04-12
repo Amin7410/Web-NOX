@@ -59,7 +59,7 @@ public class Role extends BaseEntity {
 
     public void softDelete(OffsetDateTime currentTime) {
         if (isOwnerRole()) {
-            throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted", 400);
+            throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted");
         }
         this.deletedAt = currentTime;
     }
@@ -72,7 +72,7 @@ public class Role extends BaseEntity {
 
     public void updatePermissions(List<String> newPermissions) {
         if (isOwnerRole()) {
-            throw new DomainException("IMMUTABLE_ROLE", "Cannot modify permissions of the OWNER role", 400);
+            throw new DomainException("IMMUTABLE_ROLE", "Cannot modify permissions of the OWNER role");
         }
         this.permissions = newPermissions != null ? newPermissions : new ArrayList<>();
     }
@@ -82,3 +82,4 @@ public class Role extends BaseEntity {
         return managerRole.getLevel() >= this.level;
     }
 }
+

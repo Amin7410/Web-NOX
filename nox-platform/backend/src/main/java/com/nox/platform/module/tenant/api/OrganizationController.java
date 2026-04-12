@@ -32,7 +32,7 @@ public class OrganizationController {
     @PostMapping
     public ResponseEntity<ApiResponse<OrganizationResponse>> createOrganization(@Valid @RequestBody CreateOrganizationRequest request) {
         String userEmail = securityProvider.getCurrentUserEmail()
-                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required"));
 
         CreateOrganizationCommand command = new CreateOrganizationCommand(request.name(), userEmail);
         Organization org = organizationService.createOrganization(command);
@@ -43,7 +43,7 @@ public class OrganizationController {
     @GetMapping
     public ApiResponse<List<OrganizationResponse>> getOrganizations() {
         String userEmail = securityProvider.getCurrentUserEmail()
-                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required"));
 
         List<Organization> orgs = organizationService.getOrganizationsForUser(userEmail);
         return ApiResponse.ok(orgs.stream().map(this::mapToResponse).collect(Collectors.toList()));
@@ -84,3 +84,4 @@ public class OrganizationController {
                 org.getUpdatedAt());
     }
 }
+

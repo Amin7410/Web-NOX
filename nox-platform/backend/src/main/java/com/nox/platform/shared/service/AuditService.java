@@ -1,5 +1,6 @@
 package com.nox.platform.shared.service;
 
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.domain.AuditLog;
 import com.nox.platform.shared.infrastructure.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import org.springframework.scheduling.annotation.Async;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)

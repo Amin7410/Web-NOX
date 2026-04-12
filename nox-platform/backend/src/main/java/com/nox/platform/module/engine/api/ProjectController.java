@@ -4,8 +4,9 @@ import com.nox.platform.module.engine.api.request.CreateProjectRequest;
 import com.nox.platform.module.engine.api.request.UpdateProjectRequest;
 import com.nox.platform.module.engine.api.response.ProjectResponse;
 import com.nox.platform.module.engine.service.ProjectService;
+import com.nox.platform.shared.abstraction.SecurityProvider;
 import com.nox.platform.shared.api.ApiResponse;
-import com.nox.platform.shared.util.SecurityUtil;
+import com.nox.platform.shared.exception.DomainException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,11 +25,15 @@ import java.util.UUID;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final SecurityProvider securityProvider;
 
     @PostMapping
     @PreAuthorize("hasAuthority('workspace:manage')")
     public ResponseEntity<ApiResponse<ProjectResponse>> createProject(@Valid @RequestBody CreateProjectRequest request) {
-        ProjectResponse response = projectService.createProject(request, SecurityUtil.getCurrentUserId());
+        UUID currentUserId = securityProvider.getCurrentUserId()
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "User not authenticated"));
+                
+        ProjectResponse response = projectService.createProject(request, currentUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
     }
 

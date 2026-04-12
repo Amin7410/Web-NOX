@@ -8,6 +8,7 @@ import com.nox.platform.module.engine.domain.CoreRelation;
 import com.nox.platform.module.engine.domain.Workspace;
 import com.nox.platform.module.engine.infrastructure.CoreBlockRepository;
 import com.nox.platform.module.engine.infrastructure.CoreRelationRepository;
+import com.nox.platform.module.engine.service.mapper.CoreRelationMapper;
 import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
@@ -29,25 +30,24 @@ public class CoreRelationService {
     private final CoreBlockRepository coreBlockRepository;
     private final WorkspaceService workspaceService;
     private final TimeProvider timeProvider;
+    private final CoreRelationMapper mapper;
 
     @Transactional
     public CoreRelationResponse createRelation(UUID workspaceId, CreateCoreRelationRequest request) {
         Workspace workspace = workspaceService.getWorkspaceInternal(workspaceId);
 
         CoreBlock sourceBlock = coreBlockRepository.findById(request.sourceBlockId())
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Source block not found", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Source block not found"));
 
         CoreBlock targetBlock = coreBlockRepository.findById(request.targetBlockId())
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Target block not found", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Target block not found"));
 
         if (!sourceBlock.getWorkspace().getId().equals(workspaceId) || 
             !targetBlock.getWorkspace().getId().equals(workspaceId)) {
-            throw new DomainException("INVALID_WORKSPACE", "Both blocks must be in the same current workspace..", 403);
+            throw new DomainException("INVALID_WORKSPACE", "Both blocks must be in the same current workspace..");
         }
 
         // Check if there's already a relation with EXACT same handles (Optimized for Multi-wire)
-        // Note: The database index now handles this, but a service level check is good for DomainException mapping.
-        // We only block if ALL 4 parameters match.
         boolean duplicate = coreRelationRepository.findBySourceBlock_IdAndTargetBlock_Id(
                 request.sourceBlockId(), request.targetBlockId()).stream()
                 .anyMatch(r -> {
@@ -60,7 +60,7 @@ public class CoreRelationService {
                 });
 
         if (duplicate) {
-            throw new DomainException("RELATION_EXISTS", "This exact port connection already exists", 400);
+            throw new DomainException("RELATION_EXISTS", "This exact port connection already exists");
         }
 
         OffsetDateTime now = timeProvider.now();
@@ -75,7 +75,7 @@ public class CoreRelationService {
         relation.initializeTimestamps(now);
 
         relation = coreRelationRepository.save(relation);
-        return mapToResponse(relation);
+        return mapper.toResponse(relation);
     }
 
     @Transactional
@@ -83,12 +83,12 @@ public class CoreRelationService {
         workspaceService.getWorkspaceInternal(workspaceId);
 
         CoreRelation relation = coreRelationRepository.findByIdAndWorkspace_Id(relationId, workspaceId)
-                .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace", 404));
+                .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace"));
 
         relation.update(request.rules(), request.visual());
         relation.updateTimestamp(timeProvider.now());
         relation = coreRelationRepository.save(relation);
-        return mapToResponse(relation);
+        return mapper.toResponse(relation);
     }
 
     @Transactional
@@ -96,7 +96,7 @@ public class CoreRelationService {
         workspaceService.getWorkspaceInternal(workspaceId);
 
         CoreRelation relation = coreRelationRepository.findByIdAndWorkspace_Id(relationId, workspaceId)
-                .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace", 404));
+                .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace"));
 
         OffsetDateTime now = timeProvider.now();
         relation.softDelete(now);
@@ -123,19 +123,7 @@ public class CoreRelationService {
         workspaceService.getWorkspaceInternal(workspaceId);
 
         return coreRelationRepository.findByWorkspaceIdOrderByCreatedAtAsc(workspaceId).stream()
-                .map(this::mapToResponse)
+                .map(mapper::toResponse)
                 .collect(Collectors.toList());
-    }
-
-    private CoreRelationResponse mapToResponse(CoreRelation relation) {
-        return new CoreRelationResponse(
-                relation.getId(),
-                relation.getWorkspace().getId(),
-                relation.getSourceBlock().getId(),
-                relation.getTargetBlock().getId(),
-                relation.getType(),
-                relation.getRules(),
-                relation.getVisual(),
-                relation.getDeletedAt());
     }
 }

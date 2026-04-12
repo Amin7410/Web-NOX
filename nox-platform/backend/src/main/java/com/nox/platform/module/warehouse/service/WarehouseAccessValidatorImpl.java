@@ -28,19 +28,20 @@ public class WarehouseAccessValidatorImpl implements WarehouseAccessValidator {
 
     private void validateAccess(UUID targetOwnerId, OwnerType ownerType, boolean writeRequired) {
         UUID currentUserId = securityProvider.getCurrentUserId()
-                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required"));
 
         if (ownerType == OwnerType.USER) {
             if (!currentUserId.equals(targetOwnerId)) {
-                throw new DomainException("FORBIDDEN", "User warehouse access denied", 403);
+                throw new DomainException("FORBIDDEN", "User warehouse access denied");
             }
         } else if (ownerType == OwnerType.ORG) {
             var member = orgMemberRepository.findByOrganizationIdAndUserId(targetOwnerId, currentUserId)
-                    .orElseThrow(() -> new DomainException("FORBIDDEN", "Organization membership required", 403));
+                    .orElseThrow(() -> new DomainException("FORBIDDEN", "Organization membership required"));
 
             if (writeRequired && !member.hasPermission("workspace:manage")) {
-                throw new DomainException("FORBIDDEN", "Insufficient organization permissions", 403);
+                throw new DomainException("FORBIDDEN", "Insufficient organization permissions");
             }
         }
     }
 }
+

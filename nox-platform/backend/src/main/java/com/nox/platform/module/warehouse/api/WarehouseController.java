@@ -33,11 +33,11 @@ public class WarehouseController {
 
         if (ownerId == null && request.ownerType() == OwnerType.USER) {
             ownerId = securityProvider.getCurrentUserId()
-                    .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+                    .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required"));
         }
 
         if (ownerId == null) {
-            throw new DomainException("INVALID_REQUEST", "ownerId is required", 400);
+            throw new DomainException("INVALID_REQUEST", "ownerId is required");
         }
 
         Warehouse warehouse = warehouseService.createWarehouse(
@@ -76,3 +76,4 @@ public class WarehouseController {
             boolean isSystem) {
     }
 }
+

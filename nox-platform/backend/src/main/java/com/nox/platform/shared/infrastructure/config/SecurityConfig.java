@@ -1,8 +1,11 @@
-package com.nox.platform.shared.infra;
+package com.nox.platform.shared.infrastructure.config;
 
 import com.nox.platform.module.iam.infrastructure.security.CustomUserDetailsService;
 import com.nox.platform.module.iam.infrastructure.security.JwtAuthenticationFilter;
 import com.nox.platform.module.tenant.infrastructure.security.TenantContextFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,10 +20,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.HandlerExceptionResolver;
-import org.springframework.beans.factory.annotation.Value;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -39,8 +44,8 @@ public class SecurityConfig {
     private HandlerExceptionResolver exceptionResolver;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
-            JwtAuthenticationFilter jwtAuthFilter,
-            TenantContextFilter tenantContextFilter) {
+                          JwtAuthenticationFilter jwtAuthFilter,
+                          TenantContextFilter tenantContextFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthFilter = jwtAuthFilter;
         this.tenantContextFilter = tenantContextFilter;
@@ -91,15 +96,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
-        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        configuration.setAllowedOrigins(java.util.List.of("http://localhost:5173", "http://localhost:3000"));
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Cache-Control", "Content-Type", "X-Org-Id"));
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "X-Org-Id"));
         configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(java.util.List.of("Authorization"));
-        
-        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        configuration.setExposedHeaders(List.of("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }

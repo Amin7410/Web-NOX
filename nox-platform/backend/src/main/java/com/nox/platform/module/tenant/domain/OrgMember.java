@@ -70,8 +70,7 @@ public class OrgMember extends BaseEntity {
 
     public void changeRole(Role newRole, OrgMember manager) {
         if (manager == null || !manager.canAssignRole(newRole)) {
-            throw new DomainException("INSUFFICIENT_PRIVILEGE", 
-                "Higher level role assignment forbidden", 403);
+            throw new DomainException("INSUFFICIENT_PRIVILEGE", "Higher level role assignment forbidden");
         }
         this.role = newRole;
     }
@@ -82,3 +81,4 @@ public class OrgMember extends BaseEntity {
                this.role.getPermissions().contains(permission);
     }
 }
+

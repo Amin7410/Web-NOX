@@ -1,9 +1,11 @@
 package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.util.DeviceUtils;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,7 @@ public class UserSessionService {
 
     private final UserSessionRepository userSessionRepository;
     private final TokenProvider tokenProvider;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Value("${security.jwt.refresh-token.expiration-days:7}")
     private int refreshTokenExpirationDays;
@@ -49,7 +51,7 @@ public class UserSessionService {
         String hashedToken = DigestUtils.sha256Hex(refreshToken);
         UserSession session = userSessionRepository.findByRefreshToken(hashedToken)
                 .orElseThrow(
-                        () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401));
+                        () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired"));
 
         if (!session.isValid(timeProvider.now())) {
             // Check Token Rotation Grace Period (60 seconds)
@@ -57,22 +59,21 @@ public class UserSessionService {
                 long secondsSinceRevoked = java.time.Duration.between(session.getRevokedAt(), timeProvider.now())
                         .getSeconds();
                 if (secondsSinceRevoked < 60) {
-                    throw new DomainException("INVALID_REFRESH_TOKEN",
-                            "Token recently rotated. Please use the new token or login again.", 401);
+                    throw new DomainException("INVALID_REFRESH_TOKEN", "Token recently rotated. Please use the new token or login again.");
                 }
             }
 
             userSessionRepository.revokeAllUserSessions(session.getUser().getId(),
                     "Potential Session Hijacking - Invalid Token Reuse", timeProvider.now());
-            throw new DomainException("COMPROMISED_TOKEN", "Security alert: Please login again.", 401);
+            throw new DomainException("COMPROMISED_TOKEN", "Security alert: Please login again.");
         }
 
         User user = session.getUser();
-        if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active");
         }
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked");
         }
 
         String newJwtToken = tokenProvider.generateToken(user.getEmail());
@@ -102,8 +103,7 @@ public class UserSessionService {
         userSessionRepository.findByRefreshToken(hashedToken)
                 .ifPresent(session -> {
                     if (!session.getUser().getEmail().equals(ownerEmail)) {
-                        throw new DomainException("UNAUTHORIZED_LOGOUT", "You cannot logout a session you do not own",
-                                403);
+                        throw new DomainException("UNAUTHORIZED_LOGOUT", "You cannot logout a session you do not own");
                     }
                     session.revoke("User Logged Out", timeProvider.now());
                     userSessionRepository.save(session);
@@ -111,3 +111,4 @@ public class UserSessionService {
     }
 
 }
+

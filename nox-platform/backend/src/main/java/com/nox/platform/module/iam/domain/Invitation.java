@@ -74,19 +74,20 @@ public class Invitation extends BaseEntity {
 
     public void accept(User user, OffsetDateTime currentTime) {
         if (this.status != InvitationStatus.PENDING) {
-            throw new DomainException("INVITATION_NOT_PENDING", "This invitation is no longer pending", 400);
+            throw new DomainException("INVITATION_NOT_PENDING", "This invitation is no longer pending");
         }
 
         if (isExpired(currentTime)) {
             this.status = InvitationStatus.EXPIRED;
-            throw new DomainException("INVITATION_EXPIRED", "This invitation has expired", 400);
+            throw new DomainException("INVITATION_EXPIRED", "This invitation has expired");
         }
 
         if (user == null || !user.getEmail().equalsIgnoreCase(this.email)) {
-            throw new DomainException("EMAIL_MISMATCH", "This invitation was sent to a different email address", 403);
+            throw new DomainException("EMAIL_MISMATCH", "This invitation was sent to a different email address");
         }
 
         this.status = InvitationStatus.ACCEPTED;
         this.acceptedAt = currentTime;
     }
 }
+

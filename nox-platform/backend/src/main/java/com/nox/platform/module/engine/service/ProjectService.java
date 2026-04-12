@@ -15,9 +15,9 @@ import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.shared.abstraction.SecurityProvider;
+import com.nox.platform.shared.abstraction.SlugGenerator;
 import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
-import com.nox.platform.shared.util.SlugGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,7 +44,7 @@ public class ProjectService {
     public ProjectResponse createProject(CreateProjectRequest request, UUID currentUserId) {
         UUID orgId = request.organizationId();
         if (orgId == null) {
-            throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
+            throw new DomainException("TENANT_REQUIRED", "Organization context missing");
         }
 
         Organization org = organizationRepository.getReferenceById(orgId);
@@ -80,7 +80,7 @@ public class ProjectService {
     public Page<ProjectResponse> getProjects(Pageable pageable, UUID orgId) {
         if (orgId == null) {
             orgId = securityProvider.getCurrentOrganizationId()
-                    .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing", 400));
+                    .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing"));
         }
         return projectRepository.findAllByOrganizationId(orgId, pageable).map(this::toResponse);
     }
@@ -93,9 +93,9 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public ProjectResponse getProjectBySlug(String slug) {
         UUID orgId = securityProvider.getCurrentOrganizationId()
-                .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing", 400));
+                .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing"));
         Project project = projectRepository.findBySlugAndOrganizationId(slug, orgId)
-                .orElseThrow(() -> new DomainException("PROJECT_NOT_FOUND", "Project not found or accessible", 404));
+                .orElseThrow(() -> new DomainException("PROJECT_NOT_FOUND", "Project not found or accessible"));
         return toResponse(project);
     }
 
@@ -129,9 +129,9 @@ public class ProjectService {
 
     protected Project findProjectInternal(UUID id) {
         UUID orgId = securityProvider.getCurrentOrganizationId()
-                .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing", 400));
+                .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing"));
         return projectRepository.findByIdAndOrganizationId(id, orgId)
-                .orElseThrow(() -> new DomainException("PROJECT_NOT_FOUND", "Project not found or accessible", 404));
+                .orElseThrow(() -> new DomainException("PROJECT_NOT_FOUND", "Project not found or accessible"));
     }
 
     private String generateUniqueSlug(String name, UUID orgId) {
@@ -143,7 +143,7 @@ public class ProjectService {
             finalSlug = baseSlug + "-" + counter;
             counter++;
             if (counter > 20) {
-                throw new DomainException("SLUG_GENERATION_FAILED", "Failed to generate a unique slug after 20 attempts.", 500);
+                throw new DomainException("SLUG_GENERATION_FAILED", "Failed to generate a unique slug after 20 attempts.");
             }
         }
         return finalSlug;
@@ -162,3 +162,4 @@ public class ProjectService {
                 project.getUpdatedAt());
     }
 }
+

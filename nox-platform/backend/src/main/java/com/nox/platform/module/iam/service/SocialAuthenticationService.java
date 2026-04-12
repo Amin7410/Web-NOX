@@ -7,6 +7,7 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,11 +19,6 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Service handling OAuth2 operations intercepting Provider payload
- * configurations separating
- * it from Base Authentication patterns.
- */
 @Service
 @RequiredArgsConstructor
 public class SocialAuthenticationService {
@@ -33,7 +29,7 @@ public class SocialAuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
     private final UserSessionService userSessionService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public AuthenticationService.AuthResult socialLogin(String provider, String token, String ipAddress,
@@ -59,25 +55,15 @@ public class SocialAuthenticationService {
                 // Potential Account Takeover: email found but no linked social identity
                 // If user has a password set, we MUST ask for it before linking
                 if (user.getSecurity().isPasswordSet()) {
-                    throw new DomainException("LINK_REQUIRED",
-                            "Account exists. Please link your social account with your password.", 403);
+                    throw new DomainException("LINK_REQUIRED", "Account exists. Please link your social account with your password.");
                 }
             }
 
             if (user == null) {
-                user = User.builder()
-                        .email(email)
-                        .fullName(fullName)
-                        .status(UserStatus.ACTIVE)
-                        .isEmailVerified(true)
-                        .build();
-                user.initializeTimestamps(now);
+                user = User.create(email, fullName, UserStatus.ACTIVE, now);
+                user.verifyEmail(); // Social users are verified by definition
 
-                UserSecurity security = UserSecurity.builder()
-                        .user(user)
-                        .isPasswordSet(false)
-                        .build();
-                security.updateTimestamp(now);
+                UserSecurity security = UserSecurity.create(user, null, false, now);
                 user.linkSecurity(security);
                 user = userRepository.save(user);
             }
@@ -93,7 +79,7 @@ public class SocialAuthenticationService {
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Your account is not active or has been suspended.", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Your account is not active or has been suspended.");
         }
 
         if (user.getSecurity() != null && user.getSecurity().isMfaEnabled()) {
@@ -113,16 +99,16 @@ public class SocialAuthenticationService {
         String providerId = (String) verifiedData.get("providerId");
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active");
         }
 
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
         } catch (Exception e) {
-            throw new DomainException("INVALID_CREDENTIALS", "Invalid password for linking", 401);
+            throw new DomainException("INVALID_CREDENTIALS", "Invalid password for linking");
         }
 
         // Check again if already linked (race condition)
@@ -144,3 +130,4 @@ public class SocialAuthenticationService {
         return userSessionService.generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 }
+

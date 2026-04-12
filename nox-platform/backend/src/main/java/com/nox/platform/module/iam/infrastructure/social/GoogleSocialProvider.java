@@ -41,8 +41,7 @@ public class GoogleSocialProvider implements SocialProvider {
 
                 String email = payload.getEmail();
                 if (email == null) {
-                    throw new DomainException("INVALID_SOCIAL_TOKEN",
-                            "Google token verification failed. Missing email.", 401);
+                    throw new DomainException("INVALID_SOCIAL_TOKEN", "Google token verification failed. Missing email.");
                 }
 
                 return Map.of(
@@ -51,13 +50,13 @@ public class GoogleSocialProvider implements SocialProvider {
                         "fullName", payload.get("name") != null ? payload.get("name") : "",
                         "rawProfile", payload);
             } else {
-                throw new DomainException("INVALID_SOCIAL_TOKEN", "Invalid ID token.", 401);
+                throw new DomainException("INVALID_SOCIAL_TOKEN", "Invalid ID token.");
             }
         } catch (DomainException e) {
             throw e;
         } catch (Exception e) {
-            throw new DomainException("INVALID_SOCIAL_TOKEN",
-                    "Failed to securely verify the Google token across network boundaries.", 401);
+            throw new DomainException("INVALID_SOCIAL_TOKEN", "Failed to securely verify the Google token across network boundaries.");
         }
     }
 }
+

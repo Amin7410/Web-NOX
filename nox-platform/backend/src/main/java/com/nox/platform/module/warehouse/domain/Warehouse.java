@@ -60,9 +60,9 @@ public class Warehouse extends BaseEntity {
 
     public void markAsDeleted(OffsetDateTime currentTime) {
         if (this.isSystem) {
-            throw new DomainException("SYSTEM_WAREHOUSE",
-                "System warehouse deletion denied", 400);
+            throw new DomainException("SYSTEM_WAREHOUSE", "System warehouse deletion denied");
         }
         this.deletedAt = currentTime;
     }
 }
+

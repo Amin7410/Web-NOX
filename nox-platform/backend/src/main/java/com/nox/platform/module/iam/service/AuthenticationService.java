@@ -5,6 +5,7 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +20,7 @@ public class AuthenticationService {
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final InternalSecurityStateService internalSecurityStateService;
     private final UserSessionService userSessionService;
 
@@ -35,15 +36,14 @@ public class AuthenticationService {
     public AuthResult authenticate(String email, String plaintextPassword, String ipAddress, String userAgent) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401));
+                .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password"));
 
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to too many failed attempts",
-                    423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to too many failed attempts");
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email");
         }
 
         try {
@@ -58,7 +58,7 @@ public class AuthenticationService {
                 internalSecurityStateService.lockAccount(user.getId(),
                         timeProvider.now().plusMinutes(lockoutDurationMinutes));
             }
-            throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);
+            throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password");
         }
 
         if (user.getSecurity().isMfaEnabled()) {
@@ -72,3 +72,4 @@ public class AuthenticationService {
     public record AuthResult(User user, String token, String refreshToken, boolean mfaRequired, String mfaToken) {
     }
 }
+

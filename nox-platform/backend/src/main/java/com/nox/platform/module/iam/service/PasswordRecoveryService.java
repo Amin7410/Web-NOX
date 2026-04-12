@@ -2,10 +2,12 @@ package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.OtpCode;
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.domain.event.PasswordResetRequestedEvent;
 import com.nox.platform.module.iam.domain.event.UserRegisteredEvent;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,7 +25,7 @@ public class PasswordRecoveryService {
     private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -37,7 +39,7 @@ public class PasswordRecoveryService {
                 eventPublisher.publishEvent(new UserRegisteredEvent(this, user, otp.getCode()));
                 return;
             }
-            if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
+            if (user.getStatus() != UserStatus.ACTIVE) {
                 return;
             }
             OtpCode otp = otpService.generateOtp(user, OtpCode.OtpType.RESET_PASSWORD);
@@ -50,7 +52,7 @@ public class PasswordRecoveryService {
     public void resetPassword(String email, String otpCode, String newPassword) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         otpService.validateAndUseOtp(user, otpCode, OtpCode.OtpType.RESET_PASSWORD);
 
@@ -66,11 +68,11 @@ public class PasswordRecoveryService {
     public void changePassword(String email, String oldPassword, String newPassword) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (!user.getSecurity().isPasswordSet()
                 || !passwordEncoder.matches(oldPassword, user.getSecurity().getPasswordHash())) {
-            throw new DomainException("INVALID_PASSWORD", "Old password is not correct", 400);
+            throw new DomainException("INVALID_PASSWORD", "Old password is not correct");
         }
 
         user.getSecurity().updatePassword(passwordEncoder.encode(newPassword), timeProvider.now());
@@ -79,3 +81,4 @@ public class PasswordRecoveryService {
         userSessionRepository.revokeAllUserSessions(user.getId(), "Password Changed", timeProvider.now());
     }
 }
+

@@ -55,6 +55,25 @@ public class User extends BaseEntity {
 
     // --- Domain Behaviors ---
 
+    public static User create(String email, String fullName, UserStatus status, OffsetDateTime now) {
+        User user = User.builder()
+                .email(email)
+                .fullName(fullName)
+                .status(status)
+                .build();
+        user.initializeTimestamps(now);
+        return user;
+    }
+
+    public void updateProfile(String fullName, String avatarUrl) {
+        if (fullName != null && !fullName.isBlank()) {
+            this.fullName = fullName;
+        }
+        if (avatarUrl != null) {
+            this.avatarUrl = avatarUrl;
+        }
+    }
+
     public void markAsDeleted(OffsetDateTime currentTime) {
         this.deletedAt = currentTime;
         this.status = UserStatus.DELETED;
