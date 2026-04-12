@@ -22,4 +22,8 @@ public interface AssetCollectionRepository extends JpaRepository<AssetCollection
 
     @EntityGraph(attributePaths = { "warehouse", "parentCollection" })
     Optional<AssetCollection> findByWarehouseIdAndName(UUID warehouseId, String name);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE AssetCollection c SET c.deletedAt = :deletedAt WHERE c.warehouse.id = :warehouseId")
+    void softDeleteByWarehouseId(UUID warehouseId, java.time.OffsetDateTime deletedAt);
 }

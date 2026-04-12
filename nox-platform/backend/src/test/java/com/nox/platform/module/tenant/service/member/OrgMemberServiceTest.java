@@ -9,6 +9,7 @@ import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.service.OrgMemberService;
 import com.nox.platform.module.tenant.service.RoleService;
+import com.nox.platform.module.tenant.service.command.AddMemberCommand;
 import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,6 +70,7 @@ class OrgMemberServiceTest {
             // Given
             User user = User.builder().id(UUID.randomUUID()).email(userEmail).build();
             User inviter = User.builder().id(UUID.randomUUID()).email(inviterEmail).build();
+            AddMemberCommand command = new AddMemberCommand(orgId, userEmail, "MEMBER", inviterEmail);
             
             Role adminRole = Role.builder().name("ADMIN").level(50).build();
             Role memberRole = Role.builder().name("MEMBER").level(10).build();
@@ -81,7 +83,7 @@ class OrgMemberServiceTest {
             when(orgMemberRepository.findByOrganizationIdAndUserId(orgId, inviter.getId())).thenReturn(Optional.of(inviterMember));
 
             // When
-            orgMemberService.addMember(orgId, userEmail, "MEMBER", inviterEmail);
+            orgMemberService.addMember(command);
 
             // Then
             verify(orgMemberRepository).save(any(OrgMember.class));
@@ -93,6 +95,7 @@ class OrgMemberServiceTest {
             // Given
             User user = User.builder().id(UUID.randomUUID()).email(userEmail).build();
             User inviter = User.builder().id(UUID.randomUUID()).email(inviterEmail).build();
+            AddMemberCommand command = new AddMemberCommand(orgId, userEmail, "ADMIN", inviterEmail);
             
             Role moderatorRole = Role.builder().name("MODERATOR").level(30).build();
             Role adminRole = Role.builder().name("ADMIN").level(50).build();
@@ -105,7 +108,7 @@ class OrgMemberServiceTest {
             when(orgMemberRepository.findByOrganizationIdAndUserId(orgId, inviter.getId())).thenReturn(Optional.of(inviterMember));
 
             // When & Then
-            assertThatThrownBy(() -> orgMemberService.addMember(orgId, userEmail, "ADMIN", inviterEmail))
+            assertThatThrownBy(() -> orgMemberService.addMember(command))
                     .isInstanceOf(DomainException.class)
                     .hasFieldOrPropertyWithValue("code", "INSUFFICIENT_PRIVILEGE");
         }

@@ -1,22 +1,21 @@
 package com.nox.platform.module.tenant.api;
 
 import com.nox.platform.module.tenant.api.request.AddMemberRequest;
+import com.nox.platform.module.tenant.service.command.AddMemberCommand;
+import com.nox.platform.shared.abstraction.SecurityProvider;
 import com.nox.platform.module.tenant.api.response.OrgMemberResponse;
 import com.nox.platform.module.tenant.api.response.RoleResponse;
 import com.nox.platform.module.tenant.domain.OrgMember;
-import com.nox.platform.module.iam.service.InvitationService;
-import com.nox.platform.module.tenant.infrastructure.RoleRepository;
-import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.tenant.service.OrgMemberService;
 import com.nox.platform.shared.api.ApiResponse;
+import com.nox.platform.shared.exception.DomainException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -27,30 +26,28 @@ import java.util.UUID;
 public class OrgMemberController {
 
     private final OrgMemberService orgMemberService;
-    private final InvitationService invitationService;
-    private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
+    private final SecurityProvider securityProvider;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('*') or @tenantSecurity.hasPermission(#orgId, 'iam:manage')")
-    public ApiResponse<String> inviteMember(
+    public ResponseEntity<ApiResponse<String>> inviteMember(
             @PathVariable UUID orgId,
-            @Valid @RequestBody AddMemberRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @Valid @RequestBody AddMemberRequest request) {
 
-        com.nox.platform.module.tenant.domain.Role role = roleRepository
-                .findByOrganizationIdAndName(orgId, request.roleName())
-                .orElseThrow(() -> new com.nox.platform.shared.exception.DomainException("ROLE_NOT_FOUND",
-                        "Role not found", 404));
+        String inviterEmail = securityProvider.getCurrentUserEmail()
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
 
-        com.nox.platform.module.iam.domain.User inviter = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new com.nox.platform.shared.exception.DomainException("USER_NOT_FOUND",
-                        "Inviter not found", 404));
+        AddMemberCommand command = new AddMemberCommand(
+                orgId,
+                request.email(),
+                request.roleName(),
+                inviterEmail
+        );
 
-        invitationService.inviteUser(request.email(), orgId, role.getId(), inviter.getId());
+        orgMemberService.inviteMember(command);
 
-        return ApiResponse.ok("Invitation sent successfully to " + request.email());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Invitation sent successfully to " + request.email()));
     }
 
     @GetMapping

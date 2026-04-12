@@ -3,7 +3,9 @@ package com.nox.platform.module.tenant.service;
 import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.domain.Role;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
+import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.infrastructure.RoleRepository;
+import com.nox.platform.module.tenant.service.command.CreateRoleCommand;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,37 +23,28 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
+    private final OrganizationRepository organizationRepository;
     private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
-    public Role createRole(Organization organization, String name, List<String> permissions, Integer level) {
-        if (roleRepository.existsByOrganizationIdAndName(organization.getId(), name)) {
+    public Role createRole(CreateRoleCommand command) {
+        Organization org = organizationRepository.findById(command.orgId())
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
+
+        if (roleRepository.existsByOrganizationIdAndName(command.orgId(), command.name())) {
             throw new DomainException("ROLE_EXISTS", "Role name already exists in this organization", 400);
         }
 
-        int requestedLevel = level != null ? level : 0;
-
-        java.util.UUID currentUserId = com.nox.platform.shared.util.SecurityUtil.getCurrentUserId();
-        if (currentUserId != null) {
-            orgMemberRepository.findByOrganizationIdAndUserId(organization.getId(), currentUserId)
-                    .ifPresent(member -> {
-                        if (member.getRole().getLevel() < requestedLevel) {
-                            throw new DomainException("INSUFFICIENT_PRIVILEGE",
-                                    "You cannot create a role with a level higher than your own", 403);
-                        }
-                    });
-        }
-
-        OffsetDateTime now = timeProvider.now();
-        Role role = Role.builder()
-                .organization(organization)
-                .name(name)
-                .permissions(permissions)
-                .level(level != null ? level : 0)
-                .build();
-        role.initializeTimestamps(now);
-
+        Role role = Role.create(org, command.name(), command.permissions(), command.level(), timeProvider.now());
         return roleRepository.save(role);
+    }
+
+    @Transactional
+    public void provisionDefaultRoles(Organization organization) {
+        OffsetDateTime now = timeProvider.now();
+        roleRepository.save(Role.create(organization, "OWNER", List.of("*", "workspace:manage", "workspace:read"), 100, now));
+        roleRepository.save(Role.create(organization, "ADMIN", List.of("iam:manage", "billing:manage", "workspace:manage"), 50, now));
+        roleRepository.save(Role.create(organization, "MEMBER", List.of("workspace:read"), 10, now));
     }
 
     public List<Role> getRolesByOrganization(UUID orgId) {
@@ -65,9 +58,13 @@ public class RoleService {
 
     @Transactional
     @CacheEvict(value = "org_members", allEntries = true)
-    public Role updatePermissions(UUID roleId, List<String> permissions) {
+    public Role updatePermissions(UUID orgId, UUID roleId, List<String> permissions) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
+
+        if (!role.getOrganization().getId().equals(orgId)) {
+            throw new DomainException("INVALID_ORG", "Role does not belong to this organization", 400);
+        }
 
         role.updatePermissions(permissions);
         role.updateTimestamp(timeProvider.now());
@@ -89,5 +86,11 @@ public class RoleService {
         role.softDelete(now);
         role.updateTimestamp(now);
         roleRepository.save(role);
+    }
+
+    @Transactional
+    @CacheEvict(value = "org_members", allEntries = true)
+    public void softDeleteByOrgId(UUID orgId, OffsetDateTime now) {
+        roleRepository.softDeleteByOrgId(orgId, now);
     }
 }

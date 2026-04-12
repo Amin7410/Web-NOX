@@ -46,6 +46,17 @@ public class Role extends BaseEntity {
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
+    public static Role create(Organization organization, String name, List<String> permissions, int level, OffsetDateTime now) {
+        Role role = Role.builder()
+                .organization(organization)
+                .name(name)
+                .permissions(permissions != null ? permissions : new java.util.ArrayList<>())
+                .level(level)
+                .build();
+        role.initializeTimestamps(now);
+        return role;
+    }
+
     public void softDelete(OffsetDateTime currentTime) {
         if (isOwnerRole()) {
             throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted", 400);

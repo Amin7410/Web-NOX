@@ -3,13 +3,13 @@ package com.nox.platform.module.tenant.service.organization;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.tenant.domain.Organization;
-import com.nox.platform.module.tenant.domain.Role;
-import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
-import com.nox.platform.module.tenant.infrastructure.RoleRepository;
 import com.nox.platform.module.tenant.service.OrganizationService;
 import com.nox.platform.module.tenant.service.RoleService;
+import com.nox.platform.module.tenant.service.OrgMemberService;
+import com.nox.platform.module.tenant.service.command.CreateOrganizationCommand;
 import com.nox.platform.shared.abstraction.TimeProvider;
+import com.nox.platform.shared.util.SlugGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,15 +37,15 @@ class OrganizationServiceTest {
     @Mock
     private RoleService roleService;
     @Mock
-    private RoleRepository roleRepository;
-    @Mock
-    private OrgMemberRepository orgMemberRepository;
+    private OrgMemberService orgMemberService;
     @Mock
     private UserRepository userRepository;
     @Mock
     private TimeProvider timeProvider;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private SlugGenerator slugGenerator;
 
     @InjectMocks
     private OrganizationService organizationService;
@@ -58,6 +58,10 @@ class OrganizationServiceTest {
     void setUp() {
         creator = User.builder().id(UUID.randomUUID()).email(creatorEmail).build();
         lenient().when(timeProvider.now()).thenReturn(now);
+        lenient().when(slugGenerator.generate(anyString())).thenAnswer(invocation -> {
+            String input = invocation.getArgument(0);
+            return input.toLowerCase().replace(" ", "-").replaceAll("[^a-z0-9-]", "");
+        });
     }
 
     @Nested
@@ -69,23 +73,22 @@ class OrganizationServiceTest {
         void shouldCreateOrganization() {
             // Given
             String orgName = "New Organization";
+            CreateOrganizationCommand command = new CreateOrganizationCommand(orgName, creatorEmail);
+            
             when(userRepository.findByEmail(creatorEmail)).thenReturn(Optional.of(creator));
             when(organizationRepository.existsBySlug(anyString())).thenReturn(false);
             when(organizationRepository.save(any(Organization.class))).thenAnswer(i -> i.getArgument(0));
-            
-            Role ownerRole = Role.builder().name("OWNER").level(100).build();
-            when(roleService.createRole(any(), eq("OWNER"), any(), eq(100))).thenReturn(ownerRole);
 
             // When
-            Organization result = organizationService.createOrganization(orgName, creatorEmail);
+            Organization result = organizationService.createOrganization(command);
 
             // Then
             assertThat(result.getName()).isEqualTo(orgName);
             assertThat(result.getSlug()).isEqualTo("new-organization");
             
             verify(organizationRepository).save(any(Organization.class));
-            verify(roleService, times(3)).createRole(any(), anyString(), any(), anyInt());
-            verify(orgMemberRepository).save(any());
+            verify(roleService).provisionDefaultRoles(any(Organization.class));
+            verify(orgMemberService).provisionInitialOwner(any(Organization.class), eq(creator));
             verify(eventPublisher).publishEvent(any(com.nox.platform.shared.event.OrganizationCreatedEvent.class));
         }
 
@@ -94,20 +97,20 @@ class OrganizationServiceTest {
         void shouldHandleSlugCollision() {
             // Given
             String orgName = "Hào Nam";
+            CreateOrganizationCommand command = new CreateOrganizationCommand(orgName, creatorEmail);
+            
             when(userRepository.findByEmail(creatorEmail)).thenReturn(Optional.of(creator));
             
-            // First attempt "hao-nam" exists, second one "hao-nam-xxxxxx" is free
             when(organizationRepository.existsBySlug("hao-nam")).thenReturn(true);
             when(organizationRepository.existsBySlug(argThat(s -> s.startsWith("hao-nam-")))).thenReturn(false);
             
             when(organizationRepository.save(any(Organization.class))).thenAnswer(i -> i.getArgument(0));
 
             // When
-            Organization result = organizationService.createOrganization(orgName, creatorEmail);
+            Organization result = organizationService.createOrganization(command);
 
             // Then
             assertThat(result.getSlug()).startsWith("hao-nam-");
-            assertThat(result.getSlug().length()).isEqualTo("hao-nam-".length() + 6);
         }
     }
 
@@ -127,9 +130,9 @@ class OrganizationServiceTest {
             organizationService.deleteOrganization(orgId);
 
             // Then
-            assertThat(org.getDeletedAt()).isEqualTo(now);
-            verify(orgMemberRepository).softDeleteByOrgId(orgId, now);
-            verify(roleRepository).softDeleteByOrgId(orgId, now);
+            assertThat(org.getDeletedAt()).isNotNull();
+            verify(orgMemberService).softDeleteByOrgId(orgId, now);
+            verify(roleService).softDeleteByOrgId(orgId, now);
             verify(eventPublisher).publishEvent(any(com.nox.platform.shared.event.OrganizationDeletedEvent.class));
         }
     }

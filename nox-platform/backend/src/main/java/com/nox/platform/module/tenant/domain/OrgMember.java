@@ -51,7 +51,17 @@ public class OrgMember extends BaseEntity {
         this.deletedAt = currentTime;
     }
 
-    // --- Domain Methods (Stage 4) ---
+    public static OrgMember create(Organization organization, User user, Role role, User invitedBy, OffsetDateTime now) {
+        OrgMember member = OrgMember.builder()
+                .organization(organization)
+                .user(user)
+                .role(role)
+                .invitedBy(invitedBy)
+                .joinedAt(now)
+                .build();
+        member.initializeTimestamps(now);
+        return member;
+    }
 
     public boolean canAssignRole(Role targetRole) {
         if (this.role == null || targetRole == null) return false;
@@ -61,8 +71,14 @@ public class OrgMember extends BaseEntity {
     public void changeRole(Role newRole, OrgMember manager) {
         if (manager == null || !manager.canAssignRole(newRole)) {
             throw new DomainException("INSUFFICIENT_PRIVILEGE", 
-                "You cannot assign a role with a higher level than your own", 403);
+                "Higher level role assignment forbidden", 403);
         }
         this.role = newRole;
+    }
+
+    public boolean hasPermission(String permission) {
+        if (this.role == null) return false;
+        return this.role.getPermissions().contains("*") || 
+               this.role.getPermissions().contains(permission);
     }
 }

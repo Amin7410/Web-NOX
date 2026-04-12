@@ -1,25 +1,22 @@
 package com.nox.platform.module.tenant.service;
 
-import java.text.Normalizer;
 import java.time.OffsetDateTime;
-import java.util.Locale;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.tenant.domain.OrgMember;
 import com.nox.platform.module.tenant.domain.Organization;
-import com.nox.platform.module.tenant.domain.Role;
-import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
-import com.nox.platform.module.tenant.infrastructure.RoleRepository;
+import com.nox.platform.module.tenant.service.command.CreateOrganizationCommand;
+import com.nox.platform.module.tenant.service.command.UpdateOrganizationCommand;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
+import com.nox.platform.shared.util.SlugGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,42 +26,27 @@ public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final RoleService roleService;
-    private final RoleRepository roleRepository;
-    private final OrgMemberRepository orgMemberRepository;
+    private final OrgMemberService orgMemberService;
     private final UserRepository userRepository;
     private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
+    private final SlugGenerator slugGenerator;
 
     @Transactional
-    public Organization createOrganization(String name, String creatorEmail) {
-        User creator = userRepository.findByEmail(creatorEmail)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user could not be found", 404));
+    public Organization createOrganization(CreateOrganizationCommand command) {
+        User creator = userRepository.findByEmail(command.creatorEmail())
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user not found", 404));
 
-        OffsetDateTime now = timeProvider.now();
-        Organization organization = Organization.builder()
-                .name(name)
-                .slug(generateUniqueSlug(name))
-                .settings(Map.of("theme", "system"))
-                .build();
-        organization.initializeTimestamps(now);
+        Organization organization = Organization.create(
+                command.name(),
+                generateUniqueSlug(command.name()),
+                timeProvider.now()
+        );
         organization = organizationRepository.save(organization);
 
-        Role ownerRole = roleService.createRole(organization, "OWNER",
-                List.of("*", "workspace:manage", "workspace:read"), 100);
-        roleService.createRole(organization, "ADMIN", List.of("iam:manage", "billing:manage", "workspace:manage"), 50);
-        roleService.createRole(organization, "MEMBER", List.of("workspace:read"), 10);
+        roleService.provisionDefaultRoles(organization);
+        orgMemberService.provisionInitialOwner(organization, creator);
 
-        OrgMember ownerMember = OrgMember.builder()
-                .organization(organization)
-                .user(creator)
-                .role(ownerRole)
-                .invitedBy(creator) // Self-invited essentially
-                .joinedAt(now)
-                .build();
-        ownerMember.initializeTimestamps(now);
-        orgMemberRepository.save(ownerMember);
-
-        // Publish event for downstream provisioning (e.g. Warehouse)
         eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationCreatedEvent(organization.getId(), creator.getId()));
 
         return organization;
@@ -75,7 +57,7 @@ public class OrganizationService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
-        return orgMemberRepository.findByUserId(user.getId())
+        return orgMemberService.getOrganizationsForUser(user.getId())
                 .stream()
                 .map(OrgMember::getOrganization)
                 .collect(Collectors.toList());
@@ -92,16 +74,15 @@ public class OrganizationService {
     }
 
     @Transactional
-    public Organization updateOrganization(UUID orgId, String name, Map<String, Object> settings) {
-        Organization org = getOrganizationById(orgId);
+    public Organization updateOrganization(UpdateOrganizationCommand command) {
+        Organization org = getOrganizationById(command.orgId());
 
-        if (name != null && !name.isBlank() && !org.getName().equals(name)) {
-            org.setName(name);
-            org.setSlug(generateUniqueSlug(name));
+        if (command.name() != null && !command.name().isBlank() && !org.getName().equals(command.name())) {
+            org.updateMetadata(command.name(), generateUniqueSlug(command.name()));
         }
 
-        if (settings != null) {
-            org.setSettings(settings);
+        if (command.settings() != null) {
+            org.updateSettings(command.settings());
         }
 
         org.updateTimestamp(timeProvider.now());
@@ -116,16 +97,14 @@ public class OrganizationService {
         org.updateTimestamp(now);
         organizationRepository.save(org);
 
-        // Soft delete all members and roles in this org
-        orgMemberRepository.softDeleteByOrgId(orgId, now);
-        roleRepository.softDeleteByOrgId(orgId, now);
+        orgMemberService.softDeleteByOrgId(orgId, now);
+        roleService.softDeleteByOrgId(orgId, now);
 
-        // Publish event to cleanup related entities (e.g. warehouses)
         eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationDeletedEvent(orgId));
     }
 
     private String generateUniqueSlug(String name) {
-        String baseSlug = toSlug(name);
+        String baseSlug = slugGenerator.generate(name);
         String finalSlug = baseSlug;
         int counter = 1;
 
@@ -139,16 +118,5 @@ public class OrganizationService {
             }
         }
         return finalSlug;
-    }
-
-    private String toSlug(String input) {
-        if (input == null)
-            return "";
-        String nonLatin = "[^\\w-]";
-        String whiteSpace = "[\\s]";
-        String nowhitespace = input.replaceAll(whiteSpace, "-");
-        String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
-        String slug = normalized.replaceAll(nonLatin, "");
-        return slug.toLowerCase(Locale.ENGLISH).replaceAll("-+", "-").replaceAll("^-|-$", "");
     }
 }

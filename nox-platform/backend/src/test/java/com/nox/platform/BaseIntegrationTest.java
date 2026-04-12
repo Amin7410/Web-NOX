@@ -14,6 +14,7 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 public abstract class BaseIntegrationTest {
 
+    @SuppressWarnings("resource")
     @Container
     @ServiceConnection
     protected static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -22,6 +23,7 @@ public abstract class BaseIntegrationTest {
             .withPassword("nox_secret")
             .withReuse(true);
 
+    @SuppressWarnings("resource")
     @Container
     @ServiceConnection
     protected static final GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
