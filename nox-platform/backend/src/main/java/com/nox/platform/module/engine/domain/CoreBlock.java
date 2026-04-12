@@ -29,7 +29,7 @@ public class CoreBlock extends BaseEntity {
     private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
+    @JoinColumn(name = "parent_block_id")
     @com.fasterxml.jackson.annotation.JsonIgnore
     @Setter(AccessLevel.PROTECTED)
     private CoreBlock parentBlock;
@@ -60,7 +60,7 @@ public class CoreBlock extends BaseEntity {
     private Map<String, Object> visual = Map.of();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "created_by_id", nullable = false)
     @Setter(AccessLevel.PROTECTED)
     private com.nox.platform.module.iam.domain.User createdBy;
 
