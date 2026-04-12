@@ -33,7 +33,7 @@ public class InvaderDefinitionService {
         accessValidator.validateWriteAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
 
         if (invaderDefinitionRepository.findByWarehouseIdAndCode(command.warehouseId(), command.code()).isPresent()) {
-            throw new DomainException("INVADER_CODE_EXISTS", "Invader code already exists in this warehouse", 400);
+            throw new DomainException("INVADER_CODE_EXISTS", "Invader code already exists in this warehouse");
         }
 
         AssetCollection collection = null;
@@ -58,10 +58,10 @@ public class InvaderDefinitionService {
     @Transactional
     public InvaderDefinition updateInvaderDefinition(UUID warehouseId, UUID id, UpdateInvaderDefinitionCommand command) {
         InvaderDefinition definition = invaderDefinitionRepository.findById(id)
-                .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found", 404));
+                .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found"));
 
         if (!definition.getWarehouse().getId().equals(warehouseId)) {
-            throw new DomainException("INVALID_WAREHOUSE", "Invader definition access mismatch", 400);
+            throw new DomainException("INVALID_WAREHOUSE", "Invader definition access mismatch");
         }
 
         accessValidator.validateWriteAccess(definition.getWarehouse().getOwnerId(),
@@ -76,10 +76,10 @@ public class InvaderDefinitionService {
     @Transactional
     public void deleteInvaderDefinition(UUID warehouseId, UUID id) {
         InvaderDefinition definition = invaderDefinitionRepository.findById(id)
-                .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found", 404));
+                .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found"));
 
         if (!definition.getWarehouse().getId().equals(warehouseId)) {
-            throw new DomainException("INVALID_WAREHOUSE", "Invader definition access mismatch", 400);
+            throw new DomainException("INVALID_WAREHOUSE", "Invader definition access mismatch");
         }
 
         accessValidator.validateWriteAccess(definition.getWarehouse().getOwnerId(),
@@ -93,8 +93,9 @@ public class InvaderDefinitionService {
 
     private Warehouse getWarehouseAndValidateRead(UUID warehouseId) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
-                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found", 404));
+                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found"));
         accessValidator.validateReadAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
         return warehouse;
     }
 }
+

@@ -52,7 +52,7 @@ public class PasswordRecoveryService {
     public void resetPassword(String email, String otpCode, String newPassword) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         otpService.validateAndUseOtp(user, otpCode, OtpCode.OtpType.RESET_PASSWORD);
 
@@ -68,11 +68,11 @@ public class PasswordRecoveryService {
     public void changePassword(String email, String oldPassword, String newPassword) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (!user.getSecurity().isPasswordSet()
                 || !passwordEncoder.matches(oldPassword, user.getSecurity().getPasswordHash())) {
-            throw new DomainException("INVALID_PASSWORD", "Old password is not correct", 400);
+            throw new DomainException("INVALID_PASSWORD", "Old password is not correct");
         }
 
         user.getSecurity().updatePassword(passwordEncoder.encode(newPassword), timeProvider.now());
@@ -81,3 +81,4 @@ public class PasswordRecoveryService {
         userSessionRepository.revokeAllUserSessions(user.getId(), "Password Changed", timeProvider.now());
     }
 }
+

@@ -7,6 +7,6 @@ package com.nox.platform.shared.exception;
 public class ResourceNotFoundException extends DomainException {
 
     public ResourceNotFoundException(String resourceType, Object identifier) {
-        super("NOT_FOUND", String.format("%s with identifier '%s' was not found", resourceType, identifier), 404);
+        super("NOT_FOUND", String.format("%s with identifier '%s' was not found", resourceType, identifier));
     }
 }

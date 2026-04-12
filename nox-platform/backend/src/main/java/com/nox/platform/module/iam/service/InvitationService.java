@@ -35,7 +35,7 @@ public class InvitationService {
     @Transactional
     public void inviteUser(String email, UUID orgId, UUID roleId, UUID inviterId) {
         if (invitationRepository.existsByEmailAndOrgIdAndStatus(email, orgId, InvitationStatus.PENDING)) {
-            throw new DomainException("ALREADY_INVITED", "This Email has already been invited", 400);
+            throw new DomainException("ALREADY_INVITED", "This Email has already been invited");
         }
 
         String token = UUID.randomUUID().toString();
@@ -60,18 +60,18 @@ public class InvitationService {
     @Transactional
     public void acceptInvitation(String token, UUID userId) {
         Invitation invitation = invitationRepository.findByToken(token)
-                .orElseThrow(() -> new DomainException("INVALID_INVITATION", "Invitation token is invalid", 400));
+                .orElseThrow(() -> new DomainException("INVALID_INVITATION", "Invitation token is invalid"));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         invitation.accept(user, timeProvider.now());
 
         Organization org = organizationRepository.findById(invitation.getOrgId())
-                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization no longer exists", 404));
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization no longer exists"));
 
         Role role = roleRepository.findById(invitation.getRoleId())
-                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role no longer exists", 404));
+                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role no longer exists"));
 
         User inviter = userRepository.findById(invitation.getInvitedById()).orElse(null);
 
@@ -94,3 +94,4 @@ public class InvitationService {
         invitationRepository.save(invitation);
     }
 }
+

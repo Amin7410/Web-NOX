@@ -38,7 +38,7 @@ public class OrganizationService {
     @Transactional
     public Organization createOrganization(CreateOrganizationCommand command) {
         User creator = userRepository.findByEmail(command.creatorEmail())
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user not found"));
 
         Organization organization = Organization.create(
                 command.name(),
@@ -58,7 +58,7 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public List<Organization> getOrganizationsForUser(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         return orgMemberService.getOrganizationsForUser(user.getId())
                 .stream()
@@ -68,12 +68,12 @@ public class OrganizationService {
 
     public Organization getOrganizationById(UUID orgId) {
         return organizationRepository.findById(orgId)
-                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found"));
     }
 
     public Organization getOrganizationBySlug(String slug) {
         return organizationRepository.findBySlug(slug)
-                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found"));
     }
 
     @Transactional
@@ -112,14 +112,15 @@ public class OrganizationService {
         int counter = 1;
 
         while (organizationRepository.existsBySlug(finalSlug)) {
-            String randomHash = UUID.randomUUID().toString().substring(0, 6);
+            String randomHash = UUID.randomUUID().toString().substring(0);
             finalSlug = baseSlug + "-" + randomHash;
             counter++;
             if (counter > 20) {
-                throw new DomainException("SLUG_GENERATION_FAILED",
-                        "Failed to generate a unique slug after 20 attempts.", 500);
+                throw new DomainException("SLUG_GENERATION_FAILED", "Failed to generate a unique slug after 20 attempts.");
             }
         }
         return finalSlug;
     }
 }
+
+

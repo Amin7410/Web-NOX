@@ -36,12 +36,11 @@ public class UserRegistrationService {
         if (existingUser != null) {
             if (existingUser.getStatus() == UserStatus.DELETED) {
                 // DO NOT REACTIVATE - Prevent Zombie Accounts explicitly
-                throw new DomainException("EMAIL_ALREADY_EXISTS",
-                        "A user with this email has been deleted. Please contact support.", 403);
+                throw new DomainException("EMAIL_ALREADY_EXISTS", "A user with this email has been deleted. Please contact support.");
             }
 
             if (existingUser.getStatus() != UserStatus.PENDING_VERIFICATION) {
-                throw new DomainException("EMAIL_ALREADY_EXISTS", "A user with this email already exists", 400);
+                throw new DomainException("EMAIL_ALREADY_EXISTS", "A user with this email already exists");
             }
 
             // If pending, we allow re-sending registration OTP override
@@ -70,12 +69,12 @@ public class UserRegistrationService {
     public void verifyEmail(String email, String otpCode) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         otpService.validateAndUseOtp(user, otpCode, OtpCode.OtpType.VERIFY_EMAIL);
 
         if (user.getStatus() == UserStatus.ACTIVE) {
-            throw new DomainException("USER_ALREADY_ACTIVE", "This account is already verified.", 400);
+            throw new DomainException("USER_ALREADY_ACTIVE", "This account is already verified.");
         }
 
         user.verifyEmail();
@@ -85,3 +84,4 @@ public class UserRegistrationService {
         eventPublisher.publishEvent(new UserCreatedEvent(user.getId(), user.getEmail()));
     }
 }
+

@@ -16,15 +16,48 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Set<String> FORBIDDEN_CODES = Set.of(
+            "FORBIDDEN", 
+            "INSUFFICIENT_PRIVILEGE", 
+            "ACCOUNT_LOCKED", 
+            "ACCOUNT_NOT_ACTIVE"
+    );
+
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<ApiResponse<Void>> handleDomainException(DomainException ex) {
-        ApiResponse<Void> response = ApiResponse.error(ex.getCode(), ex.getMessage());
-        return new ResponseEntity<>(response, HttpStatus.valueOf(ex.getStatus()));
+        String code = ex.getCode();
+        HttpStatus status = mapCodeToStatus(code);
+        
+        ApiResponse<Void> response = ApiResponse.error(code, ex.getMessage());
+        return new ResponseEntity<>(response, status);
+    }
+
+    private HttpStatus mapCodeToStatus(String code) {
+        if (code == null) return HttpStatus.BAD_REQUEST;
+        
+        if (code.contains("NOT_FOUND")) {
+            return HttpStatus.NOT_FOUND;
+        }
+        
+        if (code.equals("UNAUTHORIZED")) {
+            return HttpStatus.UNAUTHORIZED;
+        }
+        
+        if (FORBIDDEN_CODES.contains(code)) {
+            return HttpStatus.FORBIDDEN;
+        }
+        
+        if (code.equals("BLOCK_LOCKED")) {
+            return HttpStatus.LOCKED;
+        }
+        
+        return HttpStatus.BAD_REQUEST;
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

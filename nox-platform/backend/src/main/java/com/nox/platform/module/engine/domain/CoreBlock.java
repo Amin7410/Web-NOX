@@ -81,7 +81,7 @@ public class CoreBlock extends BaseEntity {
 
     public void lock(UUID userId, OffsetDateTime currentTime) {
         if (isLockedByOther(userId, currentTime)) {
-            throw new DomainException("BLOCK_LOCKED", "Block is currently locked by another user", 423);
+            throw new DomainException("BLOCK_LOCKED", "Block is currently locked by another user");
         }
         this.lockedBy = userId;
         this.lockedAt = currentTime;
@@ -90,7 +90,7 @@ public class CoreBlock extends BaseEntity {
 
     public void unlock(UUID userId, OffsetDateTime currentTime) {
         if (isLockedByOther(userId, currentTime)) {
-            throw new DomainException("BLOCK_LOCKED", "You cannot unlock a block locked by someone else", 403);
+            throw new DomainException("BLOCK_LOCKED", "You cannot unlock a block locked by someone else");
         }
         this.lockedBy = null;
         this.lockedAt = null;
@@ -106,7 +106,7 @@ public class CoreBlock extends BaseEntity {
 
     public void updateContent(String name, Map<String, Object> config, Map<String, Object> visual, UUID userId, OffsetDateTime currentTime) {
         if (isLockedByOther(userId, currentTime)) {
-            throw new DomainException("BLOCK_LOCKED", "Cannot update content while block is locked by another user", 423);
+            throw new DomainException("BLOCK_LOCKED", "Cannot update content while block is locked by another user");
         }
         if (name != null) this.name = name;
         if (config != null) this.config = config;
@@ -123,19 +123,19 @@ public class CoreBlock extends BaseEntity {
         if (parent == null) return;
         
         if (parent.getId() != null && parent.getId().equals(current.getId())) {
-            throw new DomainException("CIRCULAR_DEPENDENCY", "A block cannot be its own parent", 400);
+            throw new DomainException("CIRCULAR_DEPENDENCY", "A block cannot be its own parent");
         }
 
         CoreBlock temp = parent;
         int depth = 0;
         while (temp.getParentBlock() != null) {
             if (current.getId() != null && temp.getParentBlock().getId().equals(current.getId())) {
-                throw new DomainException("CIRCULAR_DEPENDENCY", "Circular block hierarchy detected", 400);
+                throw new DomainException("CIRCULAR_DEPENDENCY", "Circular block hierarchy detected");
             }
             temp = temp.getParentBlock();
             depth++;
             if (depth > 10) {
-                throw new DomainException("MAX_DEPTH_REACHED", "Maximum block depth (10) exceeded", 400);
+                throw new DomainException("MAX_DEPTH_REACHED", "Maximum block depth (10) exceeded");
             }
         }
     }
@@ -145,3 +145,4 @@ public class CoreBlock extends BaseEntity {
         this.updateTimestamp(currentTime);
     }
 }
+

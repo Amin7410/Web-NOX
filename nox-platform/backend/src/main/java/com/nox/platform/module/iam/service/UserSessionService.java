@@ -51,7 +51,7 @@ public class UserSessionService {
         String hashedToken = DigestUtils.sha256Hex(refreshToken);
         UserSession session = userSessionRepository.findByRefreshToken(hashedToken)
                 .orElseThrow(
-                        () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401));
+                        () -> new DomainException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired"));
 
         if (!session.isValid(timeProvider.now())) {
             // Check Token Rotation Grace Period (60 seconds)
@@ -59,22 +59,21 @@ public class UserSessionService {
                 long secondsSinceRevoked = java.time.Duration.between(session.getRevokedAt(), timeProvider.now())
                         .getSeconds();
                 if (secondsSinceRevoked < 60) {
-                    throw new DomainException("INVALID_REFRESH_TOKEN",
-                            "Token recently rotated. Please use the new token or login again.", 401);
+                    throw new DomainException("INVALID_REFRESH_TOKEN", "Token recently rotated. Please use the new token or login again.");
                 }
             }
 
             userSessionRepository.revokeAllUserSessions(session.getUser().getId(),
                     "Potential Session Hijacking - Invalid Token Reuse", timeProvider.now());
-            throw new DomainException("COMPROMISED_TOKEN", "Security alert: Please login again.", 401);
+            throw new DomainException("COMPROMISED_TOKEN", "Security alert: Please login again.");
         }
 
         User user = session.getUser();
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active");
         }
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked");
         }
 
         String newJwtToken = tokenProvider.generateToken(user.getEmail());
@@ -104,8 +103,7 @@ public class UserSessionService {
         userSessionRepository.findByRefreshToken(hashedToken)
                 .ifPresent(session -> {
                     if (!session.getUser().getEmail().equals(ownerEmail)) {
-                        throw new DomainException("UNAUTHORIZED_LOGOUT", "You cannot logout a session you do not own",
-                                403);
+                        throw new DomainException("UNAUTHORIZED_LOGOUT", "You cannot logout a session you do not own");
                     }
                     session.revoke("User Logged Out", timeProvider.now());
                     userSessionRepository.save(session);
@@ -113,3 +111,4 @@ public class UserSessionService {
     }
 
 }
+

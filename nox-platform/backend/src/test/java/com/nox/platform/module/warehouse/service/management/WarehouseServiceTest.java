@@ -77,7 +77,7 @@ class WarehouseServiceTest {
         @DisplayName("Should throw exception when creating a warehouse for someone else")
         void shouldThrowWhenCreatingForOtherUser() {
             UUID otherUserId = UUID.randomUUID();
-            doThrow(new DomainException("FORBIDDEN", "User warehouse access denied", 403))
+            doThrow(new DomainException("FORBIDDEN", "User warehouse access denied"))
                     .when(accessValidator).validateWriteAccess(otherUserId, OwnerType.USER);
 
             assertThatThrownBy(() -> warehouseService.createWarehouse(otherUserId, OwnerType.USER, "Fail", false))
@@ -114,7 +114,7 @@ class WarehouseServiceTest {
         @Test
         @DisplayName("Should deny Org member without manage permission")
         void shouldDenyLesserMember() {
-            doThrow(new DomainException("FORBIDDEN", "Insufficient organization permissions", 403))
+            doThrow(new DomainException("FORBIDDEN", "Insufficient organization permissions"))
                     .when(accessValidator).validateWriteAccess(orgId, OwnerType.ORG);
 
             assertThatThrownBy(() -> warehouseService.createWarehouse(orgId, OwnerType.ORG, "Forbidden", false))
@@ -156,3 +156,4 @@ class WarehouseServiceTest {
         }
     }
 }
+

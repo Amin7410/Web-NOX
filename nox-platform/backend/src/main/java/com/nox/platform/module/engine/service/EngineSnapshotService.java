@@ -53,10 +53,10 @@ public class EngineSnapshotService {
         projectService.findProjectInternal(projectId);
 
         CoreSnapshot snapshot = snapshotRepository.findById(snapshotId)
-                .orElseThrow(() -> new DomainException("SNAPSHOT_NOT_FOUND", "Snapshot not found", 404));
+                .orElseThrow(() -> new DomainException("SNAPSHOT_NOT_FOUND", "Snapshot not found"));
 
         if (!snapshot.getProject().getId().equals(projectId)) {
-            throw new DomainException("INVALID_SNAPSHOT_BOUNDS", "Mismatch mapping bounds", 400);
+            throw new DomainException("INVALID_SNAPSHOT_BOUNDS", "Mismatch mapping bounds");
         }
 
         return snapshot.getFullStateDump();
@@ -72,3 +72,4 @@ public class EngineSnapshotService {
                 snapshot.getCreatedAt());
     }
 }
+

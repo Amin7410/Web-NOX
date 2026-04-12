@@ -55,8 +55,7 @@ public class SocialAuthenticationService {
                 // Potential Account Takeover: email found but no linked social identity
                 // If user has a password set, we MUST ask for it before linking
                 if (user.getSecurity().isPasswordSet()) {
-                    throw new DomainException("LINK_REQUIRED",
-                            "Account exists. Please link your social account with your password.", 403);
+                    throw new DomainException("LINK_REQUIRED", "Account exists. Please link your social account with your password.");
                 }
             }
 
@@ -80,7 +79,7 @@ public class SocialAuthenticationService {
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Your account is not active or has been suspended.", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Your account is not active or has been suspended.");
         }
 
         if (user.getSecurity() != null && user.getSecurity().isMfaEnabled()) {
@@ -100,16 +99,16 @@ public class SocialAuthenticationService {
         String providerId = (String) verifiedData.get("providerId");
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active");
         }
 
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
         } catch (Exception e) {
-            throw new DomainException("INVALID_CREDENTIALS", "Invalid password for linking", 401);
+            throw new DomainException("INVALID_CREDENTIALS", "Invalid password for linking");
         }
 
         // Check again if already linked (race condition)
@@ -131,3 +130,4 @@ public class SocialAuthenticationService {
         return userSessionService.generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 }
+

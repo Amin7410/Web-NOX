@@ -29,7 +29,7 @@ public class AssetCollectionService {
         accessValidator.validateWriteAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
 
         if (collectionRepository.findByWarehouseIdAndName(command.warehouseId(), command.name()).isPresent()) {
-            throw new DomainException("COLLECTION_EXISTS", "Collection name exists in this warehouse", 400);
+            throw new DomainException("COLLECTION_EXISTS", "Collection name exists in this warehouse");
         }
 
         AssetCollection parent = null;
@@ -43,10 +43,10 @@ public class AssetCollectionService {
 
     public AssetCollection getCollection(UUID warehouseId, UUID id) {
         AssetCollection collection = collectionRepository.findById(id)
-                .orElseThrow(() -> new DomainException("COLLECTION_NOT_FOUND", "Collection not found", 404));
+                .orElseThrow(() -> new DomainException("COLLECTION_NOT_FOUND", "Collection not found"));
 
         if (!collection.getWarehouse().getId().equals(warehouseId)) {
-            throw new DomainException("INVALID_WAREHOUSE", "Collection access mismatch", 400);
+            throw new DomainException("INVALID_WAREHOUSE", "Collection access mismatch");
         }
 
         accessValidator.validateReadAccess(collection.getWarehouse().getOwnerId(),
@@ -91,7 +91,7 @@ public class AssetCollectionService {
         List<AssetCollection> children = collectionRepository
                 .findByWarehouseIdAndParentCollectionId(collection.getWarehouse().getId(), id);
         if (!children.isEmpty()) {
-            throw new DomainException("COLLECTION_NOT_EMPTY", "Cannot delete non-empty collection", 400);
+            throw new DomainException("COLLECTION_NOT_EMPTY", "Cannot delete non-empty collection");
         }
 
         OffsetDateTime now = timeProvider.now();
@@ -109,7 +109,7 @@ public class AssetCollectionService {
         if (newParentId == null || collectionIdToUpdate == null) return;
 
         if (collectionIdToUpdate.equals(newParentId)) {
-            throw new DomainException("CYCLIC_DEPENDENCY", "Self-parenting not allowed", 400);
+            throw new DomainException("CYCLIC_DEPENDENCY", "Self-parenting not allowed");
         }
 
         UUID currentParentId = newParentId;
@@ -118,7 +118,7 @@ public class AssetCollectionService {
             if (parent == null) break;
             
             if (collectionIdToUpdate.equals(parent.getId())) {
-                throw new DomainException("CYCLIC_DEPENDENCY", "Circular dependency detected", 400);
+                throw new DomainException("CYCLIC_DEPENDENCY", "Circular dependency detected");
             }
             currentParentId = parent.getParentCollection() != null ? parent.getParentCollection().getId() : null;
         }
@@ -126,8 +126,9 @@ public class AssetCollectionService {
 
     private Warehouse getWarehouseAndValidateRead(UUID warehouseId) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
-                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found", 404));
+                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found"));
         accessValidator.validateReadAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
         return warehouse;
     }
 }
+

@@ -48,13 +48,13 @@ public class CoreBlockService {
         CoreBlock parentBlock = null;
         if (request.parentBlockId() != null) {
             parentBlock = coreBlockRepository.findByIdAndWorkspace_Id(request.parentBlockId(), workspaceId)
-                    .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Parent block not found in this workspace", 404));
+                    .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Parent block not found in this workspace"));
         }
 
         BlockTemplate originAsset = null;
         if (request.originAssetId() != null) {
             originAsset = blockTemplateRepository.findById(request.originAssetId())
-                    .orElseThrow(() -> new DomainException("ASSET_NOT_FOUND", "Origin asset not found", 404));
+                    .orElseThrow(() -> new DomainException("ASSET_NOT_FOUND", "Origin asset not found"));
         }
 
         OffsetDateTime now = timeProvider.now();
@@ -83,7 +83,7 @@ public class CoreBlockService {
     public CoreBlockResponse updateBlock(UUID workspaceId, UUID blockId, UpdateCoreBlockRequest request) {
         workspaceService.getWorkspaceInternal(workspaceId);
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace"));
 
         UUID currentUserId = null;
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -95,7 +95,7 @@ public class CoreBlockService {
 
         if (request.parentBlockId() != null) {
             CoreBlock parentBlock = coreBlockRepository.findByIdAndWorkspace_Id(request.parentBlockId(), workspaceId)
-                    .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Parent block not found in this workspace", 404));
+                    .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Parent block not found in this workspace"));
             
             block.moveTo(parentBlock);
         }
@@ -108,7 +108,7 @@ public class CoreBlockService {
     public void lockBlock(UUID workspaceId, UUID blockId, UUID userId) {
         workspaceService.getWorkspaceInternal(workspaceId);
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found"));
 
         block.lock(userId, timeProvider.now());
         coreBlockRepository.save(block);
@@ -118,7 +118,7 @@ public class CoreBlockService {
     public void unlockBlock(UUID workspaceId, UUID blockId, UUID userId) {
         workspaceService.getWorkspaceInternal(workspaceId);
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found"));
 
         block.unlock(userId, timeProvider.now());
         coreBlockRepository.save(block);
@@ -129,7 +129,7 @@ public class CoreBlockService {
         workspaceService.getWorkspaceInternal(workspaceId);
 
         coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace"));
 
         List<UUID> descendantBlockIds = coreBlockRepository.findDescendantBlockIdsByRootId(blockId);
 
@@ -166,3 +166,4 @@ public class CoreBlockService {
         );
     }
 }
+

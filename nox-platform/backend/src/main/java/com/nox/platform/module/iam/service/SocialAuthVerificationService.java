@@ -16,7 +16,7 @@ public class SocialAuthVerificationService {
 
     public Map<String, Object> verifyToken(String provider, String token) {
         if (provider == null || token == null || token.isBlank()) {
-            throw new DomainException("INVALID_SOCIAL_TOKEN", "Provider and token must not be empty", 400);
+            throw new DomainException("INVALID_SOCIAL_TOKEN", "Provider and token must not be empty");
         }
 
         return socialProviders.stream()
@@ -24,6 +24,8 @@ public class SocialAuthVerificationService {
                 .findFirst()
                 .map(p -> p.verifyToken(token))
                 .orElseThrow(() -> new DomainException("INVALID_SOCIAL_TOKEN", 
-                    "No provider support found for: " + provider, 401));
+                    "No provider support found for: " + provider));
     }
 }
+
+

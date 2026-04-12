@@ -36,15 +36,14 @@ public class AuthenticationService {
     public AuthResult authenticate(String email, String plaintextPassword, String ipAddress, String userAgent) {
         email = email.trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401));
+                .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password"));
 
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to too many failed attempts",
-                    423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to too many failed attempts");
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Please verify your email");
         }
 
         try {
@@ -59,7 +58,7 @@ public class AuthenticationService {
                 internalSecurityStateService.lockAccount(user.getId(),
                         timeProvider.now().plusMinutes(lockoutDurationMinutes));
             }
-            throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);
+            throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password");
         }
 
         if (user.getSecurity().isMfaEnabled()) {
@@ -73,3 +72,4 @@ public class AuthenticationService {
     public record AuthResult(User user, String token, String refreshToken, boolean mfaRequired, String mfaToken) {
     }
 }
+

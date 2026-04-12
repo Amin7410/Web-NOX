@@ -32,16 +32,16 @@ public class BlockInvaderUsageService {
     @Transactional
     public BlockInvaderUsageResponse attachInvader(UUID blockId, AttachInvaderRequest request) {
         CoreBlock block = blockRepository.findById(blockId)
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found"));
 
         workspaceService.getWorkspaceInternal(block.getWorkspace().getId());
 
         InvaderDefinition invader = invaderRepository.findById(request.invaderAssetId())
-                .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found", 404));
+                .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found"));
 
         // Prevent duplicate attach
         if (usageRepository.findByBlock_IdAndInvaderAsset_Id(blockId, request.invaderAssetId()).isPresent()) {
-            throw new DomainException("INVADER_ALREADY_ATTACHED", "Invader already attached to this block", 400);
+            throw new DomainException("INVADER_ALREADY_ATTACHED", "Invader already attached to this block");
         }
 
         BlockInvaderUsage usage = BlockInvaderUsage.builder()
@@ -59,7 +59,7 @@ public class BlockInvaderUsageService {
     @Transactional
     public void detachInvader(UUID usageId) {
         BlockInvaderUsage usage = usageRepository.findById(usageId)
-                .orElseThrow(() -> new DomainException("USAGE_NOT_FOUND", "Invader usage not found", 404));
+                .orElseThrow(() -> new DomainException("USAGE_NOT_FOUND", "Invader usage not found"));
 
         workspaceService.getWorkspaceInternal(usage.getBlock().getWorkspace().getId());
 
@@ -77,7 +77,7 @@ public class BlockInvaderUsageService {
     @Transactional(readOnly = true)
     public List<BlockInvaderUsageResponse> getBlockInvaders(UUID blockId) {
         CoreBlock block = blockRepository.findById(blockId)
-                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
+                .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found"));
 
         workspaceService.getWorkspaceInternal(block.getWorkspace().getId());
 
@@ -96,3 +96,4 @@ public class BlockInvaderUsageService {
                 usage.getCreatedAt());
     }
 }
+

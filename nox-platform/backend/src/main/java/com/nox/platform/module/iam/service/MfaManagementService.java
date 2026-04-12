@@ -37,10 +37,10 @@ public class MfaManagementService {
     @Transactional
     public MfaSetupResult setupMfa(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (user.getSecurity().isMfaEnabled()) {
-            throw new DomainException("MFA_ALREADY_ENABLED", "MFA is already enabled for this user", 400);
+            throw new DomainException("MFA_ALREADY_ENABLED", "MFA is already enabled for this user");
         }
 
         String secret = mfaService.generateSecretKey();
@@ -54,15 +54,15 @@ public class MfaManagementService {
     @Transactional
     public List<String> enableMfa(String email, int code) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         String tempSecret = user.getSecurity().getTempMfaSecret();
         if (tempSecret == null) {
-            throw new DomainException("MFA_SETUP_REQUIRED", "MFA setup was not initiated", 400);
+            throw new DomainException("MFA_SETUP_REQUIRED", "MFA setup was not initiated");
         }
 
         if (!mfaService.verifyCode(tempSecret, code)) {
-            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Verification failed.", 400);
+            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Verification failed.");
         }
 
         user.getSecurity().activateMfa(tempSecret);
@@ -77,7 +77,7 @@ public class MfaManagementService {
             byte[] randomBytes = new byte[5];
             secureRandom.nextBytes(randomBytes);
             String plainCode = org.apache.commons.codec.binary.Hex.encodeHexString(randomBytes).toUpperCase()
-                    .substring(0, 8);
+                    .substring(0);
             plainBackupCodes.add(plainCode);
 
             UserMfaBackupCode backupCode = UserMfaBackupCode.builder()
@@ -95,24 +95,24 @@ public class MfaManagementService {
     @Transactional
     public void disableMfa(String email, String currentPassword) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (!user.getSecurity().isMfaEnabled()) {
-            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
+            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user");
         }
 
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked");
         }
 
         UserDetails userDetails;
         try {
             userDetails = userDetailsService.loadUserByUsername(email);
             if (!passwordEncoder.matches(currentPassword, userDetails.getPassword())) {
-                throw new DomainException("INVALID_CREDENTIALS", "Invalid password", 401);
+                throw new DomainException("INVALID_CREDENTIALS", "Invalid password");
             }
         } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
-            throw new DomainException("USER_NOT_FOUND", "User not found", 404);
+            throw new DomainException("USER_NOT_FOUND", "User not found");
         }
 
         user.getSecurity().disableMfa();
@@ -124,3 +124,5 @@ public class MfaManagementService {
     public record MfaSetupResult(String secret, String qrCodeUri) {
     }
 }
+
+

@@ -31,7 +31,7 @@ public class MfaVerificationService {
         User user = validateMfaTokenAndGetUser(mfaToken);
 
         if (!user.getSecurity().isMfaEnabled() || user.getSecurity().getMfaSecret() == null) {
-            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
+            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user");
         }
 
         if (!mfaService.verifyCode(user.getSecurity().getMfaSecret(), code)) {
@@ -39,11 +39,10 @@ public class MfaVerificationService {
             if (user.getSecurity().getFailedMfaAttempts() >= 5) {
                 user.getSecurity().lockAccount(timeProvider.now(), 15);
                 userSecurityRepository.save(user.getSecurity());
-                throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.",
-                        423);
+                throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.");
             }
             userSecurityRepository.save(user.getSecurity());
-            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Please try again.", 401);
+            throw new DomainException("INVALID_MFA_CODE", "Invalid MFA code. Please try again.");
         }
 
         user.getSecurity().resetFailedLogins();
@@ -57,11 +56,11 @@ public class MfaVerificationService {
         User user = validateMfaTokenAndGetUser(mfaToken);
 
         if (!user.getSecurity().isMfaEnabled()) {
-            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
+            throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user");
         }
 
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to security attempts", 423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to security attempts");
         }
 
         List<UserMfaBackupCode> backupCodes = userMfaBackupCodeRepository.findByUserAndUsedFalse(user);
@@ -80,11 +79,10 @@ public class MfaVerificationService {
             if (user.getSecurity().getFailedMfaAttempts() >= 5) {
                 user.getSecurity().lockAccount(timeProvider.now(), 15);
                 userSecurityRepository.save(user.getSecurity());
-                throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.",
-                        423);
+                throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.");
             }
             userSecurityRepository.save(user.getSecurity());
-            throw new DomainException("INVALID_BACKUP_CODE", "Invalid or already used backup code.", 401);
+            throw new DomainException("INVALID_BACKUP_CODE", "Invalid or already used backup code.");
         }
 
         user.getSecurity().resetFailedLogins();
@@ -101,20 +99,22 @@ public class MfaVerificationService {
         Boolean isMfaPending = tokenProvider.extractClaim(mfaToken, claims -> claims.get("mfa_pending", Boolean.class));
 
         if (isMfaPending == null || !isMfaPending) {
-            throw new DomainException("INVALID_MFA_TOKEN", "Provided token is not a valid MFA pending token", 401);
+            throw new DomainException("INVALID_MFA_TOKEN", "Provided token is not a valid MFA pending token");
         }
 
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
+            throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active");
         }
 
         if (user.getSecurity().isLocked(timeProvider.now())) {
-            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
+            throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked");
         }
 
         return user;
     }
 }
+
+

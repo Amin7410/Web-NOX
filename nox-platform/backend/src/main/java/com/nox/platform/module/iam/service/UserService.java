@@ -24,7 +24,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
     }
 
     @Transactional
@@ -38,7 +38,7 @@ public class UserService {
     @Transactional
     public void deleteUser(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found"));
 
         // Publish synchronous event to allow other modules (e.g. Tenant) 
         // to validate and cleanup related data.
@@ -52,3 +52,4 @@ public class UserService {
         eventPublisher.publishEvent(new UserDeletedEvent(userId));
     }
 }
+

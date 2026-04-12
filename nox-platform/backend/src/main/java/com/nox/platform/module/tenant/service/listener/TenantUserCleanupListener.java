@@ -32,9 +32,8 @@ public class TenantUserCleanupListener {
                         member.getOrganization().getId(), "OWNER");
                 
                 if (ownerCount <= 1) {
-                    throw new DomainException("CANNOT_DELETE_USER",
-                            "User is the sole owner of organization '" + member.getOrganization().getName() + 
-                            "'. Transfer ownership or delete the organization first.", 400);
+                    throw new DomainException("CANNOT_DELETE_USER", "User is the sole owner of organization '" + member.getOrganization().getName() + 
+                            "'. Transfer ownership or delete the organization first.");
                 }
             }
         }
@@ -47,3 +46,4 @@ public class TenantUserCleanupListener {
         orgMemberRepository.saveAll(memberships);
     }
 }
+

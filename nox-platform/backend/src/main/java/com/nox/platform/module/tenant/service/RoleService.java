@@ -30,10 +30,10 @@ public class RoleService {
     @Transactional
     public Role createRole(CreateRoleCommand command) {
         Organization org = organizationRepository.findById(command.orgId())
-                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found", 404));
+                .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization not found"));
 
         if (roleRepository.existsByOrganizationIdAndName(command.orgId(), command.name())) {
-            throw new DomainException("ROLE_EXISTS", "Role name already exists in this organization", 400);
+            throw new DomainException("ROLE_EXISTS", "Role name already exists in this organization");
         }
 
         Role role = Role.create(org, command.name(), command.permissions(), command.level(), timeProvider.now());
@@ -54,17 +54,17 @@ public class RoleService {
 
     public Role getRoleByName(UUID orgId, String name) {
         return roleRepository.findByOrganizationIdAndName(orgId, name)
-                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found in this organization", 404));
+                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found in this organization"));
     }
 
     @Transactional
     @CacheEvict(value = "org_members", allEntries = true)
     public Role updatePermissions(UUID orgId, UUID roleId, List<String> permissions) {
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
+                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found"));
 
         if (!role.getOrganization().getId().equals(orgId)) {
-            throw new DomainException("INVALID_ORG", "Role does not belong to this organization", 400);
+            throw new DomainException("INVALID_ORG", "Role does not belong to this organization");
         }
 
         role.updatePermissions(permissions);
@@ -76,11 +76,11 @@ public class RoleService {
     @CacheEvict(value = "org_members", allEntries = true)
     public void deleteRole(@AuditTargetOrg UUID orgId, String roleName) {
         Role role = roleRepository.findByOrganizationIdAndName(orgId, roleName)
-                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
+                .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found"));
 
         long memberCount = orgMemberRepository.countByOrganizationIdAndRoleName(orgId, roleName);
         if (memberCount > 0) {
-            throw new DomainException("ROLE_IN_USE", "Cannot delete role while it is assigned to members", 400);
+            throw new DomainException("ROLE_IN_USE", "Cannot delete role while it is assigned to members");
         }
 
         OffsetDateTime now = timeProvider.now();
@@ -95,3 +95,4 @@ public class RoleService {
         roleRepository.softDeleteByOrgId(orgId, now);
     }
 }
+
