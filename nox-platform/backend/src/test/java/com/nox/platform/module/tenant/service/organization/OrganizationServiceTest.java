@@ -97,20 +97,22 @@ class OrganizationServiceTest {
         void shouldHandleSlugCollision() {
             // Given
             String orgName = "Hào Nam";
+            String baseSlug = "hao-nam";
             CreateOrganizationCommand command = new CreateOrganizationCommand(orgName, creatorEmail);
-            
+
             when(userRepository.findByEmail(creatorEmail)).thenReturn(Optional.of(creator));
-            
-            when(organizationRepository.existsBySlug("hao-nam")).thenReturn(true);
-            when(organizationRepository.existsBySlug(argThat(s -> s.startsWith("hao-nam-")))).thenReturn(false);
-            
+            // Override the lenient stub for this specific input to return an expected base slug
+            when(slugGenerator.generate(orgName)).thenReturn(baseSlug);
+            // First existsBySlug call (for base slug) → collision; subsequent call → no collision
+            when(organizationRepository.existsBySlug(anyString())).thenReturn(true, false);
             when(organizationRepository.save(any(Organization.class))).thenAnswer(i -> i.getArgument(0));
 
             // When
             Organization result = organizationService.createOrganization(command);
 
-            // Then
-            assertThat(result.getSlug()).startsWith("hao-nam-");
+            // Then: slug must have been suffixed due to collision
+            assertThat(result.getSlug()).isNotEqualTo(baseSlug);
+            assertThat(result.getSlug()).startsWith(baseSlug + "-");
         }
     }
 
