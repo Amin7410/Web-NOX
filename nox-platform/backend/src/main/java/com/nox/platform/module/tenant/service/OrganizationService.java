@@ -8,9 +8,12 @@ import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.service.command.CreateOrganizationCommand;
 import com.nox.platform.module.tenant.service.command.UpdateOrganizationCommand;
+import com.nox.platform.shared.abstraction.SlugGenerator;
+import com.nox.platform.shared.abstraction.TimeProvider;
+import com.nox.platform.shared.event.OrganizationCreatedEvent;
+import com.nox.platform.shared.event.OrganizationDeletedEvent;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
-import com.nox.platform.shared.util.SlugGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -28,7 +31,7 @@ public class OrganizationService {
     private final RoleService roleService;
     private final OrgMemberService orgMemberService;
     private final UserRepository userRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final SlugGenerator slugGenerator;
 
@@ -47,7 +50,7 @@ public class OrganizationService {
         roleService.provisionDefaultRoles(organization);
         orgMemberService.provisionInitialOwner(organization, creator);
 
-        eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationCreatedEvent(organization.getId(), creator.getId()));
+        eventPublisher.publishEvent(new OrganizationCreatedEvent(organization.getId(), creator.getId()));
 
         return organization;
     }
@@ -100,7 +103,7 @@ public class OrganizationService {
         orgMemberService.softDeleteByOrgId(orgId, now);
         roleService.softDeleteByOrgId(orgId, now);
 
-        eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationDeletedEvent(orgId));
+        eventPublisher.publishEvent(new OrganizationDeletedEvent(orgId));
     }
 
     private String generateUniqueSlug(String name) {

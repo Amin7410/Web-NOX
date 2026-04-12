@@ -6,16 +6,17 @@ import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.infrastructure.RoleRepository;
 import com.nox.platform.module.tenant.service.command.CreateRoleCommand;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
+import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.cache.annotation.CacheEvict;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +25,7 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
     private final OrganizationRepository organizationRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public Role createRole(CreateRoleCommand command) {

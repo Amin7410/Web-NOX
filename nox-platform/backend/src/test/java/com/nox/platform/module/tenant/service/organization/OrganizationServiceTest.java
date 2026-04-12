@@ -9,7 +9,7 @@ import com.nox.platform.module.tenant.service.RoleService;
 import com.nox.platform.module.tenant.service.OrgMemberService;
 import com.nox.platform.module.tenant.service.command.CreateOrganizationCommand;
 import com.nox.platform.shared.abstraction.TimeProvider;
-import com.nox.platform.shared.util.SlugGenerator;
+import com.nox.platform.shared.abstraction.SlugGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

@@ -1,18 +1,19 @@
-package com.nox.platform.shared.infra;
+package com.nox.platform.shared.infrastructure.config;
 
 import com.nox.platform.shared.api.ApiResponse;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.exception.ResourceNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import org.springframework.security.core.AuthenticationException;
-import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,8 +55,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
         ApiResponse<Void> response = ApiResponse.error("FORBIDDEN", "You do not have permission to perform this action");
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
