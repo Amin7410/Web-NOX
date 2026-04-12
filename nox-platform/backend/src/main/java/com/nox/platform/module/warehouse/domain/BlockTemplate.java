@@ -2,7 +2,6 @@ package com.nox.platform.module.warehouse.domain;
 
 import com.nox.platform.module.warehouse.service.command.CreateBlockTemplateCommand;
 import com.nox.platform.module.warehouse.service.command.UpdateBlockTemplateCommand;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;

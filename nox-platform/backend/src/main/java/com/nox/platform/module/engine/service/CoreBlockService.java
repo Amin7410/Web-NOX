@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import java.time.OffsetDateTime;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class CoreBlockService {
     private final CoreRelationService coreRelationService;
     @Lazy
     private final BlockInvaderUsageService blockInvaderUsageService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public CoreBlockResponse createBlock(UUID workspaceId, CreateCoreBlockRequest request, UUID currentUserId) {
@@ -60,7 +61,7 @@ public class CoreBlockService {
         CoreBlock block = CoreBlock.builder()
                 .id(request.id())
                 .workspace(workspace)
-                .parentBlock(null) // Assigned via domain method later for validation
+                .parentBlock(null)
                 .originAsset(originAsset)
                 .type(request.type())
                 .name(request.name())
@@ -131,9 +132,9 @@ public class CoreBlockService {
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found in this workspace", 404));
 
         List<UUID> descendantBlockIds = coreBlockRepository.findDescendantBlockIdsByRootId(blockId);
-        
+
         if (descendantBlockIds != null && !descendantBlockIds.isEmpty()) {
-            java.time.OffsetDateTime now = timeProvider.now();
+            OffsetDateTime now = timeProvider.now();
             coreBlockRepository.softDeleteBlocksByIds(descendantBlockIds, now);
             coreRelationService.deleteRelationsForBlocks(descendantBlockIds, now);
             blockInvaderUsageService.deleteUsagesForBlocks(descendantBlockIds, now);

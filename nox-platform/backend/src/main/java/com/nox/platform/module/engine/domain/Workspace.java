@@ -1,5 +1,6 @@
 package com.nox.platform.module.engine.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
@@ -20,7 +21,7 @@ public class Workspace extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     @Setter(AccessLevel.PROTECTED)
     private Project project;
 
@@ -47,8 +48,6 @@ public class Workspace extends BaseEntity {
     @Column(name = "deleted_at")
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
-
-    // --- Domain Methods (Stage 2) ---
 
     public void updateMetadata(String name, WorkspaceType type) {
         if (name != null) this.name = name;

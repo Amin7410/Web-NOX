@@ -8,6 +8,7 @@ import com.nox.platform.module.engine.domain.CoreRelation;
 import com.nox.platform.module.engine.domain.Workspace;
 import com.nox.platform.module.engine.infrastructure.CoreBlockRepository;
 import com.nox.platform.module.engine.infrastructure.CoreRelationRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class CoreRelationService {
     private final CoreRelationRepository coreRelationRepository;
     private final CoreBlockRepository coreBlockRepository;
     private final WorkspaceService workspaceService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public CoreRelationResponse createRelation(UUID workspaceId, CreateCoreRelationRequest request) {
@@ -84,14 +85,7 @@ public class CoreRelationService {
         CoreRelation relation = coreRelationRepository.findByIdAndWorkspace_Id(relationId, workspaceId)
                 .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace", 404));
 
-        if (request.rules() != null) {
-            relation.setRules(request.rules()); // NOPMD
-        }
-
-        if (request.visual() != null) {
-            relation.setVisual(request.visual()); // NOPMD
-        }
-
+        relation.update(request.rules(), request.visual());
         relation.updateTimestamp(timeProvider.now());
         relation = coreRelationRepository.save(relation);
         return mapToResponse(relation);
@@ -111,7 +105,7 @@ public class CoreRelationService {
     }
 
     @Transactional
-    public void deleteRelationsForBlocks(List<UUID> blockIds, java.time.OffsetDateTime deletedAt) {
+    public void deleteRelationsForBlocks(List<UUID> blockIds, OffsetDateTime deletedAt) {
         if (blockIds != null && !blockIds.isEmpty()) {
             List<CoreRelation> relationsToSoftDelete = coreRelationRepository.findByBlockIdsActive(blockIds);
             
@@ -136,13 +130,12 @@ public class CoreRelationService {
     private CoreRelationResponse mapToResponse(CoreRelation relation) {
         return new CoreRelationResponse(
                 relation.getId(),
-                relation.getWorkspace().getId(), // NOPMD
-                relation.getSourceBlock().getId(), // NOPMD
-                relation.getTargetBlock().getId(), // NOPMD
+                relation.getWorkspace().getId(),
+                relation.getSourceBlock().getId(),
+                relation.getTargetBlock().getId(),
                 relation.getType(),
                 relation.getRules(),
                 relation.getVisual(),
-                relation.getDeletedAt()
-        );
+                relation.getDeletedAt());
     }
 }

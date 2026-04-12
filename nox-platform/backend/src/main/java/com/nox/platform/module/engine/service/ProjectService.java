@@ -14,15 +14,16 @@ import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
+import com.nox.platform.shared.abstraction.SecurityProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
-import com.nox.platform.shared.util.SecurityUtil;
+import com.nox.platform.shared.util.SlugGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.text.Normalizer;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -35,7 +36,9 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final CoreSnapshotRepository snapshotRepository;
     private final WorkspaceRepository workspaceRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
+    private final SecurityProvider securityProvider;
+    private final SlugGenerator slugGenerator;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, UUID currentUserId) {
@@ -47,7 +50,7 @@ public class ProjectService {
         Organization org = organizationRepository.getReferenceById(orgId);
         User user = userRepository.getReferenceById(currentUserId);
 
-        String generatedSlug = generateSlug(request.name(), orgId);
+        String generatedSlug = generateUniqueSlug(request.name(), orgId);
 
         OffsetDateTime now = timeProvider.now();
         Project project = Project.builder()
@@ -59,7 +62,6 @@ public class ProjectService {
                 .createdBy(user)
                 .build();
         project.initializeTimestamps(now);
-
         project = projectRepository.save(project);
 
         Workspace defaultWorkspace = Workspace.builder()
@@ -71,99 +73,83 @@ public class ProjectService {
         defaultWorkspace.initializeTimestamps(now);
         workspaceRepository.save(defaultWorkspace);
 
-        return mapToResponse(project);
+        return toResponse(project);
     }
 
     @Transactional(readOnly = true)
     public Page<ProjectResponse> getProjects(Pageable pageable, UUID orgId) {
         if (orgId == null) {
-            orgId = SecurityUtil.getCurrentOrganizationId();
+            orgId = securityProvider.getCurrentOrganizationId()
+                    .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing", 400));
         }
-        
-        if (orgId == null) {
-            throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
-        }
-        return projectRepository.findAllByOrganizationId(orgId, pageable)
-                .map(this::mapToResponse);
+        return projectRepository.findAllByOrganizationId(orgId, pageable).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public ProjectResponse getProjectById(UUID id) {
-        return mapToResponse(findProjectInternal(id));
+        return toResponse(findProjectInternal(id));
     }
 
     @Transactional(readOnly = true)
     public ProjectResponse getProjectBySlug(String slug) {
-        UUID orgId = SecurityUtil.getCurrentOrganizationId();
-        if (orgId == null) {
-            throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
-        }
+        UUID orgId = securityProvider.getCurrentOrganizationId()
+                .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing", 400));
         Project project = projectRepository.findBySlugAndOrganizationId(slug, orgId)
                 .orElseThrow(() -> new DomainException("PROJECT_NOT_FOUND", "Project not found or accessible", 404));
-        return mapToResponse(project);
+        return toResponse(project);
     }
 
     @Transactional
     public ProjectResponse updateProject(UUID id, UpdateProjectRequest request) {
         Project project = findProjectInternal(id);
-        
+
         String newSlug = project.getSlug();
         if (request.name() != null && !request.name().equals(project.getName())) {
-            newSlug = generateSlug(request.name(), project.getOrganization().getId());
+            newSlug = generateUniqueSlug(request.name(), project.getOrganization().getId());
         }
 
-        project.updateMetadata(
-            request.name(),
-            newSlug,
-            request.description(),
-            request.visibility(),
-            request.status()
-        );
+        project.updateMetadata(request.name(), newSlug, request.description(), request.visibility(), request.status());
         project.updateTimestamp(timeProvider.now());
-
         project = projectRepository.save(project);
-        return mapToResponse(project);
+        return toResponse(project);
     }
 
     @Transactional
     public void deleteProject(UUID id) {
         Project project = findProjectInternal(id);
         OffsetDateTime now = timeProvider.now();
-        
+
         snapshotRepository.softDeleteByProjectId(project.getId(), now);
         workspaceRepository.softDeleteByProjectId(project.getId(), now);
-        
+
         project.softDelete(now);
         project.updateTimestamp(now);
         projectRepository.save(project);
     }
 
     protected Project findProjectInternal(UUID id) {
-        UUID orgId = SecurityUtil.getCurrentOrganizationId();
-        if (orgId == null) {
-            throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
-        }
+        UUID orgId = securityProvider.getCurrentOrganizationId()
+                .orElseThrow(() -> new DomainException("TENANT_REQUIRED", "Organization context missing", 400));
         return projectRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new DomainException("PROJECT_NOT_FOUND", "Project not found or accessible", 404));
     }
 
-    private String generateSlug(String name, UUID orgId) {
-        String normalized = Normalizer.normalize(name, Normalizer.Form.NFD)
-                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-        String baseSlug = normalized.toLowerCase().replaceAll("[^a-z0-9\\-]", "-").replaceAll("-+", "-");
-        baseSlug = baseSlug.replaceAll("^-+|-+$", "");
-
+    private String generateUniqueSlug(String name, UUID orgId) {
+        String baseSlug = slugGenerator.generate(name);
         String finalSlug = baseSlug;
         int counter = 1;
 
         while (projectRepository.existsBySlugAndOrganizationId(finalSlug, orgId)) {
             finalSlug = baseSlug + "-" + counter;
             counter++;
+            if (counter > 20) {
+                throw new DomainException("SLUG_GENERATION_FAILED", "Failed to generate a unique slug after 20 attempts.", 500);
+            }
         }
         return finalSlug;
     }
 
-    private ProjectResponse mapToResponse(Project project) {
+    private ProjectResponse toResponse(Project project) {
         return new ProjectResponse(
                 project.getId(),
                 project.getName(),
