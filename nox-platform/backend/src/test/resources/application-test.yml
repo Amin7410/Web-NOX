@@ -1,0 +1,43 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update # Hibernate will create/update if Flyway is slow to sync in tests
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+    clean-on-validation-error: true
+    locations: classpath:db/migration
+
+logging:
+  level:
+    org.flywaydb: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+  mail:
+    host: localhost
+    port: 3025 # Different from dev
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+security:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B2D5051535546566D59
+  password:
+    encoding:
+      strength: 4 # Faster for tests
