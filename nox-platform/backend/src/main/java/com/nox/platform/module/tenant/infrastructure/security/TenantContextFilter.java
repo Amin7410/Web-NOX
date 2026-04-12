@@ -2,7 +2,7 @@ package com.nox.platform.module.tenant.infrastructure.security;
 
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.nox.platform.module.iam.infrastructure.security.CustomUserDetails;
 import com.nox.platform.module.tenant.domain.OrgMember;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import jakarta.servlet.FilterChain;
@@ -12,12 +12,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -26,11 +32,8 @@ import java.util.UUID;
 public class TenantContextFilter extends OncePerRequestFilter {
 
     private static final String TENANT_HEADER = "X-Org-Id";
-    private final OrgMemberRepository orgMemberRepository;
-    private final UserRepository userRepository;
 
-    // Danh sách các Endpoint công khai không áp dụng Tenant Filter (để tránh chặn login/register)
-    private static final java.util.List<String> PUBLIC_PATHS = java.util.List.of(
+    private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/login",
             "/api/v1/auth/register",
             "/api/v1/auth/social-login",
@@ -40,8 +43,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
             "/api/v1/auth/mfa/verify",
             "/api/v1/auth/mfa/verify-backup",
             "/api/v1/auth/refresh",
-            "/api/v1/workspaces/blocks/public" // Nếu có
+            "/api/v1/workspaces/blocks/public"
     );
+
+    private final OrgMemberRepository orgMemberRepository;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -50,8 +56,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getServletPath();
-        
-        // 1. Bypass Filter nếu là Endpoint công khai
+
         if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
             filterChain.doFilter(request, response);
             return;
@@ -74,9 +79,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof UserDetails)) {
-            log.warn("Tenant: Unauthorized access attempt. Auth: {}, Authenticated: {}", 
-                authentication == null ? "NULL" : "PRESENT",
-                authentication == null ? "N/A" : authentication.isAuthenticated());
+            log.warn("Tenant: Unauthorized access attempt. Auth: {}, Authenticated: {}",
+                    authentication == null ? "NULL" : "PRESENT",
+                    authentication == null ? "N/A" : authentication.isAuthenticated());
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "TENANT: Authentication required for tenant access");
             return;
         }
@@ -101,30 +106,21 @@ public class TenantContextFilter extends OncePerRequestFilter {
             return;
         }
 
-        java.util.List<org.springframework.security.core.GrantedAuthority> authorities = new java.util.ArrayList<>(
-                authentication.getAuthorities());
+        List<GrantedAuthority> authorities = new ArrayList<>(authentication.getAuthorities());
         if (member.getRole() != null && member.getRole().getPermissions() != null) {
-            java.util.List<String> permissions = member.getRole().getPermissions();
-            
-            // Handle Wildcard Permissions (* or ALL)
-            if (permissions.contains("*") || permissions.contains("ALL")) {
-                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("workspace:manage"));
-                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("workspace:read"));
-                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("iam:manage"));
-            }
-            
-            permissions.forEach(permission -> authorities
-                    .add(new org.springframework.security.core.authority.SimpleGrantedAuthority(permission)));
+            List<String> permissions = member.getRole().getPermissions();
+            permissions.forEach(permission ->
+                    authorities.add(new SimpleGrantedAuthority(permission)));
         }
 
-        com.nox.platform.module.iam.infrastructure.security.CustomUserDetails tenantAwareUserDetails = new com.nox.platform.module.iam.infrastructure.security.CustomUserDetails(
+        CustomUserDetails tenantAwareUserDetails = new CustomUserDetails(
                 userId,
                 orgId,
                 userDetails.getUsername(),
                 userDetails.getPassword(),
                 authorities);
 
-        org.springframework.security.authentication.UsernamePasswordAuthenticationToken newAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+        UsernamePasswordAuthenticationToken newAuth = new UsernamePasswordAuthenticationToken(
                 tenantAwareUserDetails,
                 authentication.getCredentials(),
                 authorities);

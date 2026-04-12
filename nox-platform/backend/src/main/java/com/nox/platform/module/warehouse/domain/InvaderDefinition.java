@@ -1,5 +1,6 @@
 package com.nox.platform.module.warehouse.domain;
 
+import com.nox.platform.module.warehouse.service.command.CreateInvaderDefinitionCommand;
 import com.nox.platform.module.warehouse.service.command.UpdateInvaderDefinitionCommand;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
@@ -66,7 +67,7 @@ public class InvaderDefinition extends BaseEntity {
     private OffsetDateTime deletedAt;
 
     public static InvaderDefinition create(Warehouse warehouse, AssetCollection collection,
-                                         com.nox.platform.module.warehouse.service.command.CreateInvaderDefinitionCommand command,
+                                         CreateInvaderDefinitionCommand command,
                                          OffsetDateTime now) {
         InvaderDefinition definition = InvaderDefinition.builder()
                 .warehouse(warehouse)

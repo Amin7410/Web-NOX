@@ -1,6 +1,8 @@
 package com.nox.platform.module.warehouse.domain;
 
+import com.nox.platform.module.warehouse.service.command.CreateBlockTemplateCommand;
 import com.nox.platform.module.warehouse.service.command.UpdateBlockTemplateCommand;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -59,8 +61,8 @@ public class BlockTemplate extends BaseEntity {
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
-    public static BlockTemplate create(Warehouse warehouse, AssetCollection collection, 
-                                     com.nox.platform.module.warehouse.service.command.CreateBlockTemplateCommand command,
+    public static BlockTemplate create(Warehouse warehouse, AssetCollection collection,
+                                     CreateBlockTemplateCommand command,
                                      OffsetDateTime now) {
         BlockTemplate template = BlockTemplate.builder()
                 .warehouse(warehouse)

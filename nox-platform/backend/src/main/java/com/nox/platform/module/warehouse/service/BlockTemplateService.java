@@ -8,6 +8,7 @@ import com.nox.platform.module.warehouse.infrastructure.WarehouseRepository;
 import com.nox.platform.module.warehouse.service.command.CreateBlockTemplateCommand;
 import com.nox.platform.module.warehouse.service.command.UpdateBlockTemplateCommand;
 import com.nox.platform.shared.exception.DomainException;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,7 @@ public class BlockTemplateService {
     private final BlockTemplateRepository blockTemplateRepository;
     private final WarehouseRepository warehouseRepository;
     private final AssetCollectionService collectionService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final WarehouseAccessValidator accessValidator;
 
     @Transactional

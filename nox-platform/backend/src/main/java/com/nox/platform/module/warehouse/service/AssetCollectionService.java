@@ -105,7 +105,7 @@ public class AssetCollectionService {
         collectionRepository.softDeleteByWarehouseId(warehouseId, now);
     }
 
-    public void validateNoCyclicDependency(UUID collectionIdToUpdate, UUID newParentId) {
+    private void validateNoCyclicDependency(UUID collectionIdToUpdate, UUID newParentId) {
         if (newParentId == null || collectionIdToUpdate == null) return;
 
         if (collectionIdToUpdate.equals(newParentId)) {

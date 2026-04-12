@@ -8,14 +8,16 @@ import com.nox.platform.module.tenant.domain.Role;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.service.command.AddMemberCommand;
+import com.nox.platform.module.iam.service.InvitationService;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
+import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -28,9 +30,9 @@ public class OrgMemberService {
     private final OrgMemberRepository orgMemberRepository;
     private final OrganizationRepository organizationRepository;
     private final RoleService roleService;
-    private final com.nox.platform.module.iam.service.InvitationService invitationService;
+    private final InvitationService invitationService;
     private final UserRepository userRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public OrgMember addMember(AddMemberCommand command) {
