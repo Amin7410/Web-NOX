@@ -8,11 +8,13 @@ import com.nox.platform.module.engine.infrastructure.BlockInvaderUsageRepository
 import com.nox.platform.module.engine.infrastructure.CoreBlockRepository;
 import com.nox.platform.module.warehouse.domain.InvaderDefinition;
 import com.nox.platform.module.warehouse.infrastructure.InvaderDefinitionRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -25,7 +27,7 @@ public class BlockInvaderUsageService {
     private final CoreBlockRepository blockRepository;
     private final InvaderDefinitionRepository invaderRepository;
     private final WorkspaceService workspaceService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public BlockInvaderUsageResponse attachInvader(UUID blockId, AttachInvaderRequest request) {
@@ -66,7 +68,7 @@ public class BlockInvaderUsageService {
     }
 
     @Transactional
-    public void deleteUsagesForBlocks(List<UUID> blockIds, java.time.OffsetDateTime deletedAt) {
+    public void deleteUsagesForBlocks(List<UUID> blockIds, OffsetDateTime deletedAt) {
         if (blockIds != null && !blockIds.isEmpty()) {
             usageRepository.softDeleteUsagesByBlockIds(blockIds, deletedAt);
         }
@@ -87,8 +89,8 @@ public class BlockInvaderUsageService {
     private BlockInvaderUsageResponse mapToResponse(BlockInvaderUsage usage) {
         return new BlockInvaderUsageResponse(
                 usage.getId(),
-                usage.getBlock().getId(), // NOPMD
-                usage.getInvaderAsset().getId(), // NOPMD
+                usage.getBlock().getId(),
+                usage.getInvaderAsset().getId(),
                 usage.getAppliedVersion(),
                 usage.getConfigSnapshot(),
                 usage.getCreatedAt());

@@ -1,10 +1,7 @@
 package com.nox.platform.module.tenant.domain;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -12,8 +9,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "org_usage_metrics")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class OrgUsageMetrics {
 
     @Id
@@ -27,6 +25,7 @@ public class OrgUsageMetrics {
     private String metricType;
 
     @Column(name = "current_value")
+    @Builder.Default
     private Long currentValue = 0L;
 
     @Column(name = "reset_at")
@@ -35,13 +34,27 @@ public class OrgUsageMetrics {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    public void updateTimestamp(OffsetDateTime now) {
+    public static OrgUsageMetrics create(UUID orgId, String metricType, OffsetDateTime now) {
+        return OrgUsageMetrics.builder()
+                .orgId(orgId)
+                .metricType(metricType)
+                .currentValue(0L)
+                .updatedAt(now)
+                .build();
+    }
+
+    public void increment(long amount, OffsetDateTime now) {
+        this.currentValue += amount;
         this.updatedAt = now;
     }
 
-    public OrgUsageMetrics(UUID orgId, String metricType) {
-        this.orgId = orgId;
-        this.metricType = metricType;
+    public void reset(OffsetDateTime now) {
         this.currentValue = 0L;
+        this.resetAt = now;
+        this.updatedAt = now;
+    }
+
+    public void updateTimestamp(OffsetDateTime now) {
+        this.updatedAt = now;
     }
 }

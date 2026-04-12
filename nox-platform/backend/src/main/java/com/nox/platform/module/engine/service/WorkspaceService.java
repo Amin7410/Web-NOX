@@ -8,6 +8,7 @@ import com.nox.platform.module.engine.domain.WorkspaceStatus;
 import com.nox.platform.module.engine.infrastructure.WorkspaceRepository;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,12 +26,10 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final ProjectService projectService;
     private final UserRepository userRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public WorkspaceResponse createWorkspace(UUID projectId, CreateWorkspaceRequest request, UUID currentUserId) {
-        // Enforces IDOR check inherently since findProjectInternal enforces Tenant
-        // context natively
         Project project = projectService.findProjectInternal(projectId);
 
         User user = userRepository.getReferenceById(currentUserId);
@@ -50,7 +49,6 @@ public class WorkspaceService {
 
     @Transactional(readOnly = true)
     public List<WorkspaceResponse> getWorkspacesByProject(UUID projectId) {
-        // Enforces safety bounds matching
         projectService.findProjectInternal(projectId);
 
         List<Workspace> workspaces = workspaceRepository.findByProjectId(projectId);
@@ -75,10 +73,9 @@ public class WorkspaceService {
         return mapToResponse(workspace);
     }
 
-    // INTERNAL API FOR ENGINE MODULE (Tenant Isolation Check)
     public Workspace getWorkspaceInternal(UUID workspaceId) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new DomainException("WORKSPACE_NOT_FOUND", "Workspace missing or invalid bounds", 404)); // NOPMD
+                .orElseThrow(() -> new DomainException("WORKSPACE_NOT_FOUND", "Workspace missing or invalid bounds", 404));
         projectService.findProjectInternal(workspace.getProject().getId());
         return workspace;
     }

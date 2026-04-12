@@ -1,5 +1,8 @@
 package com.nox.platform.module.engine.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.module.warehouse.domain.BlockTemplate;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
@@ -24,20 +27,20 @@ public class CoreBlock extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     @Setter(AccessLevel.PROTECTED)
     private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JoinColumn(name = "parent_block_id")
+    @JsonIgnore
     @Setter(AccessLevel.PROTECTED)
     private CoreBlock parentBlock;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "origin_asset_id")
     @Setter(AccessLevel.PROTECTED)
-    private com.nox.platform.module.warehouse.domain.BlockTemplate originAsset;
+    private BlockTemplate originAsset;
 
     @Column(nullable = false, length = 100)
     @Setter(AccessLevel.PROTECTED)
@@ -60,9 +63,9 @@ public class CoreBlock extends BaseEntity {
     private Map<String, Object> visual = Map.of();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "created_by_id", nullable = false)
     @Setter(AccessLevel.PROTECTED)
-    private com.nox.platform.module.iam.domain.User createdBy;
+    private User createdBy;
 
     @Column(name = "deleted_at")
     @Setter(AccessLevel.PROTECTED)

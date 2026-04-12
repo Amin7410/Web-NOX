@@ -2,16 +2,19 @@ package com.nox.platform.module.tenant.api;
 
 import com.nox.platform.module.tenant.api.request.CreateOrganizationRequest;
 import com.nox.platform.module.tenant.api.request.UpdateOrganizationRequest;
+import com.nox.platform.module.tenant.service.command.CreateOrganizationCommand;
+import com.nox.platform.module.tenant.service.command.UpdateOrganizationCommand;
+import com.nox.platform.shared.abstraction.SecurityProvider;
 import com.nox.platform.module.tenant.api.response.OrganizationResponse;
 import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.module.tenant.service.OrganizationService;
 import com.nox.platform.shared.api.ApiResponse;
+import com.nox.platform.shared.exception.DomainException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,21 +27,25 @@ import java.util.stream.Collectors;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final SecurityProvider securityProvider;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<OrganizationResponse> createOrganization(
-            @Valid @RequestBody CreateOrganizationRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<OrganizationResponse>> createOrganization(@Valid @RequestBody CreateOrganizationRequest request) {
+        String userEmail = securityProvider.getCurrentUserEmail()
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
 
-        Organization org = organizationService.createOrganization(request.name(), userDetails.getUsername());
-        return ApiResponse.ok(mapToResponse(org));
+        CreateOrganizationCommand command = new CreateOrganizationCommand(request.name(), userEmail);
+        Organization org = organizationService.createOrganization(command);
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(mapToResponse(org)));
     }
 
     @GetMapping
-    public ApiResponse<List<OrganizationResponse>> getOrganizations(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        List<Organization> orgs = organizationService.getOrganizationsForUser(userDetails.getUsername());
+    public ApiResponse<List<OrganizationResponse>> getOrganizations() {
+        String userEmail = securityProvider.getCurrentUserEmail()
+                .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
+
+        List<Organization> orgs = organizationService.getOrganizationsForUser(userEmail);
         return ApiResponse.ok(orgs.stream().map(this::mapToResponse).collect(Collectors.toList()));
     }
 
@@ -55,7 +62,8 @@ public class OrganizationController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateOrganizationRequest request) {
 
-        Organization org = organizationService.updateOrganization(id, request.name(), request.settings());
+        UpdateOrganizationCommand command = new UpdateOrganizationCommand(id, request.name(), request.settings());
+        Organization org = organizationService.updateOrganization(command);
         return ApiResponse.ok(mapToResponse(org));
     }
 

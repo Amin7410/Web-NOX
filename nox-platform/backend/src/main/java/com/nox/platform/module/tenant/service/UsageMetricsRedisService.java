@@ -12,8 +12,6 @@ public class UsageMetricsRedisService {
 
     private final StringRedisTemplate redisTemplate;
 
-    //Increments a usage metric in Redis (non-blocking).
-
     public void incrementMetric(UUID orgId, String metricType, long delta) {
         String key = "usage:org:" + orgId.toString() + ":" + metricType;
         redisTemplate.opsForValue().increment(key, delta);

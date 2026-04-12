@@ -1,5 +1,6 @@
 package com.nox.platform.module.engine.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.tenant.domain.Organization;
 import com.nox.platform.shared.model.BaseEntity;
@@ -25,7 +26,7 @@ public class Project extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
@@ -64,7 +65,7 @@ public class Project extends BaseEntity {
 
     @OneToMany(mappedBy = "project", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @Builder.Default
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<Workspace> workspaces = new ArrayList<>();
 
     // --- Domain Methods (Stage 2) ---

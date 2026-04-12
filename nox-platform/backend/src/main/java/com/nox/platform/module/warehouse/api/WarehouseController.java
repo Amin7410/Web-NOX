@@ -1,19 +1,23 @@
 package com.nox.platform.module.warehouse.api;
 
+import com.nox.platform.module.warehouse.api.dto.WarehouseResponse;
 import com.nox.platform.module.warehouse.domain.OwnerType;
 import com.nox.platform.module.warehouse.domain.Warehouse;
 import com.nox.platform.module.warehouse.service.WarehouseService;
-import com.nox.platform.shared.util.SecurityUtil;
+import com.nox.platform.shared.abstraction.SecurityProvider;
+import com.nox.platform.shared.api.ApiResponse;
 import com.nox.platform.shared.exception.DomainException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/warehouses")
@@ -21,24 +25,19 @@ import java.util.UUID;
 public class WarehouseController {
 
     private final WarehouseService warehouseService;
+    private final SecurityProvider securityProvider;
 
     @PostMapping
-    public ResponseEntity<Warehouse> createWarehouse(@Valid @RequestBody CreateWarehouseRequest request) {
+    public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(@Valid @RequestBody CreateWarehouseRequest request) {
         UUID ownerId = request.ownerId();
 
-        // If owner is a user, default to themselves.
-        if (request.ownerType() == OwnerType.USER) {
-            UUID currentUserId = SecurityUtil.getCurrentUserId();
-            if (currentUserId == null) {
-                throw new DomainException("UNAUTHORIZED", "User not authenticated", 401);
-            }
-            if (ownerId == null) {
-                ownerId = currentUserId; // Auto assign if missing
-            }
+        if (ownerId == null && request.ownerType() == OwnerType.USER) {
+            ownerId = securityProvider.getCurrentUserId()
+                    .orElseThrow(() -> new DomainException("UNAUTHORIZED", "Authentication required", 401));
         }
-        // At this point if it's ORG, it MUST have been provided in the DTO
+
         if (ownerId == null) {
-            throw new DomainException("INVALID_REQUEST", "ownerId is required for Orgs", 400);
+            throw new DomainException("INVALID_REQUEST", "ownerId is required", 400);
         }
 
         Warehouse warehouse = warehouseService.createWarehouse(
@@ -46,27 +45,32 @@ public class WarehouseController {
                 request.ownerType(),
                 request.name(),
                 request.isSystem());
-        return ResponseEntity.ok(warehouse);
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(WarehouseResponse.fromEntity(warehouse)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Warehouse> getWarehouse(@PathVariable UUID id) {
-        return ResponseEntity.ok(warehouseService.getWarehouseById(id));
+    public ResponseEntity<ApiResponse<WarehouseResponse>> getWarehouse(@PathVariable UUID id) {
+        Warehouse warehouse = warehouseService.getWarehouseById(id);
+        return ResponseEntity.ok(ApiResponse.ok(WarehouseResponse.fromEntity(warehouse)));
     }
 
     @GetMapping("/owner/{ownerId}")
-    public ResponseEntity<List<Warehouse>> getWarehousesByOwner(@PathVariable UUID ownerId) {
-        return ResponseEntity.ok(warehouseService.getWarehousesByOwner(ownerId));
+    public ResponseEntity<ApiResponse<List<WarehouseResponse>>> getWarehousesByOwner(@PathVariable UUID ownerId) {
+        List<WarehouseResponse> response = warehouseService.getWarehousesByOwner(ownerId).stream()
+                .map(WarehouseResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWarehouse(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteWarehouse(@PathVariable UUID id) {
         warehouseService.deleteWarehouse(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
     public record CreateWarehouseRequest(
-            UUID ownerId, // Made optional. Fallback context for Users
+            UUID ownerId,
             @NotNull OwnerType ownerType,
             @NotBlank String name,
             boolean isSystem) {

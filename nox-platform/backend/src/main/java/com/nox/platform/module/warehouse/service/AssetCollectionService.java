@@ -3,11 +3,14 @@ package com.nox.platform.module.warehouse.service;
 import com.nox.platform.module.warehouse.domain.AssetCollection;
 import com.nox.platform.module.warehouse.domain.Warehouse;
 import com.nox.platform.module.warehouse.infrastructure.AssetCollectionRepository;
+import com.nox.platform.module.warehouse.infrastructure.WarehouseRepository;
+import com.nox.platform.module.warehouse.service.command.CreateCollectionCommand;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,34 +19,25 @@ import java.util.UUID;
 public class AssetCollectionService {
 
     private final AssetCollectionRepository collectionRepository;
-    private final WarehouseService warehouseService;
+    private final WarehouseRepository warehouseRepository;
     private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final WarehouseAccessValidator accessValidator;
 
     @Transactional
-    public AssetCollection createCollection(UUID warehouseId, String name, UUID parentCollectionId) {
-        Warehouse warehouse = warehouseService.getWarehouseById(warehouseId);
-        warehouseService.validateWriteOwnership(warehouse.getOwnerId(), warehouse.getOwnerType());
+    public AssetCollection createCollection(CreateCollectionCommand command) {
+        Warehouse warehouse = getWarehouseAndValidateRead(command.warehouseId());
+        accessValidator.validateWriteAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
 
-        if (collectionRepository.findByWarehouseIdAndName(warehouseId, name).isPresent()) {
-            throw new DomainException("COLLECTION_EXISTS", "Collection with this name already exists in the warehouse",
-                    400);
+        if (collectionRepository.findByWarehouseIdAndName(command.warehouseId(), command.name()).isPresent()) {
+            throw new DomainException("COLLECTION_EXISTS", "Collection name exists in this warehouse", 400);
         }
 
         AssetCollection parent = null;
-        if (parentCollectionId != null) {
-            parent = collectionRepository.findById(parentCollectionId)
-                    .orElseThrow(() -> new DomainException("PARENT_NOT_FOUND", "Parent collection not found", 404));
-            if (!parent.getWarehouse().getId().equals(warehouseId)) {
-                throw new DomainException("INVALID_PARENT", "Parent collection belongs to a different warehouse", 400);
-            }
+        if (command.parentCollectionId() != null) {
+            parent = getCollection(command.warehouseId(), command.parentCollectionId());
         }
 
-        AssetCollection collection = AssetCollection.builder()
-                .warehouse(warehouse)
-                .name(name)
-                .parentCollection(parent)
-                .build();
-
+        AssetCollection collection = AssetCollection.create(warehouse, parent, command.name(), timeProvider.now());
         return collectionRepository.save(collection);
     }
 
@@ -52,86 +46,88 @@ public class AssetCollectionService {
                 .orElseThrow(() -> new DomainException("COLLECTION_NOT_FOUND", "Collection not found", 404));
 
         if (!collection.getWarehouse().getId().equals(warehouseId)) {
-            throw new DomainException("INVALID_WAREHOUSE", "Collection does not belong to the specified warehouse",
-                    400);
+            throw new DomainException("INVALID_WAREHOUSE", "Collection access mismatch", 400);
         }
 
-        warehouseService.validateReadOwnership(collection.getWarehouse().getOwnerId(),
+        accessValidator.validateReadAccess(collection.getWarehouse().getOwnerId(),
                 collection.getWarehouse().getOwnerType());
         return collection;
     }
 
     public List<AssetCollection> getRootCollections(UUID warehouseId) {
-        Warehouse warehouse = warehouseService.getWarehouseById(warehouseId);
-        warehouseService.validateReadOwnership(warehouse.getOwnerId(), warehouse.getOwnerType());
+        getWarehouseAndValidateRead(warehouseId);
         return collectionRepository.findByWarehouseIdAndParentCollectionIsNull(warehouseId);
     }
 
     public List<AssetCollection> getChildCollections(UUID warehouseId, UUID parentId) {
-        Warehouse warehouse = warehouseService.getWarehouseById(warehouseId);
-        warehouseService.validateReadOwnership(warehouse.getOwnerId(), warehouse.getOwnerType());
+        getWarehouseAndValidateRead(warehouseId);
         return collectionRepository.findByWarehouseIdAndParentCollectionId(warehouseId, parentId);
     }
 
     @Transactional
     public AssetCollection updateCollectionParent(UUID warehouseId, UUID id, UUID newParentId) {
         AssetCollection collection = getCollection(warehouseId, id);
-
-        warehouseService.validateWriteOwnership(collection.getWarehouse().getOwnerId(),
+        accessValidator.validateWriteAccess(collection.getWarehouse().getOwnerId(),
                 collection.getWarehouse().getOwnerType());
 
         if (newParentId != null) {
-            // Re-validate and fetch the parent collection
             AssetCollection parent = getCollection(warehouseId, newParentId);
-            if (!parent.getWarehouse().getId().equals(collection.getWarehouse().getId())) {
-                throw new DomainException("INVALID_PARENT", "Parent collection belongs to a different warehouse", 400);
-            }
             validateNoCyclicDependency(id, newParentId);
-            collection.setParentCollection(parent);
+            collection.changeParent(parent);
         } else {
-            collection.setParentCollection(null);
+            collection.changeParent(null);
         }
 
+        collection.updateTimestamp(timeProvider.now());
         return collectionRepository.save(collection);
     }
 
     @Transactional
     public void deleteCollection(UUID warehouseId, UUID id) {
         AssetCollection collection = getCollection(warehouseId, id);
-        warehouseService.validateWriteOwnership(collection.getWarehouse().getOwnerId(),
+        accessValidator.validateWriteAccess(collection.getWarehouse().getOwnerId(),
                 collection.getWarehouse().getOwnerType());
 
         List<AssetCollection> children = collectionRepository
                 .findByWarehouseIdAndParentCollectionId(collection.getWarehouse().getId(), id);
         if (!children.isEmpty()) {
-            throw new DomainException("COLLECTION_NOT_EMPTY", "Cannot delete collection with child collections", 400);
+            throw new DomainException("COLLECTION_NOT_EMPTY", "Cannot delete non-empty collection", 400);
         }
 
-        collection.softDelete(timeProvider.now());
+        OffsetDateTime now = timeProvider.now();
+        collection.markAsDeleted(now);
+        collection.updateTimestamp(now);
         collectionRepository.save(collection);
     }
 
-    public void validateNoCyclicDependency(UUID collectionIdToUpdate, UUID newParentId) {
-        if (newParentId == null || collectionIdToUpdate == null) {
-            return;
-        }
+    @Transactional
+    public void softDeleteAllByWarehouse(UUID warehouseId, OffsetDateTime now) {
+        collectionRepository.softDeleteByWarehouseId(warehouseId, now);
+    }
+
+    private void validateNoCyclicDependency(UUID collectionIdToUpdate, UUID newParentId) {
+        if (newParentId == null || collectionIdToUpdate == null) return;
 
         if (collectionIdToUpdate.equals(newParentId)) {
-            throw new DomainException("CYCLIC_DEPENDENCY", "A collection cannot be its own parent", 400);
+            throw new DomainException("CYCLIC_DEPENDENCY", "Self-parenting not allowed", 400);
         }
 
-        // Trace up the parent chain
         UUID currentParentId = newParentId;
         while (currentParentId != null) {
             AssetCollection parent = collectionRepository.findById(currentParentId).orElse(null);
-            if (parent == null) {
-                break;
-            }
+            if (parent == null) break;
+            
             if (collectionIdToUpdate.equals(parent.getId())) {
-                throw new DomainException("CYCLIC_DEPENDENCY", "Setting this parent would create a cyclic dependency",
-                        400);
+                throw new DomainException("CYCLIC_DEPENDENCY", "Circular dependency detected", 400);
             }
             currentParentId = parent.getParentCollection() != null ? parent.getParentCollection().getId() : null;
         }
+    }
+
+    private Warehouse getWarehouseAndValidateRead(UUID warehouseId) {
+        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new DomainException("WAREHOUSE_NOT_FOUND", "Warehouse not found", 404));
+        accessValidator.validateReadAccess(warehouse.getOwnerId(), warehouse.getOwnerType());
+        return warehouse;
     }
 }
