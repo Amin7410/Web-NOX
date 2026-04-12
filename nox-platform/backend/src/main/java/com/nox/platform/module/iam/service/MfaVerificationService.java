@@ -2,10 +2,12 @@ package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.domain.UserMfaBackupCode;
+import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -22,7 +24,7 @@ public class MfaVerificationService {
     private final MfaService mfaService;
     private final UserSecurityRepository userSecurityRepository;
     private final TokenProvider tokenProvider;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final UserSessionService userSessionService;
 
     public AuthenticationService.AuthResult verifyMfa(String mfaToken, int code, String ipAddress, String userAgent) {
@@ -105,7 +107,7 @@ public class MfaVerificationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
-        if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
         }
 

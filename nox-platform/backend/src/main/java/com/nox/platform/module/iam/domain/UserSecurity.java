@@ -35,7 +35,7 @@ public class UserSecurity {
     private User user;
 
     @Column(name = "password_hash", columnDefinition = "TEXT")
-    @Setter(AccessLevel.PUBLIC)
+    @Setter(AccessLevel.PROTECTED)
     private String passwordHash;
 
     @Column(name = "is_password_set", nullable = false)
@@ -85,8 +85,9 @@ public class UserSecurity {
     public void incrementFailedLogins(OffsetDateTime currentTime) {
         this.failedLoginAttempts++;
         if (this.failedLoginAttempts >= 5) {
-            lockAccount(currentTime, 30); 
+            lockAccount(currentTime, 30);
         }
+        this.updatedAt = currentTime;
     }
 
     public void resetFailedLogins() {
@@ -100,6 +101,7 @@ public class UserSecurity {
         if (this.failedMfaAttempts >= 3) {
             lockAccount(currentTime, 60);
         }
+        this.updatedAt = currentTime;
     }
 
     public void lockAccount(OffsetDateTime baseTime, long minutes) {
@@ -133,10 +135,21 @@ public class UserSecurity {
         this.isPasswordSet = true;
         this.lastPasswordChange = currentTime;
         this.resetFailedLogins();
+        this.updatedAt = currentTime;
     }
 
     public void updatePassword(String newPasswordHash, OffsetDateTime currentTime) {
         this.passwordHash = newPasswordHash;
         this.lastPasswordChange = currentTime;
+        this.updatedAt = currentTime;
+    }
+    public static UserSecurity create(User user, String passwordHash, boolean isPasswordSet, OffsetDateTime now) {
+        UserSecurity security = UserSecurity.builder()
+                .user(user)
+                .passwordHash(passwordHash)
+                .isPasswordSet(isPasswordSet)
+                .updatedAt(now)
+                .build();
+        return security;
     }
 }

@@ -1,6 +1,7 @@
 package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.Invitation;
+import com.nox.platform.module.iam.domain.InvitationStatus;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.InvitationRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
@@ -10,6 +11,7 @@ import com.nox.platform.module.tenant.domain.Role;
 import com.nox.platform.module.tenant.infrastructure.OrgMemberRepository;
 import com.nox.platform.module.tenant.infrastructure.OrganizationRepository;
 import com.nox.platform.module.tenant.infrastructure.RoleRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,12 +30,11 @@ public class InvitationService {
     private final OrganizationRepository organizationRepository;
     private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public void inviteUser(String email, UUID orgId, UUID roleId, UUID inviterId) {
-        if (invitationRepository.existsByEmailAndOrgIdAndStatus(email, orgId,
-                com.nox.platform.module.iam.domain.InvitationStatus.PENDING)) {
+        if (invitationRepository.existsByEmailAndOrgIdAndStatus(email, orgId, InvitationStatus.PENDING)) {
             throw new DomainException("ALREADY_INVITED", "This Email has already been invited", 400);
         }
 
@@ -46,7 +47,7 @@ public class InvitationService {
                 .roleId(roleId)
                 .invitedById(inviterId)
                 .token(token)
-                .status(com.nox.platform.module.iam.domain.InvitationStatus.PENDING)
+                .status(InvitationStatus.PENDING)
                 .expiresAt(now.plusDays(7))
                 .build();
         invitation.initializeTimestamps(now);

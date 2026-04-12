@@ -1,9 +1,11 @@
 package com.nox.platform.module.iam.service;
 
 import com.nox.platform.module.iam.domain.User;
+import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.domain.UserSession;
 import com.nox.platform.module.iam.infrastructure.UserSessionRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import com.nox.platform.shared.util.DeviceUtils;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,7 @@ public class UserSessionService {
 
     private final UserSessionRepository userSessionRepository;
     private final TokenProvider tokenProvider;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Value("${security.jwt.refresh-token.expiration-days:7}")
     private int refreshTokenExpirationDays;
@@ -68,7 +70,7 @@ public class UserSessionService {
         }
 
         User user = session.getUser();
-        if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
         }
         if (user.getSecurity().isLocked(timeProvider.now())) {

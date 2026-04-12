@@ -7,6 +7,7 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,11 +19,6 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Service handling OAuth2 operations intercepting Provider payload
- * configurations separating
- * it from Base Authentication patterns.
- */
 @Service
 @RequiredArgsConstructor
 public class SocialAuthenticationService {
@@ -33,7 +29,7 @@ public class SocialAuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
     private final UserSessionService userSessionService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public AuthenticationService.AuthResult socialLogin(String provider, String token, String ipAddress,
@@ -65,19 +61,10 @@ public class SocialAuthenticationService {
             }
 
             if (user == null) {
-                user = User.builder()
-                        .email(email)
-                        .fullName(fullName)
-                        .status(UserStatus.ACTIVE)
-                        .isEmailVerified(true)
-                        .build();
-                user.initializeTimestamps(now);
+                user = User.create(email, fullName, UserStatus.ACTIVE, now);
+                user.verifyEmail(); // Social users are verified by definition
 
-                UserSecurity security = UserSecurity.builder()
-                        .user(user)
-                        .isPasswordSet(false)
-                        .build();
-                security.updateTimestamp(now);
+                UserSecurity security = UserSecurity.create(user, null, false, now);
                 user.linkSecurity(security);
                 user = userRepository.save(user);
             }

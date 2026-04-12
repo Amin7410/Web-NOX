@@ -4,6 +4,7 @@ import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.domain.UserMfaBackupCode;
 import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -19,10 +20,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service dedicated to managing User MFA settings architectures (Setup, Enable,
- * Disable).
- */
 @Service
 @RequiredArgsConstructor
 public class MfaManagementService {
@@ -32,7 +29,7 @@ public class MfaManagementService {
     private final MfaService mfaService;
     private final PasswordEncoder passwordEncoder;
     private final UserDetailsService userDetailsService;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Value("${security.mfa.backup-codes.count:10}")
     private int backupCodesCount;

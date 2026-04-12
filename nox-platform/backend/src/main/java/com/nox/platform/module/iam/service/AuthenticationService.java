@@ -5,6 +5,7 @@ import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +20,7 @@ public class AuthenticationService {
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
     private final InternalSecurityStateService internalSecurityStateService;
     private final UserSessionService userSessionService;
 

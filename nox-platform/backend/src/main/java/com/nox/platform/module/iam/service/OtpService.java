@@ -3,6 +3,7 @@ package com.nox.platform.module.iam.service;
 import com.nox.platform.module.iam.domain.OtpCode;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.OtpCodeRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,7 @@ import java.time.OffsetDateTime;
 public class OtpService {
 
     private final OtpCodeRepository otpCodeRepository;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Value("${security.otp.length:6}")
     private int otpLength = 6;

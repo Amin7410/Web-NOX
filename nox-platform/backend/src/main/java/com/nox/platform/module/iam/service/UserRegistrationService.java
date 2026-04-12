@@ -6,6 +6,8 @@ import com.nox.platform.module.iam.domain.UserSecurity;
 import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.domain.event.UserRegisteredEvent;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
+import com.nox.platform.shared.abstraction.TimeProvider;
+import com.nox.platform.shared.event.UserCreatedEvent;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 
@@ -24,7 +26,7 @@ public class UserRegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final ApplicationEventPublisher eventPublisher;
-    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
+    private final TimeProvider timeProvider;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
@@ -44,8 +46,7 @@ public class UserRegistrationService {
 
             // If pending, we allow re-sending registration OTP override
             existingUser.setFullName(fullName);
-            existingUser.getSecurity().setPasswordHash(passwordEncoder.encode(plaintextPassword));
-            existingUser.updateTimestamp(now);
+            existingUser.getSecurity().updatePassword(passwordEncoder.encode(plaintextPassword), now);
             userRepository.save(existingUser);
 
             OtpCode otp = otpService.generateOtp(existingUser, OtpCode.OtpType.VERIFY_EMAIL);
@@ -53,20 +54,8 @@ public class UserRegistrationService {
             return existingUser;
         }
 
-        User user = User.builder()
-                .email(email)
-                .fullName(fullName)
-                .status(UserStatus.PENDING_VERIFICATION)
-                .build();
-        user.initializeTimestamps(now);
-
-        String hashedPassword = passwordEncoder.encode(plaintextPassword);
-        UserSecurity security = UserSecurity.builder()
-                .user(user)
-                .passwordHash(hashedPassword)
-                .isPasswordSet(true)
-                .build();
-        security.updateTimestamp(now);
+        User user = User.create(email, fullName, UserStatus.PENDING_VERIFICATION, now);
+        UserSecurity security = UserSecurity.create(user, passwordEncoder.encode(plaintextPassword), true, now);
         user.linkSecurity(security);
         user = userRepository.save(user);
 
@@ -93,6 +82,6 @@ public class UserRegistrationService {
         userRepository.save(user);
 
         // Publish event to trigger warehouse provisioning for the new active user
-        eventPublisher.publishEvent(new com.nox.platform.shared.event.UserCreatedEvent(user.getId(), user.getEmail()));
+        eventPublisher.publishEvent(new UserCreatedEvent(user.getId(), user.getEmail()));
     }
 }
