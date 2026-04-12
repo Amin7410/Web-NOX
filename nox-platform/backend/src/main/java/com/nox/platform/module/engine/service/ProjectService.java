@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Service
@@ -34,6 +35,7 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final CoreSnapshotRepository snapshotRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, UUID currentUserId) {
@@ -47,6 +49,7 @@ public class ProjectService {
 
         String generatedSlug = generateSlug(request.name(), orgId);
 
+        OffsetDateTime now = timeProvider.now();
         Project project = Project.builder()
                 .organization(org)
                 .name(request.name())
@@ -55,6 +58,7 @@ public class ProjectService {
                 .visibility(request.visibility() != null ? request.visibility() : ProjectVisibility.PRIVATE)
                 .createdBy(user)
                 .build();
+        project.initializeTimestamps(now);
 
         project = projectRepository.save(project);
 
@@ -64,6 +68,7 @@ public class ProjectService {
                 .type(WorkspaceType.MIXED)
                 .createdBy(user)
                 .build();
+        defaultWorkspace.initializeTimestamps(now);
         workspaceRepository.save(defaultWorkspace);
 
         return mapToResponse(project);
@@ -114,6 +119,7 @@ public class ProjectService {
             request.visibility(),
             request.status()
         );
+        project.updateTimestamp(timeProvider.now());
 
         project = projectRepository.save(project);
         return mapToResponse(project);
@@ -122,9 +128,14 @@ public class ProjectService {
     @Transactional
     public void deleteProject(UUID id) {
         Project project = findProjectInternal(id);
-        snapshotRepository.softDeleteByProjectId(project.getId());
-        workspaceRepository.softDeleteByProjectId(project.getId());
-        projectRepository.delete(project);
+        OffsetDateTime now = timeProvider.now();
+        
+        snapshotRepository.softDeleteByProjectId(project.getId(), now);
+        workspaceRepository.softDeleteByProjectId(project.getId(), now);
+        
+        project.softDelete(now);
+        project.updateTimestamp(now);
+        projectRepository.save(project);
     }
 
     protected Project findProjectInternal(UUID id) {

@@ -1,9 +1,12 @@
 package com.nox.platform.module.iam.infrastructure.security;
 
+import com.nox.platform.module.iam.service.abstraction.TokenProvider;
+import com.nox.platform.shared.abstraction.TimeProvider;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class JwtService {
+@RequiredArgsConstructor
+public class JwtTokenProvider implements TokenProvider {
+
+    private final TimeProvider timeProvider;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -22,29 +28,34 @@ public class JwtService {
     @Value("${jwt.expiration-minutes:15}")
     private int expirationMinutes;
 
+    @Override
     public String generateToken(String username) {
         return generateToken(new HashMap<>(), username);
     }
 
+    @Override
     public String generateToken(Map<String, Object> extraClaims, String username) {
         return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(username)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * expirationMinutes))
+                .setIssuedAt(new Date(timeProvider.currentTimeMillis()))
+                .setExpiration(new Date(timeProvider.currentTimeMillis() + 1000L * 60 * expirationMinutes))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    @Override
     public String generateRefreshToken() {
         return UUID.randomUUID().toString();
     }
 
+    @Override
     public boolean isTokenValid(String token, org.springframework.security.core.userdetails.UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 
+    @Override
     public String extractUsername(String token) {
         return extractClaim(token, io.jsonwebtoken.Claims::getSubject);
     }
@@ -63,7 +74,7 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        return extractExpiration(token).before(new Date(timeProvider.currentTimeMillis()));
     }
 
     private Date extractExpiration(String token) {

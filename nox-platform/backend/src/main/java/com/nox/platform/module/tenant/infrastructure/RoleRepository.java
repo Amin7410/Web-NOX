@@ -18,6 +18,6 @@ public interface RoleRepository extends JpaRepository<Role, UUID> {
     boolean existsByOrganizationIdAndName(UUID orgId, String name);
 
     @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.data.jpa.repository.Query("UPDATE Role r SET r.deletedAt = CURRENT_TIMESTAMP WHERE r.organization.id = :orgId")
-    void softDeleteByOrgId(UUID orgId);
+    @org.springframework.data.jpa.repository.Query("UPDATE Role r SET r.deletedAt = :deletedAt WHERE r.organization.id = :orgId")
+    void softDeleteByOrgId(UUID orgId, java.time.OffsetDateTime deletedAt);
 }

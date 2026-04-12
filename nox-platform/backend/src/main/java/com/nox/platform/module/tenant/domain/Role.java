@@ -46,11 +46,11 @@ public class Role extends BaseEntity {
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
-    public void softDelete() {
+    public void softDelete(OffsetDateTime currentTime) {
         if (isOwnerRole()) {
             throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted", 400);
         }
-        this.deletedAt = OffsetDateTime.now();
+        this.deletedAt = currentTime;
     }
 
     // --- Domain Methods (Stage 4) ---

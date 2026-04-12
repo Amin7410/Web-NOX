@@ -8,6 +8,9 @@ import com.nox.platform.module.iam.domain.event.UserRegisteredEvent;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
+
+import java.time.OffsetDateTime;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,10 +24,12 @@ public class UserRegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public User registerUser(String email, String plaintextPassword, String fullName) {
         email = email.trim().toLowerCase();
+        OffsetDateTime now = timeProvider.now();
         User existingUser = userRepository.findByEmailIncludeDeleted(email).orElse(null);
         if (existingUser != null) {
             if (existingUser.getStatus() == UserStatus.DELETED) {
@@ -40,6 +45,7 @@ public class UserRegistrationService {
             // If pending, we allow re-sending registration OTP override
             existingUser.setFullName(fullName);
             existingUser.getSecurity().setPasswordHash(passwordEncoder.encode(plaintextPassword));
+            existingUser.updateTimestamp(now);
             userRepository.save(existingUser);
 
             OtpCode otp = otpService.generateOtp(existingUser, OtpCode.OtpType.VERIFY_EMAIL);
@@ -52,6 +58,7 @@ public class UserRegistrationService {
                 .fullName(fullName)
                 .status(UserStatus.PENDING_VERIFICATION)
                 .build();
+        user.initializeTimestamps(now);
 
         String hashedPassword = passwordEncoder.encode(plaintextPassword);
         UserSecurity security = UserSecurity.builder()
@@ -59,6 +66,7 @@ public class UserRegistrationService {
                 .passwordHash(hashedPassword)
                 .isPasswordSet(true)
                 .build();
+        security.updateTimestamp(now);
         user.linkSecurity(security);
         user = userRepository.save(user);
 

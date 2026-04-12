@@ -5,7 +5,6 @@ import com.nox.platform.module.iam.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
@@ -14,7 +13,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "core_snapshots")
-@SQLDelete(sql = "UPDATE core_snapshots SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
@@ -46,10 +44,17 @@ public class CoreSnapshot {
     private User createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt;
+
+    public void initializeTimestamps(OffsetDateTime now) {
+        this.createdAt = now;
+    }
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
+    }
 
 }

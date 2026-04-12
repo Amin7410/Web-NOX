@@ -6,14 +6,12 @@ import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "org_members")
-@SQLDelete(sql = "UPDATE org_members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @SuperBuilder
@@ -42,16 +40,15 @@ public class OrgMember extends BaseEntity {
     private User invitedBy;
 
     @Column(name = "joined_at", nullable = false)
-    @Builder.Default
     @Setter(AccessLevel.PROTECTED)
-    private OffsetDateTime joinedAt = OffsetDateTime.now();
+    private OffsetDateTime joinedAt;
 
     @Column(name = "deleted_at")
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
-    public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 
     // --- Domain Methods (Stage 4) ---

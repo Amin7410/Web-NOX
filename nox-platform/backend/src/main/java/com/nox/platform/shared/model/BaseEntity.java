@@ -3,21 +3,10 @@ package com.nox.platform.shared.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Base class for all entities in the system.
- * Provides a common set of fields like ID, created_at, updated_at.
- * 
- * We use @MappedSuperclass to ensure these fields are inherited by
- * actual @Entity classes.
- * We use @SuperBuilder to allow the Builder pattern to construct both parent
- * and child fields.
- */
 @MappedSuperclass
 @Getter
 @Setter(AccessLevel.PROTECTED)
@@ -30,11 +19,9 @@ public abstract class BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
@@ -42,6 +29,15 @@ public abstract class BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private Long version = 0L;
+
+    public void initializeTimestamps(OffsetDateTime now) {
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public void updateTimestamp(OffsetDateTime now) {
+        this.updatedAt = now;
+    }
 
     // We intentionally don't add deleted_at here globally, because not EVERY
     // table uses soft delete (e.g. mapping tables like org_members might just hard

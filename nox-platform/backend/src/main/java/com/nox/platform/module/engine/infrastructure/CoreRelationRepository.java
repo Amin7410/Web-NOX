@@ -27,8 +27,8 @@ public interface CoreRelationRepository extends JpaRepository<CoreRelation, UUID
     List<CoreRelation> findByBlockIdsActive(@Param("blockIds") List<UUID> blockIds);
 
     @Modifying
-    @Query("UPDATE CoreRelation r SET r.deletedAt = CURRENT_TIMESTAMP WHERE (r.sourceBlock.id IN :blockIds OR r.targetBlock.id IN :blockIds) AND r.deletedAt IS NULL")
-    void softDeleteRelationsByBlockIds(@Param("blockIds") List<UUID> blockIds);
+    @Query("UPDATE CoreRelation r SET r.deletedAt = :deletedAt WHERE (r.sourceBlock.id IN :blockIds OR r.targetBlock.id IN :blockIds) AND r.deletedAt IS NULL")
+    void softDeleteRelationsByBlockIds(@Param("blockIds") List<UUID> blockIds, @Param("deletedAt") java.time.OffsetDateTime deletedAt);
 
     @Modifying
     @Query(value = """

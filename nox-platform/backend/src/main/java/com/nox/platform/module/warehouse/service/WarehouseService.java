@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ public class WarehouseService {
     private final BlockTemplateRepository blockTemplateRepository;
     private final InvaderDefinitionRepository invaderDefinitionRepository;
     private final OrgMemberRepository orgMemberRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public Warehouse createWarehouse(UUID ownerId, OwnerType ownerType, String name, boolean isSystem) {
@@ -36,13 +38,15 @@ public class WarehouseService {
             throw new DomainException("WAREHOUSE_EXISTS", "Warehouse already exists for this owner", 400);
         }
 
+        OffsetDateTime now = timeProvider.now();
         Warehouse warehouse = Warehouse.builder()
                 .ownerId(ownerId)
                 .ownerType(ownerType)
                 .name(name)
                 .isSystem(isSystem)
                 .build();
-
+        warehouse.initializeTimestamps(now);
+        
         return warehouseRepository.save(warehouse);
     }
 
@@ -98,12 +102,14 @@ public class WarehouseService {
             return;
 
         // 1. Soft delete the warehouse
-        warehouse.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        warehouse.softDelete(now);
+        warehouse.updateTimestamp(now);
         warehouseRepository.save(warehouse);
 
         // 2. Cascade soft delete to all children elements
-        blockTemplateRepository.softDeleteByWarehouseId(id);
-        invaderDefinitionRepository.softDeleteByWarehouseId(id);
+        blockTemplateRepository.softDeleteByWarehouseId(id, now);
+        invaderDefinitionRepository.softDeleteByWarehouseId(id, now);
     }
 
     public void validateReadOwnership(UUID targetOwnerId, OwnerType ownerType) {

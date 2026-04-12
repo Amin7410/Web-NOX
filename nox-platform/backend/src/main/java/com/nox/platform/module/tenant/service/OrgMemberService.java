@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ public class OrgMemberService {
     private final OrganizationRepository organizationRepository;
     private final RoleService roleService;
     private final UserRepository userRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     @CacheEvict(value = "org_members", key = "#orgId + '-' + #userRepository.findByEmail(#email).map(u -> u.getId()).orElse(null)")
@@ -62,12 +64,15 @@ public class OrgMemberService {
                     "You cannot assign a role with a higher level than your own", 403);
         }
 
+        OffsetDateTime now = timeProvider.now();
         OrgMember member = OrgMember.builder()
                 .organization(org)
                 .user(user)
                 .role(role)
                 .invitedBy(inviter)
+                .joinedAt(now)
                 .build();
+        member.initializeTimestamps(now);
 
         return orgMemberRepository.save(member);
     }
@@ -96,6 +101,9 @@ public class OrgMemberService {
             }
         }
 
-        orgMemberRepository.delete(member);
+        OffsetDateTime now = timeProvider.now();
+        member.softDelete(now);
+        member.updateTimestamp(now);
+        orgMemberRepository.save(member);
     }
 }

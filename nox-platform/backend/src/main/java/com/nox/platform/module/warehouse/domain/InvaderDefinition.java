@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
@@ -14,7 +13,6 @@ import java.util.Map;
 
 @Entity
 @Table(name = "assets_invader_definitions")
-@SQLDelete(sql = "UPDATE assets_invader_definitions SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
@@ -58,7 +56,7 @@ public class InvaderDefinition extends BaseEntity {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 }

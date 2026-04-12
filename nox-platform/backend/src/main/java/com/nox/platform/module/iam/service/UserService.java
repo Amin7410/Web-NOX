@@ -10,6 +10,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final OrgMemberRepository orgMemberRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public void deleteUser(UUID userId) {
@@ -42,12 +44,15 @@ public class UserService {
             }
         }
 
-        // Explicitly delete memberships from the org_members table to avoid HTTP 500s
-        // in organization member lists due to Soft-Delete User restriction.
-        orgMemberRepository.deleteAll(memberships);
+        // Explicitly soft-delete memberships to maintain deterministic time
+        OffsetDateTime now = timeProvider.now();
+        for (OrgMember member : memberships) {
+            member.softDelete(now);
+        }
+        orgMemberRepository.saveAll(memberships);
 
         // Soft delete user (mark as deleted and status = DELETED)
-        user.markAsDeleted();
+        user.markAsDeleted(now);
         userRepository.save(user);
 
         // Publish event to cleanup related entities (e.g. warehouses)

@@ -6,7 +6,6 @@ import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
@@ -17,7 +16,6 @@ import java.util.List;
 @Table(name = "projects", uniqueConstraints = {
         @UniqueConstraint(columnNames = { "org_id", "slug" }, name = "idx_projects_org_slug")
 })
-@SQLDelete(sql = "UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @SuperBuilder
@@ -78,5 +76,9 @@ public class Project extends BaseEntity {
         if (description != null) this.description = description;
         if (visibility != null) this.visibility = visibility;
         if (status != null) this.status = status;
+    }
+
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 }

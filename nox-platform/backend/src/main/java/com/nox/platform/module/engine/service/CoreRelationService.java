@@ -12,13 +12,13 @@ import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.OffsetDateTime;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +27,7 @@ public class CoreRelationService {
     private final CoreRelationRepository coreRelationRepository;
     private final CoreBlockRepository coreBlockRepository;
     private final WorkspaceService workspaceService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public CoreRelationResponse createRelation(UUID workspaceId, CreateCoreRelationRequest request) {
@@ -61,6 +62,7 @@ public class CoreRelationService {
             throw new DomainException("RELATION_EXISTS", "This exact port connection already exists", 400);
         }
 
+        OffsetDateTime now = timeProvider.now();
         CoreRelation relation = CoreRelation.builder()
                 .workspace(workspace)
                 .sourceBlock(sourceBlock)
@@ -69,6 +71,7 @@ public class CoreRelationService {
                 .rules(request.rules() != null ? request.rules() : Map.of())
                 .visual(request.visual() != null ? request.visual() : Map.of())
                 .build();
+        relation.initializeTimestamps(now);
 
         relation = coreRelationRepository.save(relation);
         return mapToResponse(relation);
@@ -89,6 +92,7 @@ public class CoreRelationService {
             relation.setVisual(request.visual()); // NOPMD
         }
 
+        relation.updateTimestamp(timeProvider.now());
         relation = coreRelationRepository.save(relation);
         return mapToResponse(relation);
     }
@@ -100,20 +104,21 @@ public class CoreRelationService {
         CoreRelation relation = coreRelationRepository.findByIdAndWorkspace_Id(relationId, workspaceId)
                 .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace", 404));
 
-        coreRelationRepository.delete(relation);
+        OffsetDateTime now = timeProvider.now();
+        relation.softDelete(now);
+        relation.updateTimestamp(now);
+        coreRelationRepository.save(relation);
     }
 
     @Transactional
-    public void deleteRelationsForBlocks(List<UUID> blockIds) {
+    public void deleteRelationsForBlocks(List<UUID> blockIds, java.time.OffsetDateTime deletedAt) {
         if (blockIds != null && !blockIds.isEmpty()) {
             List<CoreRelation> relationsToSoftDelete = coreRelationRepository.findByBlockIdsActive(blockIds);
             
-            // 1. Phân loại và sắp xếp ID để tránh Graph Deadlock (Deterministic Ordering)
-            // Ngăn chặn tình trạng AB-BA deadlock khi 2 Transaction đồng thời xóa chéo.
             relationsToSoftDelete.sort(Comparator.comparing(CoreRelation::getId));
             
             for (CoreRelation rel : relationsToSoftDelete) {
-                rel.setDeletedAt(OffsetDateTime.now());
+                rel.softDelete(deletedAt);
             }
             coreRelationRepository.saveAll(relationsToSoftDelete);
         }

@@ -68,16 +68,16 @@ public class Invitation extends BaseEntity {
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime lastSentAt;
 
-    public boolean isExpired() {
-        return this.expiresAt != null && this.expiresAt.isBefore(OffsetDateTime.now());
+    public boolean isExpired(OffsetDateTime currentTime) {
+        return this.expiresAt != null && this.expiresAt.isBefore(currentTime);
     }
 
-    public void accept(User user) {
+    public void accept(User user, OffsetDateTime currentTime) {
         if (this.status != InvitationStatus.PENDING) {
             throw new DomainException("INVITATION_NOT_PENDING", "This invitation is no longer pending", 400);
         }
 
-        if (isExpired()) {
+        if (isExpired(currentTime)) {
             this.status = InvitationStatus.EXPIRED;
             throw new DomainException("INVITATION_EXPIRED", "This invitation has expired", 400);
         }
@@ -87,6 +87,6 @@ public class Invitation extends BaseEntity {
         }
 
         this.status = InvitationStatus.ACCEPTED;
-        this.acceptedAt = OffsetDateTime.now();
+        this.acceptedAt = currentTime;
     }
 }

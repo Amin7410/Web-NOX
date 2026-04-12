@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 public class OtpService {
 
     private final OtpCodeRepository otpCodeRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Value("${security.otp.length:6}")
     private int otpLength = 6;
@@ -35,23 +36,25 @@ public class OtpService {
         // Check for cooldown (60 seconds)
         otpCodeRepository.findFirstByUser_IdAndTypeAndUsedAtIsNullOrderByCreatedAtDesc(user.getId(), type)
                 .ifPresent(latestOtp -> {
-                    if (latestOtp.getCreatedAt().isAfter(OffsetDateTime.now().minusSeconds(60))) {
+                    if (latestOtp.getCreatedAt().isAfter(timeProvider.now().minusSeconds(60))) {
                         throw new DomainException("PLEASE_WAIT",
                                 "Please wait at least 60 seconds before requesting a new OTP.", 429);
                     }
                 });
 
         // Invalidate any existing unused OTP of the same type for this user
-        otpCodeRepository.invalidatePreviousOtps(user.getId(), type);
+        otpCodeRepository.invalidatePreviousOtps(user.getId(), type, timeProvider.now());
 
         String code = generateRandomCode();
 
+        OffsetDateTime now = timeProvider.now();
         OtpCode otpCode = OtpCode.builder()
                 .user(user)
                 .code(code)
                 .type(type)
-                .expiresAt(OffsetDateTime.now().plusMinutes(otpExpiryMinutes))
+                .expiresAt(now.plusMinutes(otpExpiryMinutes))
                 .build();
+        otpCode.initializeTimestamps(now);
 
         return otpCodeRepository.save(otpCode);
     }
@@ -61,26 +64,30 @@ public class OtpService {
                 .findFirstByUser_IdAndTypeAndUsedAtIsNullOrderByCreatedAtDesc(user.getId(), type)
                 .orElseThrow(() -> new DomainException("INVALID_OTP", "No active OTP found", 400));
 
-        if (!otpCode.isValid()) {
+        OffsetDateTime now = timeProvider.now();
+        if (!otpCode.isValid(now)) {
             throw new DomainException("INVALID_OTP", "OTP code has expired", 400);
         }
 
         if (otpCode.getFailedAttempts() >= maxAttempts) {
-            otpCode.markAsUsed();
+            otpCode.markAsUsed(now);
+            otpCode.updateTimestamp(now);
             otpCodeRepository.save(otpCode);
             throw new DomainException("OTP_LOCKED", "Too many failed attempts. Please request a new OTP.", 429);
         }
 
         if (!otpCode.getCode().equals(code)) {
             otpCode.incrementFailedAttempts();
+            otpCode.updateTimestamp(now);
             if (otpCode.getFailedAttempts() >= maxAttempts) {
-                otpCode.markAsUsed();
+                otpCode.markAsUsed(now);
             }
             otpCodeRepository.save(otpCode);
             throw new DomainException("INVALID_OTP", "Invalid OTP code", 400);
         }
 
-        otpCode.markAsUsed();
+        otpCode.markAsUsed(now);
+        otpCode.updateTimestamp(now);
         return otpCodeRepository.save(otpCode);
     }
 

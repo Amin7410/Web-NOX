@@ -20,6 +20,6 @@ public interface BlockInvaderUsageRepository extends JpaRepository<BlockInvaderU
     Optional<BlockInvaderUsage> findByBlock_IdAndInvaderAsset_Id(UUID blockId, UUID invaderAssetId);
 
     @Modifying
-    @Query("UPDATE BlockInvaderUsage u SET u.deletedAt = CURRENT_TIMESTAMP WHERE u.block.id IN :blockIds AND u.deletedAt IS NULL")
-    void softDeleteUsagesByBlockIds(@Param("blockIds") List<UUID> blockIds);
+    @Query("UPDATE BlockInvaderUsage u SET u.deletedAt = :deletedAt WHERE u.block.id IN :blockIds AND u.deletedAt IS NULL")
+    void softDeleteUsagesByBlockIds(@Param("blockIds") List<UUID> blockIds, @Param("deletedAt") java.time.OffsetDateTime deletedAt);
 }

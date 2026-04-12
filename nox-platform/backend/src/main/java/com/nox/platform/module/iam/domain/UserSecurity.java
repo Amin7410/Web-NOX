@@ -13,7 +13,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -75,17 +74,18 @@ public class UserSecurity {
     @Setter(AccessLevel.PROTECTED)
     private String tempMfaSecret;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime updatedAt;
 
-    // --- Domain Behaviors ---
+    public void updateTimestamp(OffsetDateTime now) {
+        this.updatedAt = now;
+    }
 
-    public void incrementFailedLogins() {
+    public void incrementFailedLogins(OffsetDateTime currentTime) {
         this.failedLoginAttempts++;
         if (this.failedLoginAttempts >= 5) {
-            lockAccount(30); 
+            lockAccount(currentTime, 30); 
         }
     }
 
@@ -95,19 +95,19 @@ public class UserSecurity {
         this.lockedUntil = null;
     }
 
-    public void incrementFailedMfaAttempts() {
+    public void incrementFailedMfaAttempts(OffsetDateTime currentTime) {
         this.failedMfaAttempts++;
         if (this.failedMfaAttempts >= 3) {
-            lockAccount(60);
+            lockAccount(currentTime, 60);
         }
     }
 
-    public void lockAccount(long minutes) {
-        this.lockedUntil = OffsetDateTime.now().plusMinutes(minutes);
+    public void lockAccount(OffsetDateTime baseTime, long minutes) {
+        this.lockedUntil = baseTime.plusMinutes(minutes);
     }
 
-    public boolean isLocked() {
-        return this.lockedUntil != null && this.lockedUntil.isAfter(OffsetDateTime.now());
+    public boolean isLocked(OffsetDateTime currentTime) {
+        return this.lockedUntil != null && this.lockedUntil.isAfter(currentTime);
     }
 
     public void initMfa(String tempSecret) {
@@ -128,15 +128,15 @@ public class UserSecurity {
         this.failedMfaAttempts = 0;
     }
 
-    public void completePasswordReset(String newPasswordHash) {
+    public void completePasswordReset(String newPasswordHash, OffsetDateTime currentTime) {
         this.passwordHash = newPasswordHash;
         this.isPasswordSet = true;
-        this.lastPasswordChange = OffsetDateTime.now();
+        this.lastPasswordChange = currentTime;
         this.resetFailedLogins();
     }
 
-    public void updatePassword(String newPasswordHash) {
+    public void updatePassword(String newPasswordHash, OffsetDateTime currentTime) {
         this.passwordHash = newPasswordHash;
-        this.lastPasswordChange = OffsetDateTime.now();
+        this.lastPasswordChange = currentTime;
     }
 }

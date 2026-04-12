@@ -18,8 +18,6 @@ import lombok.Builder.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -64,35 +62,42 @@ public class OtpCode {
     @Setter(AccessLevel.PROTECTED)
     private int failedAttempts = 0;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime updatedAt;
+
+    public void initializeTimestamps(OffsetDateTime now) {
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public void updateTimestamp(OffsetDateTime now) {
+        this.updatedAt = now;
+    }
 
     public enum OtpType {
         VERIFY_EMAIL,
         RESET_PASSWORD
     }
 
-    public boolean isExpired() {
-        return OffsetDateTime.now().isAfter(expiresAt);
+    public boolean isExpired(OffsetDateTime currentTime) {
+        return currentTime.isAfter(expiresAt);
     }
 
     public boolean isUsed() {
         return usedAt != null;
     }
 
-    public boolean isValid() {
-        return !isExpired() && !isUsed();
+    public boolean isValid(OffsetDateTime currentTime) {
+        return !isExpired(currentTime) && !isUsed();
     }
 
-    public void markAsUsed() {
-        this.usedAt = OffsetDateTime.now();
+    public void markAsUsed(OffsetDateTime currentTime) {
+        this.usedAt = currentTime;
     }
 
     public void incrementFailedAttempts() {

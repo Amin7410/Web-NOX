@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class MfaManagementService {
     private final MfaService mfaService;
     private final PasswordEncoder passwordEncoder;
     private final UserDetailsService userDetailsService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Value("${security.mfa.backup-codes.count:10}")
     private int backupCodesCount;
@@ -71,6 +73,7 @@ public class MfaManagementService {
 
         userMfaBackupCodeRepository.deleteByUser(user);
 
+        OffsetDateTime now = timeProvider.now();
         List<String> plainBackupCodes = new ArrayList<>();
         SecureRandom secureRandom = new SecureRandom();
         for (int i = 0; i < backupCodesCount; i++) {
@@ -85,6 +88,7 @@ public class MfaManagementService {
                     .codeHash(DigestUtils.sha256Hex(plainCode))
                     .used(false)
                     .build();
+            backupCode.initializeTimestamps(now);
             userMfaBackupCodeRepository.save(backupCode);
         }
 
@@ -100,7 +104,7 @@ public class MfaManagementService {
             throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
         }
 
-        if (user.getSecurity().isLocked()) {
+        if (user.getSecurity().isLocked(timeProvider.now())) {
             throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
         }
 

@@ -28,6 +28,7 @@ public class InvitationService {
     private final OrganizationRepository organizationRepository;
     private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public void inviteUser(String email, UUID orgId, UUID roleId, UUID inviterId) {
@@ -38,6 +39,7 @@ public class InvitationService {
 
         String token = UUID.randomUUID().toString();
 
+        OffsetDateTime now = timeProvider.now();
         Invitation invitation = Invitation.builder()
                 .email(email)
                 .orgId(orgId)
@@ -45,8 +47,9 @@ public class InvitationService {
                 .invitedById(inviterId)
                 .token(token)
                 .status(com.nox.platform.module.iam.domain.InvitationStatus.PENDING)
-                .expiresAt(OffsetDateTime.now().plusDays(7))
+                .expiresAt(now.plusDays(7))
                 .build();
+        invitation.initializeTimestamps(now);
 
         invitationRepository.save(invitation);
 
@@ -61,7 +64,7 @@ public class InvitationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
-        invitation.accept(user);
+        invitation.accept(user, timeProvider.now());
 
         Organization org = organizationRepository.findById(invitation.getOrgId())
                 .orElseThrow(() -> new DomainException("ORG_NOT_FOUND", "Organization no longer exists", 404));
@@ -76,12 +79,15 @@ public class InvitationService {
             return; // Already a member
         }
 
+        OffsetDateTime acceptTime = timeProvider.now();
         OrgMember member = OrgMember.builder()
                 .organization(org)
                 .user(user)
                 .role(role)
                 .invitedBy(inviter)
+                .joinedAt(acceptTime)
                 .build();
+        member.initializeTimestamps(acceptTime);
         orgMemberRepository.save(member);
 
         invitationRepository.save(invitation);

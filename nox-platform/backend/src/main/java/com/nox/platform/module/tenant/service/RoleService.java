@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.nox.platform.shared.infrastructure.aspect.AuditTargetOrg;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,6 +21,7 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public Role createRole(Organization organization, String name, List<String> permissions, Integer level) {
@@ -40,12 +42,14 @@ public class RoleService {
                     });
         }
 
+        OffsetDateTime now = timeProvider.now();
         Role role = Role.builder()
                 .organization(organization)
                 .name(name)
                 .permissions(permissions)
                 .level(level != null ? level : 0)
                 .build();
+        role.initializeTimestamps(now);
 
         return roleRepository.save(role);
     }
@@ -66,6 +70,7 @@ public class RoleService {
                 .orElseThrow(() -> new DomainException("ROLE_NOT_FOUND", "Role not found", 404));
 
         role.updatePermissions(permissions);
+        role.updateTimestamp(timeProvider.now());
         return roleRepository.save(role);
     }
 
@@ -80,7 +85,9 @@ public class RoleService {
             throw new DomainException("ROLE_IN_USE", "Cannot delete role while it is assigned to members", 400);
         }
 
-        role.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        role.softDelete(now);
+        role.updateTimestamp(now);
         roleRepository.save(role);
     }
 }

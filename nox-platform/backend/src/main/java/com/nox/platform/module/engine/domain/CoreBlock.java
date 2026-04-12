@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
@@ -16,7 +15,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "core_blocks")
-@SQLDelete(sql = "UPDATE core_blocks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @SuperBuilder
@@ -78,36 +76,39 @@ public class CoreBlock extends BaseEntity {
     @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime lockedAt;
 
-    public void lock(UUID userId) {
-        if (isLockedByOther(userId)) {
+    public void lock(UUID userId, OffsetDateTime currentTime) {
+        if (isLockedByOther(userId, currentTime)) {
             throw new DomainException("BLOCK_LOCKED", "Block is currently locked by another user", 423);
         }
         this.lockedBy = userId;
-        this.lockedAt = OffsetDateTime.now();
+        this.lockedAt = currentTime;
+        this.updateTimestamp(currentTime);
     }
 
-    public void unlock(UUID userId) {
-        if (isLockedByOther(userId)) {
+    public void unlock(UUID userId, OffsetDateTime currentTime) {
+        if (isLockedByOther(userId, currentTime)) {
             throw new DomainException("BLOCK_LOCKED", "You cannot unlock a block locked by someone else", 403);
         }
         this.lockedBy = null;
         this.lockedAt = null;
+        this.updateTimestamp(currentTime);
     }
 
-    public boolean isLockedByOther(UUID userId) {
+    public boolean isLockedByOther(UUID userId, OffsetDateTime currentTime) {
         if (this.lockedBy == null) return false;
         if (this.lockedBy.equals(userId)) return false;
         
-        return this.lockedAt.isAfter(OffsetDateTime.now().minusMinutes(2));
+        return this.lockedAt.isAfter(currentTime.minusMinutes(2));
     }
 
-    public void updateContent(String name, Map<String, Object> config, Map<String, Object> visual, UUID userId) {
-        if (isLockedByOther(userId)) {
+    public void updateContent(String name, Map<String, Object> config, Map<String, Object> visual, UUID userId, OffsetDateTime currentTime) {
+        if (isLockedByOther(userId, currentTime)) {
             throw new DomainException("BLOCK_LOCKED", "Cannot update content while block is locked by another user", 423);
         }
         if (name != null) this.name = name;
         if (config != null) this.config = config;
         if (visual != null) this.visual = visual;
+        this.updateTimestamp(currentTime);
     }
 
     public void moveTo(CoreBlock newParent) {
@@ -134,5 +135,10 @@ public class CoreBlock extends BaseEntity {
                 throw new DomainException("MAX_DEPTH_REACHED", "Maximum block depth (10) exceeded", 400);
             }
         }
+    }
+
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
+        this.updateTimestamp(currentTime);
     }
 }

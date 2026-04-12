@@ -23,6 +23,7 @@ public class PasswordRecoveryService {
     private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -54,10 +55,10 @@ public class PasswordRecoveryService {
         otpService.validateAndUseOtp(user, otpCode, OtpCode.OtpType.RESET_PASSWORD);
 
         String hashedPassword = passwordEncoder.encode(newPassword);
-        user.getSecurity().completePasswordReset(hashedPassword);
+        user.getSecurity().completePasswordReset(hashedPassword, timeProvider.now());
         userRepository.save(user);
 
-        userSessionRepository.revokeAllUserSessions(user.getId(), "Password Reset");
+        userSessionRepository.revokeAllUserSessions(user.getId(), "Password Reset", null);
     }
 
     @Transactional
@@ -72,9 +73,9 @@ public class PasswordRecoveryService {
             throw new DomainException("INVALID_PASSWORD", "Old password is not correct", 400);
         }
 
-        user.getSecurity().updatePassword(passwordEncoder.encode(newPassword));
+        user.getSecurity().updatePassword(passwordEncoder.encode(newPassword), timeProvider.now());
         userRepository.save(user);
 
-        userSessionRepository.revokeAllUserSessions(user.getId(), "Password Changed");
+        userSessionRepository.revokeAllUserSessions(user.getId(), "Password Changed", timeProvider.now());
     }
 }

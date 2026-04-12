@@ -5,7 +5,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -33,9 +32,12 @@ public class OrgUsageMetrics {
     @Column(name = "reset_at")
     private OffsetDateTime resetAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    public void updateTimestamp(OffsetDateTime now) {
+        this.updatedAt = now;
+    }
 
     public OrgUsageMetrics(UUID orgId, String metricType) {
         this.orgId = orgId;

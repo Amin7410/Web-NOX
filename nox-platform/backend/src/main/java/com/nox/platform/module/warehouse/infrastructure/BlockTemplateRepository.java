@@ -19,6 +19,6 @@ public interface BlockTemplateRepository extends JpaRepository<BlockTemplate, UU
     List<BlockTemplate> findByCollectionId(UUID collectionId);
 
     @Modifying
-    @Query("UPDATE BlockTemplate b SET b.deletedAt = CURRENT_TIMESTAMP WHERE b.warehouse.id = :warehouseId")
-    void softDeleteByWarehouseId(UUID warehouseId);
+    @Query("UPDATE BlockTemplate b SET b.deletedAt = :deletedAt WHERE b.warehouse.id = :warehouseId")
+    void softDeleteByWarehouseId(UUID warehouseId, java.time.OffsetDateTime deletedAt);
 }

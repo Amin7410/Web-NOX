@@ -1,6 +1,7 @@
 package com.nox.platform.module.tenant.service;
 
 import java.text.Normalizer;
+import java.time.OffsetDateTime;
 import java.util.Locale;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
@@ -31,6 +32,7 @@ public class OrganizationService {
     private final RoleRepository roleRepository;
     private final OrgMemberRepository orgMemberRepository;
     private final UserRepository userRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -38,13 +40,13 @@ public class OrganizationService {
         User creator = userRepository.findByEmail(creatorEmail)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "Creator user could not be found", 404));
 
-        String slug = generateUniqueSlug(name);
-
+        OffsetDateTime now = timeProvider.now();
         Organization organization = Organization.builder()
                 .name(name)
-                .slug(slug)
+                .slug(generateUniqueSlug(name))
                 .settings(Map.of("theme", "system"))
                 .build();
+        organization.initializeTimestamps(now);
         organization = organizationRepository.save(organization);
 
         Role ownerRole = roleService.createRole(organization, "OWNER",
@@ -57,7 +59,9 @@ public class OrganizationService {
                 .user(creator)
                 .role(ownerRole)
                 .invitedBy(creator) // Self-invited essentially
+                .joinedAt(now)
                 .build();
+        ownerMember.initializeTimestamps(now);
         orgMemberRepository.save(ownerMember);
 
         // Publish event for downstream provisioning (e.g. Warehouse)
@@ -100,18 +104,21 @@ public class OrganizationService {
             org.setSettings(settings);
         }
 
+        org.updateTimestamp(timeProvider.now());
         return organizationRepository.save(org);
     }
 
     @Transactional
     public void deleteOrganization(@AuditTargetOrg UUID orgId) {
         Organization org = getOrganizationById(orgId);
-        org.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        org.softDelete(now);
+        org.updateTimestamp(now);
         organizationRepository.save(org);
 
         // Soft delete all members and roles in this org
-        orgMemberRepository.softDeleteByOrgId(orgId);
-        roleRepository.softDeleteByOrgId(orgId);
+        orgMemberRepository.softDeleteByOrgId(orgId, now);
+        roleRepository.softDeleteByOrgId(orgId, now);
 
         // Publish event to cleanup related entities (e.g. warehouses)
         eventPublisher.publishEvent(new com.nox.platform.shared.event.OrganizationDeletedEvent(orgId));

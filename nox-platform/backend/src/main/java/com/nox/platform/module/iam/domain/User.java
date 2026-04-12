@@ -4,7 +4,6 @@ import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
@@ -14,7 +13,6 @@ import java.time.OffsetDateTime;
  */
 @Entity
 @Table(name = "users")
-@SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Getter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -57,8 +55,8 @@ public class User extends BaseEntity {
 
     // --- Domain Behaviors ---
 
-    public void markAsDeleted() {
-        this.deletedAt = OffsetDateTime.now();
+    public void markAsDeleted(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
         this.status = UserStatus.DELETED;
     }
 

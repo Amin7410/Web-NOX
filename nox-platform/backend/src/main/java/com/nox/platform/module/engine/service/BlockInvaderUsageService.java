@@ -25,6 +25,7 @@ public class BlockInvaderUsageService {
     private final CoreBlockRepository blockRepository;
     private final InvaderDefinitionRepository invaderRepository;
     private final WorkspaceService workspaceService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public BlockInvaderUsageResponse attachInvader(UUID blockId, AttachInvaderRequest request) {
@@ -46,6 +47,7 @@ public class BlockInvaderUsageService {
                 .invaderAsset(invader)
                 .appliedVersion(request.appliedVersion())
                 .configSnapshot(request.configSnapshot())
+                .createdAt(timeProvider.now())
                 .build();
 
         usage = usageRepository.save(usage);
@@ -59,13 +61,14 @@ public class BlockInvaderUsageService {
 
         workspaceService.getWorkspaceInternal(usage.getBlock().getWorkspace().getId());
 
-        usageRepository.delete(usage);
+        usage.softDelete(timeProvider.now());
+        usageRepository.save(usage);
     }
 
     @Transactional
-    public void deleteUsagesForBlocks(List<UUID> blockIds) {
+    public void deleteUsagesForBlocks(List<UUID> blockIds, java.time.OffsetDateTime deletedAt) {
         if (blockIds != null && !blockIds.isEmpty()) {
-            usageRepository.softDeleteUsagesByBlockIds(blockIds);
+            usageRepository.softDeleteUsagesByBlockIds(blockIds, deletedAt);
         }
     }
 

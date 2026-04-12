@@ -15,9 +15,9 @@ public interface OrgUsageMetricsRepository extends JpaRepository<OrgUsageMetrics
     @Modifying
     @Query(value = """
             INSERT INTO org_usage_metrics (id, org_id, metric_type, current_value, updated_at)
-            VALUES (gen_random_uuid(), :orgId, :metricType, :delta, NOW())
+            VALUES (gen_random_uuid(), :orgId, :metricType, :delta, :updatedAt)
             ON CONFLICT (org_id, metric_type) 
-            DO UPDATE SET current_value = org_usage_metrics.current_value + :delta, updated_at = NOW()
+            DO UPDATE SET current_value = org_usage_metrics.current_value + :delta, updated_at = :updatedAt
             """, nativeQuery = true)
-    void incrementMetricUpsert(@Param("orgId") UUID orgId, @Param("metricType") String metricType, @Param("delta") long delta);
+    void incrementMetricUpsert(@Param("orgId") UUID orgId, @Param("metricType") String metricType, @Param("delta") long delta, @Param("updatedAt") java.time.OffsetDateTime updatedAt);
 }

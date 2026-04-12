@@ -19,8 +19,8 @@ public interface OtpCodeRepository extends JpaRepository<OtpCode, UUID> {
 
     @org.springframework.transaction.annotation.Transactional
     @Modifying
-    @Query("UPDATE OtpCode o SET o.usedAt = CURRENT_TIMESTAMP WHERE o.user.id = :userId AND o.type = :type AND o.usedAt IS NULL")
-    void invalidatePreviousOtps(@Param("userId") UUID userId, @Param("type") OtpCode.OtpType type);
+    @Query("UPDATE OtpCode o SET o.usedAt = :usedAt WHERE o.user.id = :userId AND o.type = :type AND o.usedAt IS NULL")
+    void invalidatePreviousOtps(@Param("userId") UUID userId, @Param("type") OtpCode.OtpType type, @Param("usedAt") java.time.OffsetDateTime usedAt);
 
     int deleteByExpiresAtBeforeOrUsedAtBefore(java.time.OffsetDateTime expiryThreshold,
             java.time.OffsetDateTime usedThreshold);

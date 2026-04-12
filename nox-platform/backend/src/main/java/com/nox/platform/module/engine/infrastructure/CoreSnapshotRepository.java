@@ -16,7 +16,7 @@ public interface CoreSnapshotRepository extends JpaRepository<CoreSnapshot, UUID
     List<CoreSnapshot> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE CoreSnapshot c SET c.deletedAt = CURRENT_TIMESTAMP WHERE c.project.id = :projectId AND c.deletedAt IS NULL")
-    void softDeleteByProjectId(@Param("projectId") UUID projectId);
+    @Query("UPDATE CoreSnapshot c SET c.deletedAt = :deletedAt WHERE c.project.id = :projectId AND c.deletedAt IS NULL")
+    void softDeleteByProjectId(@Param("projectId") UUID projectId, @Param("deletedAt") java.time.OffsetDateTime deletedAt);
 
 }

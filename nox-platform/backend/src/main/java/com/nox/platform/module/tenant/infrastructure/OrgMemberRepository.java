@@ -27,6 +27,6 @@ public interface OrgMemberRepository extends JpaRepository<OrgMember, UUID> {
     boolean existsByOrganizationIdAndUserId(UUID orgId, UUID userId);
 
     @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.data.jpa.repository.Query("UPDATE OrgMember o SET o.deletedAt = CURRENT_TIMESTAMP WHERE o.organization.id = :orgId")
-    void softDeleteByOrgId(UUID orgId);
+    @org.springframework.data.jpa.repository.Query("UPDATE OrgMember o SET o.deletedAt = :deletedAt WHERE o.organization.id = :orgId")
+    void softDeleteByOrgId(UUID orgId, java.time.OffsetDateTime deletedAt);
 }

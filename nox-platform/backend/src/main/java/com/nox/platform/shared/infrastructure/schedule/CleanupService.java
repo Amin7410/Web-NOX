@@ -15,21 +15,20 @@ import java.time.OffsetDateTime;
 @Slf4j
 public class CleanupService {
 
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
     private final UserSessionRepository userSessionRepository;
     private final OtpCodeRepository otpCodeRepository;
     private final com.nox.platform.module.engine.infrastructure.CoreRelationRepository coreRelationRepository;
     private final com.nox.platform.module.engine.infrastructure.CoreBlockRepository coreBlockRepository;
     private final com.nox.platform.module.engine.infrastructure.WorkspaceRepository workspaceRepository;
 
-    /**
-     * Purge expired sessions and unused OTPs every day at 3 AM.
-     */
+
     @Scheduled(cron = "0 0 3 * * *")
     @Transactional
     public void performMaintenance() {
         log.info("Starting scheduled maintenance: Purging expired data...");
 
-        OffsetDateTime threshold = OffsetDateTime.now().minusDays(30);
+        OffsetDateTime threshold = timeProvider.now().minusDays(30);
 
         // 1. Delete sessions that expired or were revoked more than 30 days ago
         int deletedSessions = userSessionRepository.deleteByExpiresAtBeforeOrRevokedAtBefore(threshold, threshold);

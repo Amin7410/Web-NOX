@@ -42,8 +42,8 @@ public interface CoreBlockRepository extends JpaRepository<CoreBlock, UUID> {
     List<UUID> findDescendantBlockIdsByRootId(@Param("rootId") UUID rootId);
 
     @Modifying
-    @Query("UPDATE CoreBlock b SET b.deletedAt = CURRENT_TIMESTAMP WHERE b.id IN :blockIds AND b.deletedAt IS NULL")
-    void softDeleteBlocksByIds(@Param("blockIds") List<UUID> blockIds);
+    @Query("UPDATE CoreBlock b SET b.deletedAt = :deletedAt WHERE b.id IN :blockIds AND b.deletedAt IS NULL")
+    void softDeleteBlocksByIds(@Param("blockIds") List<UUID> blockIds, @Param("deletedAt") java.time.OffsetDateTime deletedAt);
 
     @Modifying
     @Query(value = """

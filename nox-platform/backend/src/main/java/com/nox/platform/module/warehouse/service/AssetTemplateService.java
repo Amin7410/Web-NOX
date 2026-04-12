@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class AssetTemplateService {
     private final InvaderDefinitionRepository invaderDefinitionRepository;
     private final WarehouseService warehouseService;
     private final AssetCollectionService collectionService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public BlockTemplate createBlockTemplate(UUID warehouseId, UUID collectionId, String name, String description,
@@ -38,6 +40,7 @@ public class AssetTemplateService {
             }
         }
 
+        OffsetDateTime now = timeProvider.now();
         BlockTemplate template = BlockTemplate.builder()
                 .warehouse(warehouse)
                 .collection(collection)
@@ -47,6 +50,7 @@ public class AssetTemplateService {
                 .structureData(structureData)
                 .templateVersion(version)
                 .build();
+        template.initializeTimestamps(now);
 
         return blockTemplateRepository.save(template);
     }
@@ -88,6 +92,7 @@ public class AssetTemplateService {
         if (version != null)
             template.setTemplateVersion(version);
 
+        template.updateTimestamp(timeProvider.now());
         return blockTemplateRepository.save(template);
     }
 
@@ -103,7 +108,9 @@ public class AssetTemplateService {
         warehouseService.validateWriteOwnership(template.getWarehouse().getOwnerId(),
                 template.getWarehouse().getOwnerType());
 
-        template.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        template.softDelete(now);
+        template.updateTimestamp(now);
         blockTemplateRepository.save(template);
     }
 
@@ -125,6 +132,7 @@ public class AssetTemplateService {
             }
         }
 
+        OffsetDateTime now = timeProvider.now();
         InvaderDefinition definition = InvaderDefinition.builder()
                 .warehouse(warehouse)
                 .collection(collection)
@@ -135,6 +143,7 @@ public class AssetTemplateService {
                 .compilerHooks(compilerHooks)
                 .templateVersion(version)
                 .build();
+        definition.initializeTimestamps(now);
 
         return invaderDefinitionRepository.save(definition);
     }
@@ -176,6 +185,7 @@ public class AssetTemplateService {
         if (version != null)
             definition.setTemplateVersion(version);
 
+        definition.updateTimestamp(timeProvider.now());
         return invaderDefinitionRepository.save(definition);
     }
 
@@ -192,7 +202,9 @@ public class AssetTemplateService {
         warehouseService.validateWriteOwnership(definition.getWarehouse().getOwnerId(),
                 definition.getWarehouse().getOwnerType());
 
-        definition.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        definition.softDelete(now);
+        definition.updateTimestamp(now);
         invaderDefinitionRepository.save(definition);
     }
 }

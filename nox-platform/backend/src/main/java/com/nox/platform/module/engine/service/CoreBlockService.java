@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.OffsetDateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ public class CoreBlockService {
     private final CoreRelationService coreRelationService;
     @Lazy
     private final BlockInvaderUsageService blockInvaderUsageService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public CoreBlockResponse createBlock(UUID workspaceId, CreateCoreBlockRequest request, UUID currentUserId) {
@@ -54,6 +56,7 @@ public class CoreBlockService {
                     .orElseThrow(() -> new DomainException("ASSET_NOT_FOUND", "Origin asset not found", 404));
         }
 
+        OffsetDateTime now = timeProvider.now();
         CoreBlock block = CoreBlock.builder()
                 .id(request.id())
                 .workspace(workspace)
@@ -65,6 +68,7 @@ public class CoreBlockService {
                 .visual(request.visual() != null ? request.visual() : Map.of())
                 .createdBy(user)
                 .build();
+        block.initializeTimestamps(now);
 
         if (parentBlock != null) {
             block.moveTo(parentBlock);
@@ -86,7 +90,7 @@ public class CoreBlockService {
             currentUserId = currentUser.getId();
         }
 
-        block.updateContent(request.name(), request.config(), request.visual(), currentUserId);
+        block.updateContent(request.name(), request.config(), request.visual(), currentUserId, timeProvider.now());
 
         if (request.parentBlockId() != null) {
             CoreBlock parentBlock = coreBlockRepository.findByIdAndWorkspace_Id(request.parentBlockId(), workspaceId)
@@ -105,7 +109,7 @@ public class CoreBlockService {
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
 
-        block.lock(userId);
+        block.lock(userId, timeProvider.now());
         coreBlockRepository.save(block);
     }
 
@@ -115,7 +119,7 @@ public class CoreBlockService {
         CoreBlock block = coreBlockRepository.findByIdAndWorkspace_Id(blockId, workspaceId)
                 .orElseThrow(() -> new DomainException("BLOCK_NOT_FOUND", "Block not found", 404));
 
-        block.unlock(userId);
+        block.unlock(userId, timeProvider.now());
         coreBlockRepository.save(block);
     }
 
@@ -129,9 +133,10 @@ public class CoreBlockService {
         List<UUID> descendantBlockIds = coreBlockRepository.findDescendantBlockIdsByRootId(blockId);
         
         if (descendantBlockIds != null && !descendantBlockIds.isEmpty()) {
-            coreBlockRepository.softDeleteBlocksByIds(descendantBlockIds);
-            coreRelationService.deleteRelationsForBlocks(descendantBlockIds);
-            blockInvaderUsageService.deleteUsagesForBlocks(descendantBlockIds);
+            java.time.OffsetDateTime now = timeProvider.now();
+            coreBlockRepository.softDeleteBlocksByIds(descendantBlockIds, now);
+            coreRelationService.deleteRelationsForBlocks(descendantBlockIds, now);
+            blockInvaderUsageService.deleteUsagesForBlocks(descendantBlockIds, now);
         }
     }
 

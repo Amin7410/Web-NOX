@@ -4,7 +4,6 @@ import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
@@ -12,7 +11,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "warehouses")
-@SQLDelete(sql = "UPDATE warehouses SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
@@ -37,7 +35,7 @@ public class Warehouse extends BaseEntity {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 }

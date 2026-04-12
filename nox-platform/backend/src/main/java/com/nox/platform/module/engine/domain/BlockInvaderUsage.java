@@ -41,9 +41,12 @@ public class BlockInvaderUsage {
     private Map<String, Object> configSnapshot;
 
     @Column(name = "created_at", updatable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt;
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
+    }
 }

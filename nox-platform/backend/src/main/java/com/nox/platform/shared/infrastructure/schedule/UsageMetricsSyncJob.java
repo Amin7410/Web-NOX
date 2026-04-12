@@ -18,6 +18,7 @@ public class UsageMetricsSyncJob {
 
     private final StringRedisTemplate redisTemplate;
     private final OrgUsageMetricsRepository orgUsageMetricsRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     /**
      * Runs every 1 minute.
@@ -54,7 +55,7 @@ public class UsageMetricsSyncJob {
                 try {
                     long delta = Long.parseLong(valStr);
                     if (delta > 0) {
-                        orgUsageMetricsRepository.incrementMetricUpsert(orgId, metricType, delta);
+                        orgUsageMetricsRepository.incrementMetricUpsert(orgId, metricType, delta, timeProvider.now());
                         log.debug("Flushed metric {} for org {} with delta {}", metricType, orgId, delta);
                     }
                 } catch (NumberFormatException e) {

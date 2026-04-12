@@ -19,8 +19,8 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
     Optional<Workspace> findByIdAndProjectId(UUID id, UUID projectId);
 
     @Modifying
-    @Query("UPDATE Workspace w SET w.deletedAt = CURRENT_TIMESTAMP WHERE w.project.id = :projectId")
-    void softDeleteByProjectId(@Param("projectId") UUID projectId);
+    @Query("UPDATE Workspace w SET w.deletedAt = :deletedAt WHERE w.project.id = :projectId")
+    void softDeleteByProjectId(@Param("projectId") UUID projectId, @Param("deletedAt") java.time.OffsetDateTime deletedAt);
 
     @Modifying
     @Query(value = """
