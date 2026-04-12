@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { ReactFlowInstance, Node, XYPosition, Edge } from 'reactflow';
-import { NoxNodeData, NoxNodeType, SavedBlock } from '../types/studio';
+import { NoxNodeData, NoxNodeType } from '../types/studio';
 import { useStudio } from '../context/StudioContext';
 import { v4 as uuidv4 } from 'uuid';
 import { StudioApi } from '../services/studioApi';
@@ -73,7 +73,7 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
               type: savedBlock.type,
               invaders: [...savedBlock.invaders],
               isDefined: true,
-              parentId: currentParentId
+              parentId: currentParentId ?? undefined
             },
           };
           newNodes.push(rootNode);
@@ -130,9 +130,9 @@ export const useCanvasDnD = ({ reactFlowInstance, reactFlowWrapper, setNodes }: 
         data: { 
           label: nodeName,
           type: noxType,
-          invaders: (isDefined && !['junction', 'inputTerminal', 'outputTerminal'].includes(noxType)) ? ['Placeholder-Invader'] : [],
+          invaders: [],
           isDefined: isDefined || isCustom,
-          parentId: currentParentId,
+          parentId: currentParentId ?? undefined,
           terminalConfig: (noxType === 'inputTerminal' || noxType === 'outputTerminal') ? {
             direction: noxType === 'inputTerminal' ? 'input' : 'output',
             parentHandle: 'top'
