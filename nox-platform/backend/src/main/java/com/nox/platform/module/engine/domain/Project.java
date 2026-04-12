@@ -1,81 +1,84 @@
 package com.nox.platform.module.engine.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.tenant.domain.Organization;
+import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLDelete;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "projects", uniqueConstraints = {
         @UniqueConstraint(columnNames = { "org_id", "slug" }, name = "idx_projects_org_slug")
 })
-@SQLDelete(sql = "UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
-@NoArgsConstructor
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
-public class Project {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class Project extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
-    @JsonIgnore // Prevent infinite loops
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
     @Column(nullable = false, length = 255)
+    @Setter(AccessLevel.PROTECTED)
     private String name;
 
     @Column(nullable = false, length = 255)
+    @Setter(AccessLevel.PROTECTED)
     private String slug;
 
     @Column(columnDefinition = "TEXT")
+    @Setter
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     @Builder.Default
+    @Setter
     private ProjectVisibility visibility = ProjectVisibility.PRIVATE;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private ProjectStatus status = ProjectStatus.ACTIVE;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private User createdBy;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
-    @Column(name = "updated_at", nullable = false)
-    @Builder.Default
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
-
     @Column(name = "deleted_at")
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "project", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @Builder.Default
-    @JsonIgnore // Break cycles during serialization
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Workspace> workspaces = new ArrayList<>();
 
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
+    // --- Domain Methods (Stage 2) ---
+
+    public void updateMetadata(String name, String slug, String description, 
+                              ProjectVisibility visibility, ProjectStatus status) {
+        if (name != null) this.name = name;
+        if (slug != null) this.slug = slug;
+        if (description != null) this.description = description;
+        if (visibility != null) this.visibility = visibility;
+        if (status != null) this.status = status;
+    }
+
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 }

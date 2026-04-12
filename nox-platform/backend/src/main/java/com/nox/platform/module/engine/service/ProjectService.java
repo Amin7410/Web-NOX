@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Service
@@ -34,10 +35,11 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final CoreSnapshotRepository snapshotRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, UUID currentUserId) {
-        UUID orgId = SecurityUtil.getCurrentOrganizationId();
+        UUID orgId = request.organizationId();
         if (orgId == null) {
             throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
         }
@@ -47,6 +49,7 @@ public class ProjectService {
 
         String generatedSlug = generateSlug(request.name(), orgId);
 
+        OffsetDateTime now = timeProvider.now();
         Project project = Project.builder()
                 .organization(org)
                 .name(request.name())
@@ -55,6 +58,7 @@ public class ProjectService {
                 .visibility(request.visibility() != null ? request.visibility() : ProjectVisibility.PRIVATE)
                 .createdBy(user)
                 .build();
+        project.initializeTimestamps(now);
 
         project = projectRepository.save(project);
 
@@ -64,14 +68,18 @@ public class ProjectService {
                 .type(WorkspaceType.MIXED)
                 .createdBy(user)
                 .build();
+        defaultWorkspace.initializeTimestamps(now);
         workspaceRepository.save(defaultWorkspace);
 
         return mapToResponse(project);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProjectResponse> getProjects(Pageable pageable) {
-        UUID orgId = SecurityUtil.getCurrentOrganizationId();
+    public Page<ProjectResponse> getProjects(Pageable pageable, UUID orgId) {
+        if (orgId == null) {
+            orgId = SecurityUtil.getCurrentOrganizationId();
+        }
+        
         if (orgId == null) {
             throw new DomainException("TENANT_REQUIRED", "Organization context missing", 400);
         }
@@ -98,23 +106,20 @@ public class ProjectService {
     @Transactional
     public ProjectResponse updateProject(UUID id, UpdateProjectRequest request) {
         Project project = findProjectInternal(id);
-
+        
+        String newSlug = project.getSlug();
         if (request.name() != null && !request.name().equals(project.getName())) {
-            project.setName(request.name());
-            project.setSlug(generateSlug(request.name(), project.getOrganization().getId()));
+            newSlug = generateSlug(request.name(), project.getOrganization().getId());
         }
 
-        if (request.description() != null) {
-            project.setDescription(request.description());
-        }
-
-        if (request.visibility() != null) {
-            project.setVisibility(request.visibility());
-        }
-
-        if (request.status() != null) {
-            project.setStatus(request.status());
-        }
+        project.updateMetadata(
+            request.name(),
+            newSlug,
+            request.description(),
+            request.visibility(),
+            request.status()
+        );
+        project.updateTimestamp(timeProvider.now());
 
         project = projectRepository.save(project);
         return mapToResponse(project);
@@ -123,8 +128,14 @@ public class ProjectService {
     @Transactional
     public void deleteProject(UUID id) {
         Project project = findProjectInternal(id);
-        snapshotRepository.softDeleteByProjectId(project.getId());
-        projectRepository.delete(project);
+        OffsetDateTime now = timeProvider.now();
+        
+        snapshotRepository.softDeleteByProjectId(project.getId(), now);
+        workspaceRepository.softDeleteByProjectId(project.getId(), now);
+        
+        project.softDelete(now);
+        project.updateTimestamp(now);
+        projectRepository.save(project);
     }
 
     protected Project findProjectInternal(UUID id) {

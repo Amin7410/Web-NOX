@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public record CreateCoreBlockRequest(
+        UUID id,
         UUID parentBlockId,
         UUID originAssetId,
         @NotBlank(message = "Type is required") String type,

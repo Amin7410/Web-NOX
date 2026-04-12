@@ -11,13 +11,16 @@
     },
     "dependencies": {
         "@nox/ui": "workspace:*",
+        "@types/uuid": "^11.0.0",
+        "axios": "^1.14.0",
         "clsx": "^2.1.1",
         "framer-motion": "^12.34.0",
         "lucide-react": "^0.564.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "reactflow": "^11.11.4",
-        "tailwind-merge": "^3.4.1"
+        "tailwind-merge": "^3.4.1",
+        "uuid": "^13.0.0"
     },
     "devDependencies": {
         "@nox/tailwind-config": "workspace:*",

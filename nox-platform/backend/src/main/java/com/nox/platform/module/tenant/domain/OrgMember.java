@@ -1,78 +1,68 @@
 package com.nox.platform.module.tenant.domain;
 
 import com.nox.platform.module.iam.domain.User;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.nox.platform.shared.exception.DomainException;
+import com.nox.platform.shared.model.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
-
-import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.SQLDelete;
 
 @Entity
 @Table(name = "org_members")
-@SQLDelete(sql = "UPDATE org_members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OrgMember {
-
-    @Id
-    @GeneratedValue
-    private UUID id;
+@AllArgsConstructor
+public class OrgMember extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private Role role;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by")
+    @Setter(AccessLevel.PROTECTED)
     private User invitedBy;
 
     @Column(name = "joined_at", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime joinedAt;
 
     @Column(name = "deleted_at")
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime deletedAt;
 
-    @Builder
-    public OrgMember(Organization organization, User user, Role role, User invitedBy) {
-        this.organization = organization;
-        this.user = user;
-        this.role = role;
-        this.invitedBy = invitedBy;
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 
-    @PrePersist
-    public void prePersist() {
-        if (this.joinedAt == null) {
-            this.joinedAt = OffsetDateTime.now();
+    // --- Domain Methods (Stage 4) ---
+
+    public boolean canAssignRole(Role targetRole) {
+        if (this.role == null || targetRole == null) return false;
+        return this.role.getLevel() >= targetRole.getLevel();
+    }
+
+    public void changeRole(Role newRole, OrgMember manager) {
+        if (manager == null || !manager.canAssignRole(newRole)) {
+            throw new DomainException("INSUFFICIENT_PRIVILEGE", 
+                "You cannot assign a role with a higher level than your own", 403);
         }
-    }
-
-    public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+        this.role = newRole;
     }
 }

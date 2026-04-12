@@ -5,7 +5,7 @@ import com.nox.platform.module.iam.domain.UserMfaBackupCode;
 import com.nox.platform.module.iam.infrastructure.UserMfaBackupCodeRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
 import com.nox.platform.module.iam.infrastructure.UserSecurityRepository;
-import com.nox.platform.module.iam.infrastructure.security.JwtService;
+import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -13,12 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Service dedicated to evaluating runtime OTP verification logic bounds routing
- * strictly mapped authentication
- * events towards subsequent session generation systems cleanly avoiding
- * internal looping validations against Root Authenticators.
- */
 @Service
 @RequiredArgsConstructor
 public class MfaVerificationService {
@@ -27,7 +21,8 @@ public class MfaVerificationService {
     private final UserMfaBackupCodeRepository userMfaBackupCodeRepository;
     private final MfaService mfaService;
     private final UserSecurityRepository userSecurityRepository;
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
     private final UserSessionService userSessionService;
 
     public AuthenticationService.AuthResult verifyMfa(String mfaToken, int code, String ipAddress, String userAgent) {
@@ -38,9 +33,9 @@ public class MfaVerificationService {
         }
 
         if (!mfaService.verifyCode(user.getSecurity().getMfaSecret(), code)) {
-            user.getSecurity().incrementFailedMfaAttempts();
+            user.getSecurity().incrementFailedMfaAttempts(timeProvider.now());
             if (user.getSecurity().getFailedMfaAttempts() >= 5) {
-                user.getSecurity().lockAccount(15);
+                user.getSecurity().lockAccount(timeProvider.now(), 15);
                 userSecurityRepository.save(user.getSecurity());
                 throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.",
                         423);
@@ -63,7 +58,7 @@ public class MfaVerificationService {
             throw new DomainException("MFA_NOT_ENABLED", "MFA is not enabled for this user", 400);
         }
 
-        if (user.getSecurity().isLocked()) {
+        if (user.getSecurity().isLocked(timeProvider.now())) {
             throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to security attempts", 423);
         }
 
@@ -79,9 +74,9 @@ public class MfaVerificationService {
         }
 
         if (matchedCode == null) {
-            user.getSecurity().incrementFailedMfaAttempts();
+            user.getSecurity().incrementFailedMfaAttempts(timeProvider.now());
             if (user.getSecurity().getFailedMfaAttempts() >= 5) {
-                user.getSecurity().lockAccount(15);
+                user.getSecurity().lockAccount(timeProvider.now(), 15);
                 userSecurityRepository.save(user.getSecurity());
                 throw new DomainException("ACCOUNT_LOCKED", "Too many failed attempts. Account locked for 15 minutes.",
                         423);
@@ -93,28 +88,28 @@ public class MfaVerificationService {
         user.getSecurity().resetFailedLogins();
         userSecurityRepository.save(user.getSecurity());
 
-        matchedCode.setUsed(true);
+        matchedCode.markAsUsed(timeProvider.now());
         userMfaBackupCodeRepository.save(matchedCode);
 
         return userSessionService.generateSuccessAuthResult(user, ipAddress, userAgent);
     }
 
     private User validateMfaTokenAndGetUser(String mfaToken) {
-        String email = jwtService.extractUsername(mfaToken);
-        Boolean isMfaPending = jwtService.extractClaim(mfaToken, claims -> claims.get("mfa_pending", Boolean.class));
+        String userEmail = tokenProvider.extractUsername(mfaToken);
+        Boolean isMfaPending = tokenProvider.extractClaim(mfaToken, claims -> claims.get("mfa_pending", Boolean.class));
 
         if (isMfaPending == null || !isMfaPending) {
             throw new DomainException("INVALID_MFA_TOKEN", "Provided token is not a valid MFA pending token", 401);
         }
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DomainException("USER_NOT_FOUND", "User not found", 404));
 
         if (user.getStatus() != com.nox.platform.module.iam.domain.UserStatus.ACTIVE) {
             throw new DomainException("ACCOUNT_NOT_ACTIVE", "Account is not active", 403);
         }
 
-        if (user.getSecurity().isLocked()) {
+        if (user.getSecurity().isLocked(timeProvider.now())) {
             throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked", 423);
         }
 

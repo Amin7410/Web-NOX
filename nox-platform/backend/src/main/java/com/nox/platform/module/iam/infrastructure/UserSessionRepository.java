@@ -21,8 +21,8 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
 
     @Transactional
     @Modifying
-    @Query("UPDATE UserSession s SET s.revokedAt = CURRENT_TIMESTAMP, s.revokeReason = :reason WHERE s.user.id = :userId AND s.revokedAt IS NULL AND s.expiresAt > CURRENT_TIMESTAMP")
-    void revokeAllUserSessions(@Param("userId") UUID userId, @Param("reason") String reason);
+    @Query("UPDATE UserSession s SET s.revokedAt = :revokedAt, s.revokeReason = :reason WHERE s.user.id = :userId AND s.revokedAt IS NULL AND s.expiresAt > :revokedAt")
+    void revokeAllUserSessions(@Param("userId") UUID userId, @Param("reason") String reason, @Param("revokedAt") java.time.OffsetDateTime revokedAt);
 
     int deleteByExpiresAtBeforeOrRevokedAtBefore(java.time.OffsetDateTime expiryThreshold,
             java.time.OffsetDateTime revocationThreshold);

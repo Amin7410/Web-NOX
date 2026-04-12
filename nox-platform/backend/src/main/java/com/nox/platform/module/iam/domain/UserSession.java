@@ -63,20 +63,20 @@ public class UserSession {
 
     // --- Behaviors ---
 
-    public void revoke(String reason) {
-        this.revokedAt = OffsetDateTime.now();
+    public void revoke(String reason, OffsetDateTime currentTime) {
+        this.revokedAt = currentTime;
         this.revokeReason = reason;
     }
 
-    public boolean isExpired() {
-        return OffsetDateTime.now().isAfter(expiresAt);
+    public boolean isExpired(OffsetDateTime currentTime) {
+        return currentTime.isAfter(expiresAt);
     }
 
     public boolean isRevoked() {
         return this.revokedAt != null;
     }
 
-    public boolean isValid() {
-        return !isExpired() && !isRevoked();
+    public boolean isValid(OffsetDateTime currentTime) {
+        return !isExpired(currentTime) && !isRevoked();
     }
 }

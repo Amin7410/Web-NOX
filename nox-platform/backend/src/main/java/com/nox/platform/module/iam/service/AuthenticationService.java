@@ -3,7 +3,7 @@ package com.nox.platform.module.iam.service;
 import com.nox.platform.module.iam.domain.User;
 import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
-import com.nox.platform.module.iam.infrastructure.security.JwtService;
+import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import com.nox.platform.module.iam.service.internal.InternalSecurityStateService;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
-import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +18,8 @@ public class AuthenticationService {
 
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
     private final InternalSecurityStateService internalSecurityStateService;
     private final UserSessionService userSessionService;
 
@@ -37,7 +37,7 @@ public class AuthenticationService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401));
 
-        if (user.getSecurity().isLocked()) {
+        if (user.getSecurity().isLocked(timeProvider.now())) {
             throw new DomainException("ACCOUNT_LOCKED", "Account is temporarily locked due to too many failed attempts",
                     423);
         }
@@ -52,27 +52,17 @@ public class AuthenticationService {
         } catch (Exception e) {
             internalSecurityStateService.incrementFailedLogins(user.getId());
 
-            // Since internalSecurityStateService mutates state natively, we must consider
-            // if we need the refreshed value.
-            // Using user.getSecurity() here might fetch stale Object relative to native
-            // increment, but lock is 5 max.
-            // It's safer to pull raw fail_limit directly or just assume if it fails right
-            // now + existing DB states it passes.
-            // A more optimized way is counting the offset against getSecurity.
             int currentFails = user.getSecurity().getFailedLoginAttempts() + 1; // + 1 for current failure
 
             if (currentFails >= maxLoginAttempts) {
                 internalSecurityStateService.lockAccount(user.getId(),
-                        OffsetDateTime.now().plusMinutes(lockoutDurationMinutes));
+                        timeProvider.now().plusMinutes(lockoutDurationMinutes));
             }
             throw new DomainException("INVALID_CREDENTIALS", "Invalid email or password", 401);
         }
 
-        // Removed redundant repository.save(user) as we use native queries for security
-        // state
-
         if (user.getSecurity().isMfaEnabled()) {
-            String mfaToken = jwtService.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
+            String mfaToken = tokenProvider.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
             return new AuthResult(null, null, null, true, mfaToken);
         }
 

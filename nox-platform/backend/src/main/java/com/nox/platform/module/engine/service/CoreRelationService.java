@@ -12,7 +12,9 @@ import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.OffsetDateTime;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +27,7 @@ public class CoreRelationService {
     private final CoreRelationRepository coreRelationRepository;
     private final CoreBlockRepository coreBlockRepository;
     private final WorkspaceService workspaceService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public CoreRelationResponse createRelation(UUID workspaceId, CreateCoreRelationRequest request) {
@@ -41,15 +44,25 @@ public class CoreRelationService {
             throw new DomainException("INVALID_WORKSPACE", "Both blocks must be in the same current workspace..", 403);
         }
 
-        // Enforce unique index idx_core_relations_source_target
-        boolean exists = coreRelationRepository.findBySourceBlock_IdOrTargetBlock_Id(
+        // Check if there's already a relation with EXACT same handles (Optimized for Multi-wire)
+        // Note: The database index now handles this, but a service level check is good for DomainException mapping.
+        // We only block if ALL 4 parameters match.
+        boolean duplicate = coreRelationRepository.findBySourceBlock_IdAndTargetBlock_Id(
                 request.sourceBlockId(), request.targetBlockId()).stream()
-                .anyMatch(r -> r.getSourceBlock().getId().equals(request.sourceBlockId())
-                            && r.getTargetBlock().getId().equals(request.targetBlockId()));
-        if (exists) {
-            throw new DomainException("RELATION_EXISTS", "Relation between these blocks already exists", 400);
+                .anyMatch(r -> {
+                    String sH = (String) r.getVisual().get("sourceHandle");
+                    String tH = (String) r.getVisual().get("targetHandle");
+                    String newSH = (String) request.visual().get("sourceHandle");
+                    String newTH = (String) request.visual().get("targetHandle");
+                    return (sH == null ? "" : sH).equals(newSH == null ? "" : newSH) 
+                        && (tH == null ? "" : tH).equals(newTH == null ? "" : newTH);
+                });
+
+        if (duplicate) {
+            throw new DomainException("RELATION_EXISTS", "This exact port connection already exists", 400);
         }
 
+        OffsetDateTime now = timeProvider.now();
         CoreRelation relation = CoreRelation.builder()
                 .workspace(workspace)
                 .sourceBlock(sourceBlock)
@@ -58,6 +71,7 @@ public class CoreRelationService {
                 .rules(request.rules() != null ? request.rules() : Map.of())
                 .visual(request.visual() != null ? request.visual() : Map.of())
                 .build();
+        relation.initializeTimestamps(now);
 
         relation = coreRelationRepository.save(relation);
         return mapToResponse(relation);
@@ -78,6 +92,7 @@ public class CoreRelationService {
             relation.setVisual(request.visual()); // NOPMD
         }
 
+        relation.updateTimestamp(timeProvider.now());
         relation = coreRelationRepository.save(relation);
         return mapToResponse(relation);
     }
@@ -89,13 +104,23 @@ public class CoreRelationService {
         CoreRelation relation = coreRelationRepository.findByIdAndWorkspace_Id(relationId, workspaceId)
                 .orElseThrow(() -> new DomainException("RELATION_NOT_FOUND", "Relation not found in this workspace", 404));
 
-        coreRelationRepository.delete(relation);
+        OffsetDateTime now = timeProvider.now();
+        relation.softDelete(now);
+        relation.updateTimestamp(now);
+        coreRelationRepository.save(relation);
     }
 
     @Transactional
-    public void deleteRelationsForBlocks(List<UUID> blockIds) {
+    public void deleteRelationsForBlocks(List<UUID> blockIds, java.time.OffsetDateTime deletedAt) {
         if (blockIds != null && !blockIds.isEmpty()) {
-            coreRelationRepository.softDeleteRelationsByBlockIds(blockIds);
+            List<CoreRelation> relationsToSoftDelete = coreRelationRepository.findByBlockIdsActive(blockIds);
+            
+            relationsToSoftDelete.sort(Comparator.comparing(CoreRelation::getId));
+            
+            for (CoreRelation rel : relationsToSoftDelete) {
+                rel.softDelete(deletedAt);
+            }
+            coreRelationRepository.saveAll(relationsToSoftDelete);
         }
     }
 

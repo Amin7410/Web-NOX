@@ -54,6 +54,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+        ApiResponse<Void> response = ApiResponse.error("FORBIDDEN", "You do not have permission to perform this action");
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
         ApiResponse<Void> response = ApiResponse.error("MALFORMED_JSON", "Malformed JSON request");
@@ -61,9 +67,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleAllExceptions(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
         log.error("Unhandled exception: ", ex);
-        ApiResponse<Void> response = ApiResponse.error("INTERNAL_ERROR", "An unexpected error occurred");
+        ApiResponse<Void> response = ApiResponse.error("INTERNAL_ERROR", "An unexpected error occurred", ex.toString());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

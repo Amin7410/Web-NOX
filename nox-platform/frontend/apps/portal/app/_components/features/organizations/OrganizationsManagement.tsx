@@ -11,30 +11,52 @@ import { Button } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import { Badge } from "../../../ui/badge";
 import { Organization } from "./data";
-
 export function OrganizationsManagement() {
   const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [error, setError] = useState<string | null>(null); // Added error state
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSelectOrg = async (orgId: string) => {
+    try {
+      console.log('UI: Selecting Organization:', orgId);
+      const res = await fetch('/api/orgs/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId }),
+      });
+
+      if (res.ok) {
+        console.log('UI: Org selected successfully. Redirecting to projects...');
+        router.push('/projects');
+      } else {
+        console.error('UI: Failed to select org');
+      }
+    } catch (err) {
+      console.error('UI: Select org exception:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchOrganizations = async () => {
+      setLoading(true);
       try {
         const res = await fetch("/api/orgs");
-        if (res.status === 401) {
-          setError("Session expired. Please login again.");
-          setLoading(false);
-          return;
-        }
         const data = await res.json();
+        
         const orgList = data.data || [];
+        
+        if (!Array.isArray(orgList)) {
+           setOrganizations([]);
+           return;
+        }
+
         setOrganizations(orgList.map((o: any) => ({
           id: o.id,
           name: o.name,
           slug: o.slug,
-          role: "Member",
+          role: "Owner",
           memberCount: 0,
           projectCount: 0,
           createdAt: o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—",
@@ -103,7 +125,7 @@ export function OrganizationsManagement() {
         ) : filteredOrgs.map((org) => (
           <div
             key={org.id}
-            onClick={() => router.push(`/organizations/${org.id}`)}
+            onClick={() => handleSelectOrg(org.id)}
             className="group cursor-pointer bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:border-[#4F46E5]/30 hover:-translate-y-0.5 transition-all duration-200"
           >
             <div className="flex items-start justify-between mb-4">

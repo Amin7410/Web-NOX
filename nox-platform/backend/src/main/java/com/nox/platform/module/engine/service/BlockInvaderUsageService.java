@@ -25,6 +25,7 @@ public class BlockInvaderUsageService {
     private final CoreBlockRepository blockRepository;
     private final InvaderDefinitionRepository invaderRepository;
     private final WorkspaceService workspaceService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public BlockInvaderUsageResponse attachInvader(UUID blockId, AttachInvaderRequest request) {
@@ -35,7 +36,7 @@ public class BlockInvaderUsageService {
 
         InvaderDefinition invader = invaderRepository.findById(request.invaderAssetId())
                 .orElseThrow(() -> new DomainException("INVADER_NOT_FOUND", "Invader definition not found", 404));
-        
+
         // Prevent duplicate attach
         if (usageRepository.findByBlock_IdAndInvaderAsset_Id(blockId, request.invaderAssetId()).isPresent()) {
             throw new DomainException("INVADER_ALREADY_ATTACHED", "Invader already attached to this block", 400);
@@ -46,6 +47,7 @@ public class BlockInvaderUsageService {
                 .invaderAsset(invader)
                 .appliedVersion(request.appliedVersion())
                 .configSnapshot(request.configSnapshot())
+                .createdAt(timeProvider.now())
                 .build();
 
         usage = usageRepository.save(usage);
@@ -56,16 +58,17 @@ public class BlockInvaderUsageService {
     public void detachInvader(UUID usageId) {
         BlockInvaderUsage usage = usageRepository.findById(usageId)
                 .orElseThrow(() -> new DomainException("USAGE_NOT_FOUND", "Invader usage not found", 404));
-        
+
         workspaceService.getWorkspaceInternal(usage.getBlock().getWorkspace().getId());
-        
-        usageRepository.delete(usage);
+
+        usage.softDelete(timeProvider.now());
+        usageRepository.save(usage);
     }
 
     @Transactional
-    public void deleteUsagesForBlocks(List<UUID> blockIds) {
+    public void deleteUsagesForBlocks(List<UUID> blockIds, java.time.OffsetDateTime deletedAt) {
         if (blockIds != null && !blockIds.isEmpty()) {
-            usageRepository.softDeleteUsagesByBlockIds(blockIds);
+            usageRepository.softDeleteUsagesByBlockIds(blockIds, deletedAt);
         }
     }
 
@@ -88,7 +91,6 @@ public class BlockInvaderUsageService {
                 usage.getInvaderAsset().getId(), // NOPMD
                 usage.getAppliedVersion(),
                 usage.getConfigSnapshot(),
-                usage.getCreatedAt()
-        );
+                usage.getCreatedAt());
     }
 }

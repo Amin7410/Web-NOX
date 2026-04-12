@@ -1,6 +1,6 @@
 package com.nox.platform.module.engine.infrastructure.websocket;
 
-import com.nox.platform.module.iam.infrastructure.security.JwtService;
+import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class WebSocketJwtInterceptor implements ChannelInterceptor {
 
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
     private final UserDetailsService userDetailsService;
 
     @Override
@@ -28,11 +28,11 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
             String authorizationHeader = accessor.getFirstNativeHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
                 String token = authorizationHeader.substring(7);
-                String username = jwtService.extractUsername(token);
+                String username = tokenProvider.extractUsername(token);
 
                 if (username != null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                    if (jwtService.isTokenValid(token, userDetails)) {
+                    if (tokenProvider.isTokenValid(token, userDetails)) {
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities()
                         );

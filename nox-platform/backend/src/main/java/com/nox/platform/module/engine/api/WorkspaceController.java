@@ -3,6 +3,7 @@ package com.nox.platform.module.engine.api;
 import com.nox.platform.module.engine.api.request.CreateWorkspaceRequest;
 import com.nox.platform.module.engine.api.response.WorkspaceResponse;
 import com.nox.platform.module.engine.service.WorkspaceService;
+import com.nox.platform.shared.api.ApiResponse;
 import com.nox.platform.shared.util.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,36 +24,36 @@ public class WorkspaceController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('workspace:manage')")
-    public ResponseEntity<WorkspaceResponse> createWorkspace(
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> createWorkspace(
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateWorkspaceRequest request) {
         WorkspaceResponse response = workspaceService.createWorkspace(projectId, request,
                 SecurityUtil.getCurrentUserId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('workspace:read')")
-    public ResponseEntity<List<WorkspaceResponse>> getWorkspaces(@PathVariable UUID projectId) {
-        return ResponseEntity.ok(workspaceService.getWorkspacesByProject(projectId));
+    public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getWorkspaces(@PathVariable UUID projectId) {
+        return ResponseEntity.ok(ApiResponse.ok(workspaceService.getWorkspacesByProject(projectId)));
     }
 
     @DeleteMapping("/{workspaceId}")
     @PreAuthorize("hasAuthority('workspace:manage')")
-    public ResponseEntity<Void> deleteWorkspace(
+    public ResponseEntity<ApiResponse<Void>> deleteWorkspace(
             @PathVariable UUID projectId,
             @PathVariable UUID workspaceId) {
         workspaceService.deleteWorkspace(workspaceId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
     @PatchMapping("/{workspaceId}/status")
     @PreAuthorize("hasAuthority('workspace:manage')")
-    public ResponseEntity<WorkspaceResponse> updateWorkspaceStatus(
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> updateWorkspaceStatus(
             @PathVariable UUID projectId,
             @PathVariable UUID workspaceId,
             @RequestParam com.nox.platform.module.engine.domain.WorkspaceStatus status) {
         WorkspaceResponse response = workspaceService.updateWorkspaceStatus(workspaceId, status);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

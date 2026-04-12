@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -31,6 +32,7 @@ public class AuditService {
                 .ipAddress(ip)
                 .userAgent(ua)
                 .build();
+        log.initializeTimestamps(timeProvider.now());
         auditLogRepository.save(log);
     }
 }

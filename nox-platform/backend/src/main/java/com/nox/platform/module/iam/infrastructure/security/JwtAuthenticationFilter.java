@@ -1,5 +1,6 @@
 package com.nox.platform.module.iam.infrastructure.security;
 
+import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,7 +20,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
     private final UserDetailsService userDetailsService;
 
     @Override
@@ -35,10 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         jwt = authHeader.substring(7);
-        io.jsonwebtoken.Claims claims;
         try {
-            claims = jwtService.extractAllClaims(jwt);
-            userEmail = claims.getSubject();
+            userEmail = tokenProvider.extractUsername(jwt);
         } catch (Exception e) {
             // Invalid token, treat as anonymous
             filterChain.doFilter(request, response);
@@ -54,10 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            boolean isTokenExpired = claims.getExpiration() != null
-                    && claims.getExpiration().before(new java.util.Date());
-            if (userEmail.equals(userDetails.getUsername()) && !isTokenExpired) {
-                Boolean isMfaPending = claims.get("mfa_pending", Boolean.class);
+            if (tokenProvider.isTokenValid(jwt, userDetails)) {
+                Boolean isMfaPending = tokenProvider.extractClaim(jwt, claims -> claims.get("mfa_pending", Boolean.class));
                 if (Boolean.TRUE.equals(isMfaPending)) {
                     filterChain.doFilter(request, response);
                     return;

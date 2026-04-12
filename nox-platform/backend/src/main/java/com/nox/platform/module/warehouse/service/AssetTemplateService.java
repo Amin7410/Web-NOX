@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class AssetTemplateService {
     private final InvaderDefinitionRepository invaderDefinitionRepository;
     private final WarehouseService warehouseService;
     private final AssetCollectionService collectionService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public BlockTemplate createBlockTemplate(UUID warehouseId, UUID collectionId, String name, String description,
@@ -38,6 +40,7 @@ public class AssetTemplateService {
             }
         }
 
+        OffsetDateTime now = timeProvider.now();
         BlockTemplate template = BlockTemplate.builder()
                 .warehouse(warehouse)
                 .collection(collection)
@@ -45,8 +48,9 @@ public class AssetTemplateService {
                 .description(description)
                 .thumbnailUrl(thumbnailUrl)
                 .structureData(structureData)
-                .version(version)
+                .templateVersion(version)
                 .build();
+        template.initializeTimestamps(now);
 
         return blockTemplateRepository.save(template);
     }
@@ -55,6 +59,12 @@ public class AssetTemplateService {
         Warehouse warehouse = warehouseService.getWarehouseById(warehouseId);
         warehouseService.validateReadOwnership(warehouse.getOwnerId(), warehouse.getOwnerType());
         return blockTemplateRepository.findByWarehouseId(warehouseId);
+    }
+
+    public List<BlockTemplate> getBlockTemplatesByOrg(UUID orgId) {
+        Warehouse warehouse = warehouseService.getWarehouseForOwner(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        warehouseService.validateReadOwnership(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        return blockTemplateRepository.findByWarehouseId(warehouse.getId());
     }
 
     @Transactional
@@ -80,8 +90,9 @@ public class AssetTemplateService {
         if (structureData != null)
             template.setStructureData(structureData);
         if (version != null)
-            template.setVersion(version);
+            template.setTemplateVersion(version);
 
+        template.updateTimestamp(timeProvider.now());
         return blockTemplateRepository.save(template);
     }
 
@@ -97,7 +108,9 @@ public class AssetTemplateService {
         warehouseService.validateWriteOwnership(template.getWarehouse().getOwnerId(),
                 template.getWarehouse().getOwnerType());
 
-        template.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        template.softDelete(now);
+        template.updateTimestamp(now);
         blockTemplateRepository.save(template);
     }
 
@@ -119,6 +132,7 @@ public class AssetTemplateService {
             }
         }
 
+        OffsetDateTime now = timeProvider.now();
         InvaderDefinition definition = InvaderDefinition.builder()
                 .warehouse(warehouse)
                 .collection(collection)
@@ -127,8 +141,9 @@ public class AssetTemplateService {
                 .category(category)
                 .configSchema(configSchema)
                 .compilerHooks(compilerHooks)
-                .version(version)
+                .templateVersion(version)
                 .build();
+        definition.initializeTimestamps(now);
 
         return invaderDefinitionRepository.save(definition);
     }
@@ -137,6 +152,12 @@ public class AssetTemplateService {
         Warehouse warehouse = warehouseService.getWarehouseById(warehouseId);
         warehouseService.validateReadOwnership(warehouse.getOwnerId(), warehouse.getOwnerType());
         return invaderDefinitionRepository.findByWarehouseId(warehouseId);
+    }
+
+    public List<InvaderDefinition> getInvaderDefinitionsByOrg(UUID orgId) {
+        Warehouse warehouse = warehouseService.getWarehouseForOwner(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        warehouseService.validateReadOwnership(orgId, com.nox.platform.module.warehouse.domain.OwnerType.ORG);
+        return invaderDefinitionRepository.findByWarehouseId(warehouse.getId());
     }
 
     @Transactional
@@ -162,8 +183,9 @@ public class AssetTemplateService {
         if (compilerHooks != null)
             definition.setCompilerHooks(compilerHooks);
         if (version != null)
-            definition.setVersion(version);
+            definition.setTemplateVersion(version);
 
+        definition.updateTimestamp(timeProvider.now());
         return invaderDefinitionRepository.save(definition);
     }
 
@@ -180,7 +202,9 @@ public class AssetTemplateService {
         warehouseService.validateWriteOwnership(definition.getWarehouse().getOwnerId(),
                 definition.getWarehouse().getOwnerType());
 
-        definition.softDelete();
+        OffsetDateTime now = timeProvider.now();
+        definition.softDelete(now);
+        definition.updateTimestamp(now);
         invaderDefinitionRepository.save(definition);
     }
 }

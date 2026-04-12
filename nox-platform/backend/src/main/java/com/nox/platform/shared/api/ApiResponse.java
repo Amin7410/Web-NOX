@@ -20,7 +20,7 @@ public class ApiResponse<T> {
     private ApiError error;
 
     @Builder.Default
-    private OffsetDateTime timestamp = OffsetDateTime.now();
+    private OffsetDateTime timestamp = null;
 
     // -- Helper constructors --
 

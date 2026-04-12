@@ -1,65 +1,73 @@
 package com.nox.platform.module.tenant.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.nox.platform.shared.exception.DomainException;
+import com.nox.platform.shared.model.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-
-import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "roles")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
-@Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Role {
-
-    @Id
-    @GeneratedValue
-    private UUID id;
+@AllArgsConstructor
+public class Role extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
     private Organization organization;
 
     @Column(nullable = false, length = 100)
+    @Setter(AccessLevel.PROTECTED)
     private String name;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]", nullable = false)
+    @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private List<String> permissions = new ArrayList<>();
 
     @Column(nullable = false)
+    @Builder.Default
+    @Setter(AccessLevel.PROTECTED)
     private int level = 0;
 
     @Column(name = "deleted_at")
-    private java.time.OffsetDateTime deletedAt;
+    @Setter(AccessLevel.PROTECTED)
+    private OffsetDateTime deletedAt;
 
-    @Builder
-    public Role(Organization organization, String name, List<String> permissions, Integer level) {
-        this.organization = organization;
-        this.name = name;
-        this.permissions = permissions != null ? permissions : new ArrayList<>();
-        this.level = level != null ? level : 0;
+    public void softDelete(OffsetDateTime currentTime) {
+        if (isOwnerRole()) {
+            throw new DomainException("IMMUTABLE_ROLE", "The OWNER role cannot be deleted", 400);
+        }
+        this.deletedAt = currentTime;
     }
 
-    public void softDelete() {
-        this.deletedAt = java.time.OffsetDateTime.now();
+    // --- Domain Methods (Stage 4) ---
+
+    public boolean isOwnerRole() {
+        return "OWNER".equalsIgnoreCase(this.name);
+    }
+
+    public void updatePermissions(List<String> newPermissions) {
+        if (isOwnerRole()) {
+            throw new DomainException("IMMUTABLE_ROLE", "Cannot modify permissions of the OWNER role", 400);
+        }
+        this.permissions = newPermissions != null ? newPermissions : new ArrayList<>();
+    }
+
+    public boolean canBeManagedBy(Role managerRole) {
+        if (managerRole == null) return false;
+        return managerRole.getLevel() >= this.level;
     }
 }

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final ProjectService projectService;
     private final UserRepository userRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public WorkspaceResponse createWorkspace(UUID projectId, CreateWorkspaceRequest request, UUID currentUserId) {
@@ -33,12 +35,14 @@ public class WorkspaceService {
 
         User user = userRepository.getReferenceById(currentUserId);
 
+        OffsetDateTime now = timeProvider.now();
         Workspace workspace = Workspace.builder()
                 .project(project)
                 .name(request.name())
                 .type(request.type())
                 .createdBy(user)
                 .build();
+        workspace.initializeTimestamps(now);
 
         workspace = workspaceRepository.save(workspace);
         return mapToResponse(workspace);
@@ -56,13 +60,17 @@ public class WorkspaceService {
     @Transactional
     public void deleteWorkspace(UUID workspaceId) {
         Workspace workspace = getWorkspaceInternal(workspaceId);
-        workspaceRepository.delete(workspace);
+        OffsetDateTime now = timeProvider.now();
+        workspace.softDelete(now);
+        workspace.updateTimestamp(now);
+        workspaceRepository.save(workspace);
     }
 
     @Transactional
     public WorkspaceResponse updateWorkspaceStatus(UUID workspaceId, WorkspaceStatus newStatus) {
         Workspace workspace = getWorkspaceInternal(workspaceId);
-        workspace.setStatus(newStatus);
+        workspace.updateStatus(newStatus);
+        workspace.updateTimestamp(timeProvider.now());
         workspace = workspaceRepository.save(workspace);
         return mapToResponse(workspace);
     }

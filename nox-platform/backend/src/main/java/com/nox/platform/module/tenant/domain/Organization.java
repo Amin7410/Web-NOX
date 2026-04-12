@@ -4,14 +4,10 @@ import com.nox.platform.shared.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
@@ -19,11 +15,12 @@ import java.util.Map;
 
 @Entity
 @Table(name = "organizations")
-@SQLDelete(sql = "UPDATE organizations SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Organization extends BaseEntity {
 
     @Column(nullable = false)
@@ -34,19 +31,13 @@ public class Organization extends BaseEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
+    @Builder.Default
     private Map<String, Object> settings = Map.of();
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    @Builder
-    public Organization(String name, String slug, Map<String, Object> settings) {
-        this.name = name;
-        this.slug = slug;
-        this.settings = settings != null ? settings : Map.of();
-    }
-
-    public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+    public void softDelete(OffsetDateTime currentTime) {
+        this.deletedAt = currentTime;
     }
 }

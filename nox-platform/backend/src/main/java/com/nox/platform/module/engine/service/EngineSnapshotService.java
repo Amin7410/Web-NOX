@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ public class EngineSnapshotService {
     private final CoreSnapshotRepository snapshotRepository;
     private final ProjectService projectService;
     private final UserRepository userRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public SnapshotResponse saveDesignSnapshot(UUID projectId, CreateSnapshotRequest request, UUID currentUserId) {
@@ -32,6 +34,7 @@ public class EngineSnapshotService {
 
         User user = userRepository.getReferenceById(currentUserId);
 
+        OffsetDateTime now = timeProvider.now();
         CoreSnapshot snapshot = CoreSnapshot.builder()
                 .project(project)
                 .name(request.name())
@@ -39,6 +42,7 @@ public class EngineSnapshotService {
                 .fullStateDump(request.fullStateDump()) // Binds Studio Canvas JSON mapping
                 .createdBy(user)
                 .build();
+        snapshot.initializeTimestamps(now);
 
         snapshot = snapshotRepository.save(snapshot);
         return mapToResponse(snapshot);

@@ -1,6 +1,10 @@
--- 1. IAM & SECURITY
+-- =========================================================================
+-- Migration: V1__init_iam_schema.sql
+-- Description: Initializes Identity and Access Management (IAM) and Security tables.
+-- =========================================================================
 
 -- Table: users
+-- Purpose: Core identity management. Uses soft-delete (deleted_at) to preserve relational integrity.
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,
@@ -17,6 +21,7 @@ CREATE UNIQUE INDEX idx_users_email_unique ON users (LOWER(email)) WHERE deleted
 CREATE INDEX idx_users_status ON users (status);
 
 -- Table: user_security
+-- Purpose: Isolates sensitive authentication credentials (passwords, MFA secrets) from public user profiles.
 CREATE TABLE user_security (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     password_hash TEXT,
@@ -30,6 +35,7 @@ CREATE TABLE user_security (
 );
 
 -- Table: user_mfa_backup_codes
+-- Purpose: Provides hashed, single-use recovery codes for MFA failure scenarios.
 CREATE TABLE user_mfa_backup_codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -42,6 +48,7 @@ CREATE TABLE user_mfa_backup_codes (
 CREATE INDEX idx_user_mfa_backup_codes_user_id ON user_mfa_backup_codes (user_id);
 
 -- Table: user_sessions
+-- Purpose: Tracks active refresh token sessions, enabling remote access revocation and device auditing.
 CREATE TABLE user_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -58,6 +65,7 @@ CREATE TABLE user_sessions (
 CREATE INDEX idx_user_sessions_user_id ON user_sessions (user_id);
 
 -- Table: social_identities
+-- Purpose: Maps internal user accounts to external Identity Providers (e.g., Google, GitHub) for SSO.
 CREATE TABLE social_identities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

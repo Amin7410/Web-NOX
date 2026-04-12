@@ -9,18 +9,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.OffsetDateTime;
 
-/**
- * Represents a backup code for Multi-Factor Authentication (MFA).
- */
 @Entity
 @Table(name = "user_mfa_backup_codes")
 @Getter
@@ -34,9 +30,22 @@ public class UserMfaBackupCode {
     @GeneratedValue(strategy = GenerationType.UUID)
     private java.util.UUID id;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Setter(AccessLevel.PROTECTED)
     private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    @Setter(AccessLevel.PROTECTED)
+    private OffsetDateTime updatedAt;
+
+    public void initializeTimestamps(OffsetDateTime now) {
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public void updateTimestamp(OffsetDateTime now) {
+        this.updatedAt = now;
+    }
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -52,10 +61,8 @@ public class UserMfaBackupCode {
     @Column(name = "used_at")
     private OffsetDateTime usedAt;
 
-    // --- Behaviors ---
-
-    public void markAsUsed() {
+    public void markAsUsed(OffsetDateTime currentTime) {
         this.used = true;
-        this.usedAt = OffsetDateTime.now();
+        this.usedAt = currentTime;
     }
 }

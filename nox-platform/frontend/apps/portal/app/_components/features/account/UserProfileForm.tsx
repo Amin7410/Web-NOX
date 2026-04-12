@@ -24,6 +24,22 @@ export function UserProfileForm() {
       avatarUrl: ""
   });
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit. Please choose a smaller file.");
+        e.target.value = ''; // Reset
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
       const fetchProfile = async () => {
           try {
@@ -58,11 +74,24 @@ export function UserProfileForm() {
       setError(null);
       setSuccess(false);
       
-      // Mocking save for now as there is no backend update endpoint yet
-      setTimeout(() => {
-          setSaving(false);
+      try {
+        const res = await fetch('/api/auth/me', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile),
+        });
+        
+        if (res.ok) {
           setSuccess(true);
-      }, 1000);
+          setTimeout(() => { window.location.reload(); }, 1500);
+        } else {
+          setError("Failed to update profile");
+        }
+      } catch (err) {
+        setError("Network error. Please try again later.");
+      } finally {
+        setSaving(false);
+      }
   };
 
   return (
@@ -85,6 +114,17 @@ export function UserProfileForm() {
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-6 sm:p-8 flex flex-col gap-8">
               
+              {error && (
+                <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-100 text-sm font-medium">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="p-4 bg-green-50 text-green-600 rounded-lg border border-green-100 text-sm font-medium">
+                  Profile updated successfully! Refreshing...
+                </div>
+              )}
+
               <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                 <div className="h-10 w-10 rounded-xl bg-[#4F46E5]/5 flex items-center justify-center text-[#4F46E5]">
                   <User className="h-5 w-5" />
@@ -107,15 +147,31 @@ export function UserProfileForm() {
                     className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center cursor-pointer text-gray-500 hover:text-[#4F46E5] hover:border-[#4F46E5] transition-all"
                   >
                     <Camera className="h-4 w-4" />
-                    <input id="avatar-upload" type="file" className="hidden" />
+                    <input id="avatar-upload" type="file" accept="image/png, image/jpeg, image/gif" className="hidden" onChange={handleImageUpload} />
                   </label>
                 </div>
                 <div className="flex flex-col gap-2 text-center sm:text-left">
                   <h3 className="text-sm font-bold text-gray-900">Profile Picture</h3>
-                  <p className="text-xs font-medium text-gray-500 max-w-[200px]">JPG, GIF or PNG. Max size of 800K.</p>
+                  <p className="text-xs font-medium text-gray-500 max-w-[200px]">JPG, GIF or PNG. Max size of 5MB.</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Button variant="outline" size="sm" className="h-8 text-xs font-bold uppercase tracking-widest border-gray-200 hover:bg-gray-50">Upload New</Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs font-bold uppercase tracking-widest text-[#EF4444] hover:bg-red-50 hover:text-[#EF4444]">Remove</Button>
+                    <Button 
+                      type="button"
+                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 text-xs font-bold uppercase tracking-widest border-gray-200 hover:bg-gray-50"
+                    >
+                      Upload New
+                    </Button>
+                    <Button 
+                      type="button"
+                      onClick={() => setProfile(prev => ({ ...prev, avatarUrl: "" }))}
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 text-xs font-bold uppercase tracking-widest text-[#EF4444] hover:bg-red-50 hover:text-[#EF4444]"
+                    >
+                      Remove
+                    </Button>
                   </div>
                 </div>
               </div>

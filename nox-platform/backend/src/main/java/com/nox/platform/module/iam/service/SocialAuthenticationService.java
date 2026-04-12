@@ -6,7 +6,7 @@ import com.nox.platform.module.iam.domain.UserSecurity;
 import com.nox.platform.module.iam.domain.UserStatus;
 import com.nox.platform.module.iam.infrastructure.SocialIdentityRepository;
 import com.nox.platform.module.iam.infrastructure.UserRepository;
-import com.nox.platform.module.iam.infrastructure.security.JwtService;
+import com.nox.platform.module.iam.service.abstraction.TokenProvider;
 import com.nox.platform.shared.exception.DomainException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,14 +31,15 @@ public class SocialAuthenticationService {
     private final SocialIdentityRepository socialIdentityRepository;
     private final SocialAuthVerificationService socialAuthVerificationService;
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
     private final UserSessionService userSessionService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public AuthenticationService.AuthResult socialLogin(String provider, String token, String ipAddress,
             String userAgent) {
         Map<String, Object> verifiedData = socialAuthVerificationService.verifyToken(provider, token);
-
+        OffsetDateTime now = timeProvider.now();
         String providerId = (String) verifiedData.get("providerId");
         String email = ((String) verifiedData.get("email")).trim().toLowerCase();
         String fullName = (String) verifiedData.get("fullName");
@@ -69,12 +71,14 @@ public class SocialAuthenticationService {
                         .status(UserStatus.ACTIVE)
                         .isEmailVerified(true)
                         .build();
+                user.initializeTimestamps(now);
 
                 UserSecurity security = UserSecurity.builder()
                         .user(user)
                         .isPasswordSet(false)
                         .build();
-                user.setSecurity(security);
+                security.updateTimestamp(now);
+                user.linkSecurity(security);
                 user = userRepository.save(user);
             }
 
@@ -84,6 +88,7 @@ public class SocialAuthenticationService {
                     .providerId(providerId)
                     .profileData(profileData)
                     .build();
+            identity.initializeTimestamps(now); 
             socialIdentityRepository.save(identity);
         }
 
@@ -92,7 +97,7 @@ public class SocialAuthenticationService {
         }
 
         if (user.getSecurity() != null && user.getSecurity().isMfaEnabled()) {
-            String mfaToken = jwtService.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
+            String mfaToken = tokenProvider.generateToken(java.util.Map.of("mfa_pending", true), user.getEmail());
             return new AuthenticationService.AuthResult(null, null, null, true, mfaToken);
         }
 

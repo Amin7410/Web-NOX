@@ -11,7 +11,6 @@ import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
-
 export function OrganizationForm() {
   const router = useRouter();
   const [orgName, setOrgName] = useState("");
@@ -38,16 +37,16 @@ export function OrganizationForm() {
         body: JSON.stringify({ name: orgName, slug }),
       });
       const data = await res.json().catch(() => ({}));
+
       if (res.ok && data.data) {
-        router.push(`/organizations/${data.data.id}`);
-      } else if (res.status === 401) {
-        alert("Session expired or unauthorized. Please login again.");
-        router.push("/auth/login"); // Redirect to login if possible
+        router.push(`/organizations`);
       } else {
-        alert(data.message || "Failed to create organization");
+        console.error('Failed to create organization', data);
+        alert(data.message || 'Failed to create organization');
       }
     } catch (error) {
-      alert("Network error");
+      console.error('Create organization exception:', error);
+      alert('Internal Server Error. Please try again.');
     } finally {
       setLoading(false);
     }

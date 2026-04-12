@@ -48,6 +48,9 @@ public class AuditLog {
     private String userAgent;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt;
+
+    public void initializeTimestamps(OffsetDateTime now) {
+        this.createdAt = now;
+    }
 }

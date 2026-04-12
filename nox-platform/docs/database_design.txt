@@ -1,5 +1,5 @@
 // ==========================================
-// NOX DATABASE
+// NOX PLATFORM DATABASE DESIGN (v24)
 // ==========================================
 
 // 1. IAM & SECURITY
@@ -18,6 +18,7 @@ Table users {
   Indexes {
     email [unique, note: "LOWER(email) WHERE deleted_at IS NULL"] 
     status
+    full_name [type: gin, name: "idx_users_full_name_trgm", note: "opclass: gin_trgm_ops"]
   }
 }
 
@@ -30,6 +31,7 @@ Table user_security {
   locked_until TIMESTAMPTZ
   mfa_enabled BOOLEAN [not null, default: FALSE]
   mfa_secret TEXT
+  temp_mfa_secret TEXT
   updated_at TIMESTAMPTZ [not null, default: `NOW()`]
 }
 
@@ -43,6 +45,24 @@ Table user_mfa_backup_codes {
 
   Indexes {
     user_id
+  }
+}
+
+Table otp_codes {
+  id UUID [pk, default: `gen_random_uuid()`]
+  user_id UUID [not null]
+  code VARCHAR(6) [not null]
+  type VARCHAR(20) [not null]
+  failed_attempts INTEGER [not null, default: 0]
+  expires_at TIMESTAMPTZ [not null]
+  used_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  updated_at TIMESTAMPTZ [not null, default: `NOW()`]
+  
+  Indexes {
+    (code, type)
+    user_id
+    expires_at
   }
 }
 
@@ -60,6 +80,7 @@ Table user_sessions {
 
   Indexes {
     user_id
+    expires_at
   }
 }
 
@@ -97,11 +118,11 @@ Table roles {
   id UUID [pk, default: `gen_random_uuid()`]
   org_id UUID [not null]
   name VARCHAR(100) [not null]
+  level INTEGER [not null, default: 0]
   permissions "TEXT[]" [not null, default: '{}']
 
   Indexes {
     (org_id, name) [unique]
-    org_id
   }
 }
 
@@ -137,6 +158,7 @@ Table invitations {
   Indexes {
     token
     (org_id, email) [unique, note: "WHERE status = 'PENDING'"]
+    expires_at
   }
 }
 
@@ -167,7 +189,6 @@ Table org_usage_metrics {
 
   Indexes {
     (org_id, metric_type) [unique]
-    org_id
   }
 }
 
@@ -186,6 +207,7 @@ Table api_keys {
   Indexes {
     user_id
     org_id
+    expires_at
   }
 }
 
@@ -198,6 +220,7 @@ Table warehouses {
   name VARCHAR(255)
   is_system BOOLEAN [not null, default: FALSE]
   created_at TIMESTAMPTZ [default: `NOW()`]
+  updated_at TIMESTAMPTZ [default: `NOW()`]
   deleted_at TIMESTAMPTZ
 
   Indexes {
@@ -211,9 +234,11 @@ Table asset_collections {
   name VARCHAR(255) [not null]
   parent_collection_id UUID
   created_at TIMESTAMPTZ [default: `NOW()`]
+  updated_at TIMESTAMPTZ [default: `NOW()`]
+  deleted_at TIMESTAMPTZ
 
   Indexes {
-    (warehouse_id, name) [unique]
+    (warehouse_id, name) [unique, note: "WHERE deleted_at IS NULL"]
     parent_collection_id
   }
 }
@@ -241,7 +266,7 @@ Table assets_invader_definitions {
   id UUID [pk, default: `gen_random_uuid()`]
   warehouse_id UUID [not null]
   collection_id UUID
-  code VARCHAR(100) [unique, not null]
+  code VARCHAR(100) [not null]
   name VARCHAR(255) [not null]
   category VARCHAR(50) [not null]
   config_schema JSONB [not null]
@@ -252,6 +277,7 @@ Table assets_invader_definitions {
   deleted_at TIMESTAMPTZ
 
   Indexes {
+    code [unique, note: "WHERE deleted_at IS NULL"]
     (warehouse_id, created_at)
     collection_id
   }
@@ -276,6 +302,7 @@ Table projects {
     (org_id, slug) [unique, note: "WHERE deleted_at IS NULL"]
     (org_id, created_at)
     created_by_id
+    name [type: gin, name: "idx_projects_name_trgm", note: "opclass: gin_trgm_ops"]
   }
 }
 
@@ -284,6 +311,7 @@ Table workspaces {
   project_id UUID [not null]
   name VARCHAR(255) [not null]
   type VARCHAR(50) [not null]
+  status VARCHAR(20) [not null, default: 'DRAFT']
   created_by UUID [not null]
   created_at TIMESTAMPTZ [not null, default: `NOW()`]
   deleted_at TIMESTAMPTZ
@@ -303,7 +331,11 @@ Table core_blocks {
   name VARCHAR(255) [not null]
   config JSONB [not null, default: '{}']
   visual JSONB [not null, default: '{}']
+  version BIGINT [not null, default: 0]
+  locked_by UUID
+  locked_at TIMESTAMPTZ
   created_by_id UUID
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
   updated_at TIMESTAMPTZ [not null, default: `NOW()`]
   deleted_at TIMESTAMPTZ
 
@@ -312,6 +344,7 @@ Table core_blocks {
     (parent_block_id)
     (origin_asset_id)
     (created_by_id)
+    created_at
   }
 }
 
@@ -322,9 +355,10 @@ Table block_invader_usages {
   applied_version VARCHAR(20)
   config_snapshot JSONB
   created_at TIMESTAMPTZ [default: `NOW()`]
+  deleted_at TIMESTAMPTZ
 
   Indexes {
-    (block_id, invader_asset_id) [unique]
+    (block_id, invader_asset_id) [unique, note: "WHERE deleted_at IS NULL"]
     invader_asset_id
   }
 }
@@ -337,12 +371,14 @@ Table core_relations {
   type VARCHAR(50) [not null]
   rules JSONB [not null, default: '{}']
   visual JSONB [not null, default: '{}']
+  created_at TIMESTAMPTZ [not null, default: `NOW()`]
   deleted_at TIMESTAMPTZ
 
   Indexes {
     workspace_id
     (source_block_id, target_block_id) [unique, note: "WHERE deleted_at IS NULL"]
     target_block_id
+    created_at
   }
 }
 
@@ -355,6 +391,8 @@ Table core_snapshots {
   created_by_id UUID [not null]
   created_at TIMESTAMPTZ [not null, default: `NOW()`]
   
+  Note: "Scalability: Partitioned by RANGE (created_at) for efficient snapshot pruning."
+
   Indexes {
     (project_id, created_at)
     created_by_id
@@ -413,6 +451,8 @@ Table chat_messages {
   content TEXT [not null]
   created_at TIMESTAMPTZ [not null, default: `NOW()`]
   
+  Note: "Scalability: Partitioned by RANGE (created_at) to handle high-volume activity logs."
+
   Indexes {
     (room_id, created_at)
     sender_id
@@ -460,6 +500,8 @@ Table audit_logs {
   user_agent TEXT
   created_at TIMESTAMPTZ [not null, default: `NOW()`]
   
+  Note: "Scalability: Partitioned by RANGE (created_at). Global standard for high-throughput auditing."
+
   Indexes {
     (org_id, created_at)
     (target_type, target_id)
@@ -477,6 +519,7 @@ Table edit_locks {
   Indexes {
     (resource_type, resource_id) [unique]
     locked_by
+    expires_at
   }
 }
 
@@ -503,6 +546,7 @@ Table org_feature_overrides {
 
 Ref: users.id < user_security.user_id [delete: cascade]
 Ref: users.id < user_mfa_backup_codes.user_id [delete: cascade]
+Ref: users.id < otp_codes.user_id [delete: cascade]
 Ref: users.id < user_sessions.user_id [delete: cascade]
 Ref: users.id < social_identities.user_id [delete: cascade]
 
@@ -537,6 +581,7 @@ Ref: workspaces.id < core_blocks.workspace_id [delete: cascade]
 Ref: core_blocks.id < core_blocks.parent_block_id [delete: cascade]
 Ref: assets_block_templates.id < core_blocks.origin_asset_id [delete: set null]
 Ref: users.id < core_blocks.created_by_id
+Ref: users.id < core_blocks.locked_by [delete: set null]
 
 Ref: core_blocks.id < block_invader_usages.block_id [delete: cascade]
 Ref: assets_invader_definitions.id < block_invader_usages.invader_asset_id [delete: cascade]
@@ -567,7 +612,3 @@ Ref: users.id < edit_locks.locked_by
 
 Ref: organizations.id < org_feature_overrides.org_id [delete: cascade]
 Ref: feature_flags.id < org_feature_overrides.feature_flag_id [delete: cascade]
-
-
-
-

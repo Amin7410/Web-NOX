@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button, Input } from "@nox/ui";
 import { Alert } from "../../../_components/UiBits";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -12,6 +12,12 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+
+    // Dọn dẹp session cũ khi vào trang login để tránh xung đột tenant
+    useEffect(() => {
+        document.cookie = "nox_org_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        // Ta không xóa accessToken ở đây nếu nó là HttpOnly, nhưng ta xóa ở cấp độ client nếu có thể
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

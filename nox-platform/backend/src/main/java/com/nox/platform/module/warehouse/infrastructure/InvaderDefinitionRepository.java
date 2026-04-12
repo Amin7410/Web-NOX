@@ -23,6 +23,6 @@ public interface InvaderDefinitionRepository extends JpaRepository<InvaderDefini
     Optional<InvaderDefinition> findByWarehouseIdAndCode(UUID warehouseId, String code);
 
     @Modifying
-    @Query("UPDATE InvaderDefinition i SET i.deletedAt = CURRENT_TIMESTAMP WHERE i.warehouse.id = :warehouseId")
-    void softDeleteByWarehouseId(UUID warehouseId);
+    @Query("UPDATE InvaderDefinition i SET i.deletedAt = :deletedAt WHERE i.warehouse.id = :warehouseId")
+    void softDeleteByWarehouseId(UUID warehouseId, java.time.OffsetDateTime deletedAt);
 }

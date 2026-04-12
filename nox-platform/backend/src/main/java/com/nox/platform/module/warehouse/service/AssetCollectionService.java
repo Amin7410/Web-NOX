@@ -17,6 +17,7 @@ public class AssetCollectionService {
 
     private final AssetCollectionRepository collectionRepository;
     private final WarehouseService warehouseService;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public AssetCollection createCollection(UUID warehouseId, String name, UUID parentCollectionId) {
@@ -106,7 +107,7 @@ public class AssetCollectionService {
             throw new DomainException("COLLECTION_NOT_EMPTY", "Cannot delete collection with child collections", 400);
         }
 
-        collection.softDelete();
+        collection.softDelete(timeProvider.now());
         collectionRepository.save(collection);
     }
 

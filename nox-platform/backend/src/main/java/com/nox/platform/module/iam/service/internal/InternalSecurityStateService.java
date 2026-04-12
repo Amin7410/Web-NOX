@@ -17,19 +17,20 @@ import java.util.UUID;
 public class InternalSecurityStateService {
 
     private final UserSecurityRepository userSecurityRepository;
+    private final com.nox.platform.shared.abstraction.TimeProvider timeProvider;
 
     @Transactional
     public void incrementFailedLogins(UUID userId) {
-        userSecurityRepository.incrementFailedLogins(userId);
+        userSecurityRepository.incrementFailedLogins(userId, timeProvider.now());
     }
 
     @Transactional
     public void resetFailedLogins(UUID userId) {
-        userSecurityRepository.resetFailedLogins(userId);
+        userSecurityRepository.resetFailedLogins(userId, timeProvider.now());
     }
 
     @Transactional
     public void lockAccount(UUID userId, OffsetDateTime lockedUntil) {
-        userSecurityRepository.lockAccount(userId, lockedUntil);
+        userSecurityRepository.lockAccount(userId, lockedUntil, timeProvider.now());
     }
 }
